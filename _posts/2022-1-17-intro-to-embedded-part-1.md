@@ -208,7 +208,7 @@ When we review firmware images throughout this series, we will use Ghidra. In ad
 - [Augment the auto-analysis with custom ghidra extensions](https://wrongbaud.github.io/posts/kong-vs-ghidra/#initial-rom-analysis)
 - [Emulate Ghidra's PCode to understand firmware behavior better](https://wrongbaud.github.io/posts/kong-vs-ghidra/#pcode)
 
-I have written a blog post [here](https://voidstarsec.com/blog//2021/12/24/ghidra-dev-environment) about setting up a development environment for developing Ghidra modules and scripts. We will be using this environment when we review the firmware images that we extract from our targets.
+I have written a blog post [here](https://voidstarsec.com/blog/ghidra-dev-environment) about setting up a development environment for developing Ghidra modules and scripts. We will be using this environment when we review the firmware images that we extract from our targets.
 
 ## Binwalk
 
@@ -276,9 +276,9 @@ Next, let's talk about how this series will be structured.
 
 This series aims to review the fundamentals of embedded system reverse engineering from both a hardware and software perspective. In the post outline below, the posts aren't strictly separated into hardware vs. software. I chose not to separate these in this series because neither hardware nor software reverse engineering can exist in isolation for our targets. For example - we need to understand how the UART works to write our custom Deptcharge module to extract the firmware. We also need to know how the hardware peripherals are accessed to understand better what the binaries are doing when analyzing them in Ghidra. For this reason, I've decided to list the planned posts below. Throughout this series, we will cover:
 
-- Part 1: [Tools / Series Overview](https://voidstarsec.com/blog//2022/01/17/intro-to-embedded-part-1)
-- Part 2: [Building a Development Environment for Ghidra](https://voidstarsec.com/blog//2021/12/24/ghidra-dev-environment)
-- Part 3: [UART Discovery and Firmware Extraction via UBOOT](https://voidstarsec.com/blog//2022/01/27/uart-uboot-and-usb)
+- Part 1: [Tools / Series Overview](https://voidstarsec.com/blog/intro-to-embedded-part-1)
+- Part 2: [Building a Development Environment for Ghidra](https://voidstarsec.com/blog/ghidra-dev-environment)
+- Part 3: [UART Discovery and Firmware Extraction via UBOOT](https://voidstarsec.com/blog/uart-uboot-and-usb)
 - Part 4: Understanding Memory Maps and Address Spaces in Ghidra
 - Part 5: Firmware Extraction via SPI and USB
 - Part 6: Kaitai Struct for Firmware Analysis

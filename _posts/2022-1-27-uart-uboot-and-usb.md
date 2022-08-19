@@ -11,8 +11,8 @@ tags: embedded tutorial
 
 # Previous Entries
 
-- Part 1: [Tools / Series Overview](https://voidstarsec.com/blog//2022/01/17/intro-to-embedded-part-1)
-- Part 2: [Building a Development Environment for Ghidra](https://voidstarsec.com/blog//2021/12/24/ghidra-dev-environment)
+- Part 1: [Tools / Series Overview](https://voidstarsec.com/blog/intro-to-embedded-part-1)
+- Part 2: [Building a Development Environment for Ghidra](https://voidstarsec.com/blog/ghidra-dev-environment)
 
 # Overview
 
