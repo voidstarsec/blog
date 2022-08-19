@@ -1,22 +1,26 @@
 navbar_entries:
-  - title: about
-    url: about
 
-  - title: blog
-    url: blog
+  - title: About Us
+    url: https://voidstarsec.com/about.html
 
-  - title: website
-    url: https://www.abhinav.co
+  - title: VSS Homepage
+    url: https://www.voidstarsec.com
+
+  - title: VSS Training
+    url: https://www.voidstarsec.com/training.html
 
 footer_entries:
-  - title: abhinav's homepage
+  - title: VSS Homepage
     url: https://www.voidstarsec.com
+
+  - title: VSS Training
+    url: https://www.voidstarsec.com/training.html
 
   - title: twitter
     url: https://twitter.com/voidstarsec
 
-  - title: github
-    url: https://github.com/voidstarsec
+  - title: Contact Us
+    url: https://voidstarsec.com/index.html#contact
 
   - title: feed
     url: feed.xml
