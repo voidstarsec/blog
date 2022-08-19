@@ -15,7 +15,7 @@ navbar_entries:
   - title: Twitter
     url: https://twitter.com/voidstarsec
 
-  - title: RSS Feed
+  - title: RSS
     url: feed.xml
 
 footer_entries:
