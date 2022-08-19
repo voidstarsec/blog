@@ -1,13 +1,22 @@
 navbar_entries:
 
-  - title: About Us
+  - title: About
     url: https://voidstarsec.com/about.html
 
-  - title: VSS Homepage
+  - title: Home
     url: https://www.voidstarsec.com
 
-  - title: VSS Training
+  - title: Training
     url: https://www.voidstarsec.com/training.html
+
+  - title: Contact
+    url: https://voidstarsec.com/index.html#contact
+
+  - title: Twitter
+    url: https://twitter.com/voidstarsec
+
+  - title: RSS Feed
+    url: feed.xml
 
 footer_entries:
   - title: VSS Homepage
@@ -22,8 +31,6 @@ footer_entries:
   - title: Contact Us
     url: https://voidstarsec.com/index.html#contact
 
-  - title: feed
-    url: feed.xml
 
 misc_entries:
   - title: this is an example vertical list
