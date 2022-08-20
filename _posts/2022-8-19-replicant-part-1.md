@@ -6,8 +6,6 @@ summary:
 tags: fault-injection chipwhisperer security tutorial
 ---
 
-# Replicant: Reproducing a Fault Injection Attack on the Trezor One 
-
 # Overview
 
 There has been a lot of public work in the last four or five years surrounding the security of cryptocurrency wallets. Much of this research has been in the realm of fault injection, which is the art/science of disrupting an embedded system just enough that it will cause undefined behavior to occur. The goal is to find a fault that allows one to modify the device's behavior to grant an attacker escalated levels of access. Examples of this might include skipping instructions, corrupting memory read operations, etc. 
