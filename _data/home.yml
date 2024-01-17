@@ -1,13 +1,13 @@
 navbar_entries:
 
   - title: About
-    url: https://voidstarsec.com/about.html
+    url: https://voidstarsec.com/#about
 
   - title: Home
     url: https://www.voidstarsec.com
 
   - title: Training
-    url: https://www.voidstarsec.com/training.html
+    url: https://www.voidstarsec.com/#training
 
   - title: Contact
     url: https://voidstarsec.com/index.html#contact
@@ -23,7 +23,7 @@ footer_entries:
     url: https://www.voidstarsec.com
 
   - title: VSS Training
-    url: https://www.voidstarsec.com/training.html
+    url: https://www.voidstarsec.com/#training
 
   - title: twitter
     url: https://twitter.com/voidstarsec
