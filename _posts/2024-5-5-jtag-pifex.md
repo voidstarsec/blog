@@ -125,6 +125,8 @@ Now we need to determine what logic levels are in use; remember that the Pi uses
 
 ![](https://voidstarsec.com/blog/assets/images/jtag-pifex/connector_pins.jpg)
 
+
+
 After measuring the voltages on the connector, we saw the following voltages. 
 
 - **Side Note:** When reversing a new target, I like to place the target platform on top of a blank sheet of paper; that way, I can quickly write down notes as I am probing/reverse engineering without having to turn away from the workspace. You can see this in the video below:
@@ -170,6 +172,14 @@ Looking closely at the images above, you may notice that image 1 has a slightly 
 | 6   | 3.284V  | ???   |
 | 7   | 3.284V  | ???   |
 | 8   | 3.284V  | ???   |
+
+We will connect to the SSD using the clips shown in the image below, these were also purchased on AliExpress.
+
+![](https://voidstarsec.com/blog/assets/images/jtag-pifex/clip-only.JPG)
+
+![](https://voidstarsec.com/blog/assets/images/jtag-pifex/connected.JPG)
+
+
 
 With this assumption, we are left with six unknown pins. Next, we can perform a JTAG IDCODE scan using the `go-jtagenum` tools; this will attempt to brute force all of the possible JTAG pin combinations and will report back pin configurations that report a valid ID code or pass the bypass test. If you're unfamiliar with these scans and want to learn more about them, check out my old writeup [here](https://wrongbaud.github.io/posts/jtag-hdd/).
 
@@ -252,6 +262,8 @@ Going back to our table of pin usages, we now know the following:
 | 6   | 3.284V  | TMS   |
 | 7   | 3.284V  | TDI   |
 | 8   | 3.284V  | TCK   |
+
+**Note**: We are not **required** to use the labeled JTAG pins on the PiFex for JTAG operations, they are configurable via OpenOCD. 
 
 So now that we know what the pins are, we need to use them to access the test access port (TAP) on the device. There is only one problem: we know our pins, but now we need to figure out how to actually use them. We can now write to the Instruction Register (IR) and Data Registers (DR), but without knowing **what** to write to them, knowing the JTAG pinout is largely useless. Before we move forward, we need to figure out two things:
 
