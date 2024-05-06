@@ -128,7 +128,7 @@ After measuring the voltages on the connector, we saw the following voltages. 
 
 - **Side Note:** When reversing a new target, I like to place the target platform on top of a blank sheet of paper; that way, I can quickly write down notes as I am probing/reverse engineering without having to turn away from the workspace. You can see this in the video below:
 
-![UART Startup Voltages](https://voidstarsec.com/blog/assets/images/serial.gif){:style="display:block; margin-left:auto; margin-right:auto"}
+![UART Startup Voltages](https://voidstarsec.com/blog/assets/images/jtag-pifex/measurement.gif){:style="display:block; margin-left:auto; margin-right:auto"}
 
 | Pin | Voltage | Usage |
 | --- | ------- | ----- |
