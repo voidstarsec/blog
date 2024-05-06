@@ -128,7 +128,7 @@ After measuring the voltages on the connector, we saw the following voltages. 
 
 - **Side Note:** When reversing a new target, I like to place the target platform on top of a blank sheet of paper; that way, I can quickly write down notes as I am probing/reverse engineering without having to turn away from the workspace. You can see this in the video below:
 
-![](https://voidstarsec.com/blog/assets/images/jtag-pifex/measurement.mp4)
+![](https://pouch.jumpshare.com/preview/OOCgauYzO4S7W48oCb8QYDck9lH70p0cLXhyiGdL7kH-XFX71mEq6CSu8Kpd2nKGBMiqnTlSmv1Da5NjUuOLwfbxzgFKX9F8O0tiBJxp5OokUC8BHO5TRe4DT0H6SEO7p717jU3CVqxVMbPc-nEEE26yjbN-I2pg_cnoHs_AmgI.mp4)
 
 | Pin | Voltage | Usage |
 | --- | ------- | ----- |
