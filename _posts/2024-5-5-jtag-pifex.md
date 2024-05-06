@@ -70,7 +70,8 @@ We chose to use the [TXB0108 Bi-Directional level shifters](https://www.ti.com/p
 
 If you've ever had to set up a headless Raspberry Pi before, you know that it's not always a simple task, and when performing remote training, we can't assume that everyone will be able to manually configure their Pi to connect to their network. This is why we designed the PiFex image to use a USB-Ethernet gadget on startup to present an Ethernet device to the end user over USB. This results in an easy, predictable way to connect to the Pi. After plugging the Pi into their machine, all the user needs to do is set the IP address, and they are all set. A short video walking through the web interface can be seen below:
 
-![](https://voidstarsec.com/blog/assets/images/jtag-pifex/multi.mp4)
+
+![UART Startup Voltages](https://voidstarsec.com/blog/assets/images/jtag-pifex/multi.gif){:style="display:block; margin-left:auto; margin-right:auto"}
 
 As mentioned in the previous section, one of the initial hurdles when learning about embedded protocols is selecting what tool or interface you want to learn with. Embedded development boards like the Arduino series or STM32 series are great but require setting up a development environment and understanding the specifics of the target microcontroller. One of the benefits of using an embedded Linux board is that these interfaces are exposed via `/dev/` and can be accessed using many programming languages such as Python, Rust, C, and even bash. 
 
