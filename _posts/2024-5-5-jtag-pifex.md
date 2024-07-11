@@ -575,7 +575,7 @@ If you've read this far, thank you for taking the time to read it all. This prob
 
 With this blog post, we introduced the PiFex hardware and software tools. These tools utilize open-source software and commercial hardware to aid in embedded device assessments. We then demonstrated how to use these tools to discover and enumerate an undocumented JTAG TAP on an SSD. Using this TAP, we were able to read memory and control execution on the target, giving us full control over the device. 
 
-If you want to stay up to date on the official release, sign up for our mailing list [here](http://eepurl.com/hSl31f), or you can order one [here](https://voidmalt.gumroad.com/l/pifex)
+If you want to stay up to date on the official release, sign up for our mailing list [here](http://eepurl.com/hSl31f), or you can order one [here](https://b07fc7-12.myshopify.com/)
 
 If you're interested in a [private training](https://voidstarsec.com/hhb.html) at your organization, please don't hesitate to [contact us](https://voidstarsec.com/#contact). We also have our only public training available this year at [RingZer0 DoubleDown Vegas](https://ringzer0.training/doubledown24-hardware-hacking-bootcamp/)
 
