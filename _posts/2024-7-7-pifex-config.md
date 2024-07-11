@@ -317,4 +317,8 @@ To purchase a full PiFex kit, including a provisioned SD card, check out our sto
 
 If you're interested in a [hardware security training](https://voidstarsec.com/hhb.html) at your organization, please don't hesitate to [contact us](https://voidstarsec.com/#contact). 
 
+If you want to stay up to date on the official releases, new courses and blog posts sign up for our mailing list [here](http://eepurl.com/hSl31f).
+
+Thank you for reading!
+
 
