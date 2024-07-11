@@ -14,7 +14,7 @@ However, one of the biggest hurdles that stop people from using an Armbian-based
 
 With this blog post, we'll introduce the PiFex, a basic companion board for the Raspberry Pi designed to teach users the basics of hardware hacking and embedded protocols. We will then demonstrate how to use the PiFex to access a JTAG tap on an undocumented SSD, allowing memory reads and GDB access to the SSD CPU.
 
-**Note:** The design and software for the PiFex will be open-sourced in the coming months as we continue our final rounds of testing
+**Note:** The design/software for the PiFex will be open-sourced in the coming months as we continue our final rounds of testing
 
 ## Background Information
 
