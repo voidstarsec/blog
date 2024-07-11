@@ -12,7 +12,7 @@ In our [last post](https://voidstarsec.com/blog/jtag-pifex), we released the PiF
 
 # Background: Why a Pi?
 
-If you want to get straight to setting up an image, feel free to head to the [next section](# Setting up an image). However, if you want to learn a little more about why we opt for teaching hardware hacking concepts using the Pi, please continue reading.
+If you want to get straight to setting up an image, feel free to head to the next section. However, if you want to learn a little more about why we opt for teaching hardware hacking concepts using the Pi, please continue reading.
 
 Like many disciplines, there are an infinite amount of hardware and software tools that you can use when beginning your journey into hardware reverse engineering. For many people, the first tool they choose to start with will depend on their professional background or personal interests; for example, perhaps you're an FPGA engineer by day, and you might be able to whip up some Verilog in 10 minutes to communicate with an SPI flash. Maybe you're an embedded engineer, and the easiest way for you to interact with a UART is by writing firmware for an STM32. Maybe you are following one of my [old tutorials](https://wrongbaud.github.io) and are using a [Bus Pirate](https://hackerwarehouse.com/product/bus-pirate-v5-kit/) or [ESP32](https://www.amazon.com/HiLetgo-ESP-WROOM-32-Development-Microcontroller-Integrated/dp/B0718T232Z). Luckily for us, in all of these cases **you are right!**
 
