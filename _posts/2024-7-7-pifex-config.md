@@ -110,6 +110,7 @@ pi@voidstar:~ $ ip link list
 If you don't see that in your output, check `dmesg` for any logs or errors related to the USB controller or power consumption. Often, laptop USB ports can not provide appropriate power to the Pi when it presents a USB gadget, causing it to fail to enumerate. Also, make sure that your cable is not just power only. You would be surprised how many USB C cables I have come across that only have power and no data lines. 
 
 Now that we can easily access our PiFex over USB, let's examine some common tools that we'll use in future blog posts. 
+
 ## Step 3: Software Dependencies and Tools
 
 At its core, the goal of the PiFex is to easily streamline access to some of the commodity interfaces on the Raspberry Pi. We use the Pi for training and hardware assessments we perform for clients. When we conduct a [hardware security training](TODO) we focus on using Open-Source tooling and libraries to ensure that students are not tied to a specific hardware platform in the future. The goal of training, after all, is to teach the underlying concepts instead of the specifics of the **tools used**.
@@ -297,6 +298,7 @@ jupyter-lab . --ip 0.0.0.0
 ```
 
 Now, the Jupyter Notebooks can be accessed at 192.168.7.2:8888. In our [pifex-sw](https://github.com/voidstarsec/pifex-sw) repository, you can find examples of a JTAG notebook that we developed for the [previous blog post](https://voidstarsec.com/blog/jtag-pifex). We will add more notebooks and examples with corresponding blog posts.
+
 # Conclusion and Kit Updates
 
 This post has covered how to set up a Raspberry Pi for basic hardware hacking. We reviewed how to configure a USB Ethernet gadget to allow for SSH over USB, common packages and tools used for hardware reverse engineering, how to interact with the OLED screen on the PiFex, and how to configure various interfaces on the Raspberry Pi. 
@@ -311,13 +313,17 @@ We also have developed a basic baseplate for the Raspberry Pi and a small breadb
 
 ![Pifex Baseplate](https://voidstarsec.com/blog/assets/images/pifex-config/baseplate.JPG)
 
-To purchase a full PiFex kit, including a provisioned SD card, check out our store [here](https://b07fc7-12.myshopify.com/). 
+To purchase a full PiFex kit, including a provisioned SD card, check out our store [here](https://b07fc7-12.myshopify.com/).
 
 ![Full Kit](https://voidstarsec.com/blog/assets/images/pifex-config/full-kit.JPG)
 
 If you're interested in a [hardware security training](https://voidstarsec.com/hhb.html) at your organization, please don't hesitate to [contact us](https://voidstarsec.com/#contact). 
 
 If you want to stay up to date on the official releases, new courses and blog posts sign up for our mailing list [here](http://eepurl.com/hSl31f).
+
+Lastly, as conference season is well underway, I wanted to highlight a new conference that is being put on by an awesome group of researchers: [RSTCON](https://rstcon.org/). This conference is focused on cutting-edge research, exploitation, and tradecraft in the logistics, energy, and manufacturing industries. The speaker lineup looks incredible and this is a conference that I plan on attending regularly!
+
+If you're looking for a discounted ticket, you can use the promo code `wrongbaud` for a 10% discount
 
 Thank you for reading!
 
