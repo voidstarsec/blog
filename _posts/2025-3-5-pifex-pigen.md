@@ -160,7 +160,7 @@ With OpenOCD launched, the GDB terminal and telnet interface can be accessed via
 
 There is also a memory-view feature that allows users to dump segments of memory via the UI:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/telnet-memdump.png.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/telnet-memdump.png)
 
 **Note:** This is a WIP interface, so feel free to provide feedback or submit PRs for desired features!
 
