@@ -195,11 +195,11 @@ Mar 02 21:01:57 pifex start_jupyter.sh[538]: [I 2025-03-02 21:01:57.236 LabApp] 
 
 Included in these notebooks are examples of how to interact with the OLED display:
 
-![[luma-oled.png.png]]
+![](https://voidstarsec.com/blog/assets/images/brushing-up/luma-oled.png.png)
 
 We have also included basic JTAG notebooks, which were used in one of our [previous blog posts](https://voidstarsec.com/blog/jtag-pifex)
 
-![[jtag-jupyter.png.png]]
+![](https://voidstarsec.com/blog/assets/images/brushing-up/jtag-jupyter.png.png)
 
 Users can also access a terminal window through Jupyter-Lab as well; this can be done via "`File` "-> "`New` "-> "`Terminal` "
 
