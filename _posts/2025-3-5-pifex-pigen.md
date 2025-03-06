@@ -146,14 +146,16 @@ I am currently developing a web-based interface for using OpenOCD. A beta versio
 
 The search bar at the top can be used to search for config files used by OpenOCD and includes an autocomplete feature:
 
-![[openocd-cfg.png]]
+![](https://voidstarsec.com/blog/assets/images/brushing-up/openocd-cfg.png)
 
 Once the desired configuration files are selected, OpenOCD can be launched and interfaced with via telnet and gdb.
 
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui.png.png)
+
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/openocd-config-files.png.png)
 
 With OpenOCD launched, the GDB terminal and telnet interface can be accessed via the web browser:
+
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/gdb-terminal.png.png)
 
 There is also a memory-view feature that allows users to dump segments of memory via the UI:
