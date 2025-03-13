@@ -68,7 +68,7 @@ So, we have debug output! But this does not get us what we're looking for. We wa
 ## Target 1: SPI Flash
 
 If you are unfamiliar with SPI flash chips and how they work, check out some of our previous blog entries [here](https://wrongbaud.github.io/posts/BasicFUN-flashing/).
-In order to read out this flash we will use [flashrom](https://flashrom.org/). If you are unfamiliar with `flashrom,` it is an open-source tool for reading and writing SPI flash devices. We've used this tool in previous posts, and you can learn more about it and see more usage examples [here](https://wrongbaud.github.io/posts/router-teardown/):
+In order to read out this flash we will use [flashrom](https://flashrom.org/). If you are unfamiliar with `flashrom`, it is an open-source tool for reading and writing SPI flash devices. We've used this tool in previous posts, and you can learn more about it and see more usage examples [here](https://wrongbaud.github.io/posts/router-teardown/)
 
 One of the nice things about `flashrom` is that we can use it with several hardware adapters. One of the most commonly used is the CH341 adapter, which you can purchase [here](https://www.amazon.com/CH341A-programmer-socket-programer-support/dp/B077GBTWQP). However, you can also use an embedded Linux device with the `spidev` kernel module loaded, allowing an SPI peripheral to be accessed through the `/dev/` directory. 
 
@@ -131,7 +131,7 @@ With this, we can set up an SPI decoder and assign the signals, as shown below. 
 
 While we know the pins we have connected to on the SPI flash, let's examine the traffic and see if we can identify them. This skill can be helpful if you are analyzing signals on an undocumented bus or debug header. 
 
-**Note:** If you would like more of a deep dive into the SPI protocol and how it is used for EEPROMs, check out my old blog post [here](**https://wrongbaud.github.io/posts/BasicFUN-flashing/)**
+**Note:** If you would like more of a deep dive into the SPI protocol and how it is used for EEPROMs, check out my old blog post [here](**https://wrongbaud.github.io/posts/BasicFUN-flashing/)
 
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191456.png)
 
@@ -278,14 +278,14 @@ pi@pifex:~/targets/toothbrush $ hexdump -C -n512 spi.bin
 
 If this were a firmware image for this processor, we would expect to see a pointer to somewhere in the SRAM region and a table pointing to offsets in the internal flash; we do not. We also do not see any data that resembles ARM instructions, so what could this data be?
 
-Recall that this device has a high-(ish) resolution screen, so this data is likely the image data displayed on startup. For devices with OLED displays, it is rare that the data is stored in a standard image format. It is often stored as pixelated RGB data, which can be difficult to parse. Luckily, there are tools available, such as https://codestation.ch/, that can allow us to test various formats and parameters. 
+Recall that this device has a high-(ish) resolution screen, so this data is likely the image data displayed on startup. For devices with OLED displays, it is rare that the data is stored in a standard image format. It is often stored as pixelated RGB data, which can be difficult to parse. Luckily, there are tools available, such as [https://codestation.ch/](https://codestation.ch), that can allow us to test various formats and parameters. 
 
 This introduces a new problem; we know very little about the formatting being used, so let's start with what we **do** know. The width and length of this screen are 11mm by 22mm, which means that our pixel ratio should be similar. Common ratios for these screens include 128x64; however, if we try that, it does not work. After some experimenting, a width of 80 and a height of 160 worked, and I could properly render the images on the screen. See the output below for more details:
 
 
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250223181553.png)
 
-Now that we know the size of the images and the screen layout, we can carve out the various images from the binary and load them as shown below - here, we have the software information screen. Each image was 24kb pixel maps (remember the read size from before?). Now that they are extracted, we should be able to replace them! After looking through the SPI flash image, it was determined that this bitmap lives at offset `0x308061` in our SPI flash image. It was individually extracted and loaded as shown below:
+Now that we know the size of the images and the screen layout, we can carve out the various images from the binary and load them as shown below. Using the data that we gathered earlier in pulseview, we know the offsets in the flash where som eof these images are stored.Each image was 24kb pixel maps (remember the read size from before?). Now that they are extracted, we should be able to replace them! After looking through the SPI flash image, it was determined that the bitmap for the software information screen is located at offset `0x308061` in our SPI flash image. It was individually extracted and loaded as shown below:
 
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250223185944.png)
 
@@ -307,7 +307,7 @@ Result:
 
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195410.png)
 
-We now understand how the SPI flash is structured, but we still have not extracted the firmware. We have one more source: the internal flash on the MCU. In our next post, we'll discuss how to communicate with an SWD interface and write an OpenOCD config file for a new microcontroller. 
+Our new image worked, and was displayed properly! We now understand how the SPI flash is structured, but we still have not extracted the firmware. We have one more source: the internal flash on the MCU. In our next post, we'll discuss how to communicate with an SWD interface and write an OpenOCD config file for a new microcontroller. 
 
 # Conclusion
 
