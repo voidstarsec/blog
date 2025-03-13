@@ -74,7 +74,8 @@ One of the nice things about `flashrom` is that we can use it with several hardw
 
 We can attempt to access the SPI flash using a standard SOIC8 clip ([pomona](https://www.digikey.com/en/products/detail/pomona-electronics/5250/745102) are the best) as shown in the diagram:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250302162428.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/spi_clip_wiring_v2_no_bb_bb.png)
+
 ### Running Flashrom
 
 Using a Raspberry Pi with the `spidev` kernel module enabled, we can attempt to extract the SPI flash as follows:
@@ -118,13 +119,13 @@ Let's go through all three of these together. For our first example, I have an o
 
 #### Analyzing Data with Pulseview
 
-Using the same clip setup as before, we can use a [low-cost]() logic analyzer to view the traffic on startup and during operations:
+Using the same clip setup as before, we can use a [low-cost](https://www.amazon.com/HiLetgo-Analyzer-Ferrite-Channel-Arduino/dp/B077LSG5P2) logic analyzer to view the traffic on startup and during operations:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250225195449.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195449.png)
 
 After monitoring the SPI traffic on boot, we have the following:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250225190923.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225190923.png)
 
 With this, we can set up an SPI decoder and assign the signals, as shown below. Pulseview also includes protocol-level decoders that we can use to see exactly what commands are being sent to this SPI flash.
 
@@ -132,7 +133,7 @@ While we know the pins we have connected to on the SPI flash, let's examine the 
 
 **Note:** If you would like more of a deep dive into the SPI protocol and how it is used for EEPROMs, check out my old blog post [here](**https://wrongbaud.github.io/posts/BasicFUN-flashing/)**
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250225191456.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191456.png)
 
 Serial Peripheral Interface (SPI) requires the following four signals:
 
@@ -145,11 +146,11 @@ Based on what we know about the SPI protocol, the CS line should stay low during
 
 If we look closely at our captured signals, we can see that one line is active first (3), which is followed by a response on the other line (2). It is a fair assumption to label the third signal as SDO and the second as SDI; we can set this up in our pulseview decoder as shown below: 
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250225191839.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191839.png)
 
 With our decoder set up, we can see the bytes that are being sent and what those bytes mean to the SPI flash:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250225191751.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191751.png)
 
 One thing to note is that when a read operation is performed (when cycling through the menus) and new data is displayed on screen, we have the following transactions:
 
@@ -160,7 +161,7 @@ It is a reasonable assumption to say that the data for each image displayed requ
 
 One of the most useful features in Pulseview is the "Binary Decoder Output View." This window will let you view decoded traffic results and export them to a file. In the following screenshot, we have selected the MISO (SDI) line, which shows the responses from the SPI flash. This contains the data that was transmitted back to the CPU from the flash chip. 
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250225192446.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225192446.png)
 
 While this gives us some data, the CPU does not read all of the data in one shot; it reads data from this flash as needed. We can see this when we cycle through the menu options, which generates new traffic. 
 
@@ -181,7 +182,7 @@ Luckily for us, this device has multiple labeled test pads, as seen in the image
 
 We can use this pin to hold the processor in reset if we hold the processor in reset and attempt to read out the flash in the same manner as before, we see the following:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250225195239.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195239.png)
 
 ```
 pi@pifex:~/targets/toothbrush $ ./run-flashrom.sh r spi2.bin
@@ -273,7 +274,7 @@ pi@pifex:~/targets/toothbrush $ hexdump -C -n512 spi.bin
 
 **If** this were an ARM Cortex firmware image, we would expect to see an Interrupt Vector Table (IVT). On the Cortex-M, the vector table is preceded by a stack pointer, which will point to somewhere in the CPU's RAM. If we examine the memory map for our processor, we have the following:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250224064652.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250224064652.png)
 
 If this were a firmware image for this processor, we would expect to see a pointer to somewhere in the SRAM region and a table pointing to offsets in the internal flash; we do not. We also do not see any data that resembles ARM instructions, so what could this data be?
 
@@ -282,11 +283,11 @@ Recall that this device has a high-(ish) resolution screen, so this data is like
 This introduces a new problem; we know very little about the formatting being used, so let's start with what we **do** know. The width and length of this screen are 11mm by 22mm, which means that our pixel ratio should be similar. Common ratios for these screens include 128x64; however, if we try that, it does not work. After some experimenting, a width of 80 and a height of 160 worked, and I could properly render the images on the screen. See the output below for more details:
 
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250223181553.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250223181553.png)
 
 Now that we know the size of the images and the screen layout, we can carve out the various images from the binary and load them as shown below - here, we have the software information screen. Each image was 24kb pixel maps (remember the read size from before?). Now that they are extracted, we should be able to replace them! After looking through the SPI flash image, it was determined that this bitmap lives at offset `0x308061` in our SPI flash image. It was individually extracted and loaded as shown below:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250223185944.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250223185944.png)
 
 With all of this information, we can generate an RGB file from an 80x160-pixel image file and overwrite the SPI flash with our modified pixel map to display a custom image. 
 
@@ -304,7 +305,7 @@ flashrom -p linux_spi:dev=/dev/spidev0.0 -w flashme.bin
 
 Result:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted image 20250225195410.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195410.png)
 
 We now understand how the SPI flash is structured, but we still have not extracted the firmware. We have one more source: the internal flash on the MCU. In our next post, we'll discuss how to communicate with an SWD interface and write an OpenOCD config file for a new microcontroller. 
 
