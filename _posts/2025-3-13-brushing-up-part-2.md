@@ -43,7 +43,7 @@ The first thing we need to do is determine the baud rate; once we have that, we 
 
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/none.png)
 
-This does not look promising in terms of debug output. However, If you are familiar with UART, you know that the transmit line must be pulled high as bits are (in a standard configuration) transmitted by driving the line low. We can see in this capture that the line is low. This may lead you to think that the UART is active and we should move on; before we do that, let's try one more thing. Using a 10K resistor, we will pull the Tx line high to 3.3V; if we take a capture in this configuration and press a few buttons on the toothbrush, we see the following:
+This does not look promising in terms of debug output. However, If you are familiar with UART, you know that the transmit line must be pulled high as bits are (in a standard configuration) transmitted by driving the line low. We can see in this capture that the line is low. This may lead you to think that the UART is not active and we should move on; before we do that, let's try one more thing. Using a 10K resistor, we will pull the Tx line high to 3.3V; if we take a capture in this configuration and press a few buttons on the toothbrush, we see the following:
 
 ![](https://voidstarsec.com/blog/assets/images/brushing-up/UART.png)
 
