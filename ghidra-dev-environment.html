@@ -9,7 +9,7 @@
 
 
 
-<link rel="canonical" href="https://voidstarsec.com/newblog/ghidra-dev-environment">
+<link rel="canonical" href="https://voidstarsec.com/blog/ghidra-dev-environment">
 
         <meta name="author" content=""Matthew Alt"" />
         <meta name="keywords" content="ghidra,tutorial,tools" />
@@ -18,7 +18,7 @@
         <meta property="og:site_name" content="VoidStar Security Blog" />
         <meta property="og:type" content="article"/>
         <meta property="og:title" content="Extending Ghidra Part 1: Setting up a Development Environment"/>
-        <meta property="og:url" content="https://voidstarsec.com/newblog/ghidra-dev-environment"/>
+        <meta property="og:url" content="https://voidstarsec.com/blog/ghidra-dev-environment"/>
         <meta property="og:description" content="With this post, I hope to explain how to set up a development environment for the latest Ghidra release on Ubuntu 20.04. After following the steps outlined below, we will have the ability to write, debug and export custom Ghidra plugins, modules, and scripts."/>
         <meta property="article:published_time" content="2021-12-24" />
             <meta property="article:section" content="Ghidra" />
@@ -30,16 +30,16 @@
 
 
     <!-- Bootstrap -->
-        <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/bootstrap.flatly.min.css" type="text/css"/>
-    <link href="https://voidstarsec.com/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://voidstarsec.com/blog/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="https://voidstarsec.com/blog/theme/css/font-awesome.min.css" rel="stylesheet">
 
-    <link href="https://voidstarsec.com/newblog/theme/css/pygments/native.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/style.css" type="text/css"/>
+    <link href="https://voidstarsec.com/blog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://voidstarsec.com/blog/theme/css/style.css" type="text/css"/>
 
-        <link href="https://voidstarsec.com/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+        <link href="https://voidstarsec.com/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog ATOM Feed"/>
 
-        <link href="https://voidstarsec.com/newblog/feeds/ghidra.atom.xml" type="application/atom+xml" rel="alternate"
+        <link href="https://voidstarsec.com/blog/feeds/ghidra.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog Ghidra ATOM Feed"/>
 
 </head>
@@ -48,7 +48,7 @@
 <div class="navbar navbar-default navbar-fixed-top" role="navigation">
     <div class="container">
         <div class="navbar-header">
-            <a href="https://voidstarsec.com/newblog/" class="navbar-brand">
+            <a href="https://voidstarsec.com/blog/" class="navbar-brand">
 VoidStar Security Blog            </a>
         </div>
         <div class="collapse navbar-collapse navbar-ex1-collapse">
@@ -69,14 +69,14 @@ VoidStar Security Blog            </a>
     <div class="row">
         <div class="col-sm-9 col-sm-push-3">
             <ol class="breadcrumb">
-                <li><a href="https://voidstarsec.com/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li><a href="https://voidstarsec.com/blog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
                 <li class="active">Extending Ghidra Part 1: Setting up a Development Environment</li>
             </ol>
     <section id="content">
         <article>
             <header class="page-header">
                 <h1>
-                    <a href="https://voidstarsec.com/newblog/ghidra-dev-environment"
+                    <a href="https://voidstarsec.com/blog/ghidra-dev-environment"
                        rel="bookmark"
                        title="Permalink to Extending Ghidra Part 1: Setting up a Development Environment">
                         Extending Ghidra Part 1: Setting up a Development Environment
@@ -94,18 +94,18 @@ VoidStar Security Blog            </a>
 
 
             <span class="label label-default">By</span>
-            <a href="https://voidstarsec.com/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+            <a href="https://voidstarsec.com/blog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
         <span class="label label-default">Category</span>
-        <a href="https://voidstarsec.com/newblog/category/ghidra.html">Ghidra</a>
+        <a href="https://voidstarsec.com/blog/category/ghidra.html">Ghidra</a>
 
 
 <span class="label label-default">Tags</span>
-	<a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+	<a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
         /
-	<a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+	<a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
         /
-	<a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+	<a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     
 </footer><!-- /.post-info -->                    </div>
                 </div>
@@ -380,19 +380,16 @@ index<span class="w"> </span>6391c29..9ccf7fa<span class="w"> </span><span class
   <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
   <ul class="list-group" id="categories">
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
+      <a href="https://voidstarsec.com/blog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
     </li>
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+      <a href="https://voidstarsec.com/blog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
     </li>
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+      <a href="https://voidstarsec.com/blog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
     </li>
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
-    </li>
-    <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+      <a href="https://voidstarsec.com/blog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
     </li>
   </ul>
 </li>
@@ -400,37 +397,37 @@ index<span class="w"> </span>6391c29..9ccf7fa<span class="w"> </span><span class
 
 <!-- Sidebar/Tag Cloud -->
 <li class="list-group-item">
-  <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
+      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+      <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+      <a href="https://voidstarsec.com/blog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
+      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
     </li>
   </ul>
 </li>
@@ -478,13 +475,13 @@ index<span class="w"> </span>6391c29..9ccf7fa<span class="w"> </span><span class
       </div>
    </div>
 </footer>
-<script src="https://voidstarsec.com/newblog/theme/js/jquery.min.js"></script>
+<script src="https://voidstarsec.com/blog/theme/js/jquery.min.js"></script>
 
 <!-- Include all compiled plugins (below), or include individual files as needed -->
-<script src="https://voidstarsec.com/newblog/theme/js/bootstrap.min.js"></script>
+<script src="https://voidstarsec.com/blog/theme/js/bootstrap.min.js"></script>
 
 <!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
-<script src="https://voidstarsec.com/newblog/theme/js/respond.min.js"></script>
+<script src="https://voidstarsec.com/blog/theme/js/respond.min.js"></script>
 
 
 

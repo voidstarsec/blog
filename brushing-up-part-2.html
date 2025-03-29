@@ -9,7 +9,7 @@
 
 
 
-<link rel="canonical" href="https://voidstarsec.com/newblog/brushing-up-part-2">
+<link rel="canonical" href="https://voidstarsec.com/blog/brushing-up-part-2">
 
         <meta name="author" content=""Matthew Alt"" />
         <meta name="keywords" content="pifex,jtag,hardware,uart,spi" />
@@ -18,7 +18,7 @@
         <meta property="og:site_name" content="VoidStar Security Blog" />
         <meta property="og:type" content="article"/>
         <meta property="og:title" content="Brushing Up on Hardware Hacking Part 2 - SPI, UART, Pulseview, and Flashrom"/>
-        <meta property="og:url" content="https://voidstarsec.com/newblog/brushing-up-part-2"/>
+        <meta property="og:url" content="https://voidstarsec.com/blog/brushing-up-part-2"/>
         <meta property="og:description" content="In our last post, we reviewed how to use the pi-gen tool to generate an image for a Raspberry Pi that is pre-configured with many tools needed for basic hardware hacking. In this post, we will start using them on our first target."/>
         <meta property="article:published_time" content="2025-03-13" />
             <meta property="article:section" content="Hardware" />
@@ -32,16 +32,16 @@
 
 
     <!-- Bootstrap -->
-        <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/bootstrap.flatly.min.css" type="text/css"/>
-    <link href="https://voidstarsec.com/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://voidstarsec.com/blog/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="https://voidstarsec.com/blog/theme/css/font-awesome.min.css" rel="stylesheet">
 
-    <link href="https://voidstarsec.com/newblog/theme/css/pygments/native.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/style.css" type="text/css"/>
+    <link href="https://voidstarsec.com/blog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://voidstarsec.com/blog/theme/css/style.css" type="text/css"/>
 
-        <link href="https://voidstarsec.com/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+        <link href="https://voidstarsec.com/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog ATOM Feed"/>
 
-        <link href="https://voidstarsec.com/newblog/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate"
+        <link href="https://voidstarsec.com/blog/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog Hardware ATOM Feed"/>
 
 </head>
@@ -50,7 +50,7 @@
 <div class="navbar navbar-default navbar-fixed-top" role="navigation">
     <div class="container">
         <div class="navbar-header">
-            <a href="https://voidstarsec.com/newblog/" class="navbar-brand">
+            <a href="https://voidstarsec.com/blog/" class="navbar-brand">
 VoidStar Security Blog            </a>
         </div>
         <div class="collapse navbar-collapse navbar-ex1-collapse">
@@ -71,14 +71,14 @@ VoidStar Security Blog            </a>
     <div class="row">
         <div class="col-sm-9 col-sm-push-3">
             <ol class="breadcrumb">
-                <li><a href="https://voidstarsec.com/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li><a href="https://voidstarsec.com/blog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
                 <li class="active">Brushing Up on Hardware Hacking Part 2 - SPI, UART, Pulseview, and Flashrom</li>
             </ol>
     <section id="content">
         <article>
             <header class="page-header">
                 <h1>
-                    <a href="https://voidstarsec.com/newblog/brushing-up-part-2"
+                    <a href="https://voidstarsec.com/blog/brushing-up-part-2"
                        rel="bookmark"
                        title="Permalink to Brushing Up on Hardware Hacking Part 2 - SPI, UART, Pulseview, and Flashrom">
                         Brushing Up on Hardware Hacking Part 2 - SPI, UART, Pulseview, and Flashrom
@@ -96,28 +96,28 @@ VoidStar Security Blog            </a>
 
 
             <span class="label label-default">By</span>
-            <a href="https://voidstarsec.com/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+            <a href="https://voidstarsec.com/blog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
         <span class="label label-default">Category</span>
-        <a href="https://voidstarsec.com/newblog/category/hardware.html">Hardware</a>
+        <a href="https://voidstarsec.com/blog/category/hardware.html">Hardware</a>
 
 
 <span class="label label-default">Tags</span>
-	<a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+	<a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
         /
-	<a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+	<a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
         /
-	<a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+	<a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
         /
-	<a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
+	<a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
         /
-	<a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+	<a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
     
 </footer><!-- /.post-info -->                    </div>
                 </div>
                 <h1>Brushing Up on Hardware Hacking Part 2 - SPI, UART, Pulseview, and Flashrom</h1>
 <h2>Overview</h2>
-<p>In our <a href="https://voidstarsec.com/newblog/pifex-pigen">last post</a>, we reviewed how to use the <a href="https://github.com/RPi-Distro/pi-gen">pi-gen</a> tool to generate an image for a Raspberry Pi that is pre-configured with many tools needed for basic hardware hacking. In this post, we will start using them on our first target. </p>
+<p>In our <a href="https://voidstarsec.com/blog/pifex-pigen">last post</a>, we reviewed how to use the <a href="https://github.com/RPi-Distro/pi-gen">pi-gen</a> tool to generate an image for a Raspberry Pi that is pre-configured with many tools needed for basic hardware hacking. In this post, we will start using them on our first target. </p>
 <p>Our first target from the AliExpress grab bag is going to be this electric toothbrush. Our goal is to extract the firmware and maybe push modified firmware to the toothbrush (there is a statement I never thought I'd type...). </p>
 <p>This toothbrush is an interesting target for several reasons:</p>
 <ol>
@@ -173,7 +173,7 @@ VoidStar Security Blog            </a>
 </tr>
 </tbody>
 </table>
-<p>This is a pretty simple target, which makes it great for learning how to do embedded assessments. We have an ARM Cortex MCU, an SPI flash, an IC for managing the charging of the battery, and another IC for controlling the motor. This target also contains a very well-documented silkscreen, which makes our initial analysis much simpler; one thing that likely stuck out to you when examining this PCB was the clearly labeled <code>Tx</code> and <code>Rx</code> pads, as we've discussed in <a href="https://voidstarsec.com/newblog/uart-uboot-and-usb">previous posts</a> this is indicative of a UART. Let's start by looking at this toothbrush's UART output.</p>
+<p>This is a pretty simple target, which makes it great for learning how to do embedded assessments. We have an ARM Cortex MCU, an SPI flash, an IC for managing the charging of the battery, and another IC for controlling the motor. This target also contains a very well-documented silkscreen, which makes our initial analysis much simpler; one thing that likely stuck out to you when examining this PCB was the clearly labeled <code>Tx</code> and <code>Rx</code> pads, as we've discussed in <a href="https://voidstarsec.com/blog/uart-uboot-and-usb">previous posts</a> this is indicative of a UART. Let's start by looking at this toothbrush's UART output.</p>
 <h2>Target 0: UART (?!)</h2>
 <p>If you've never looked at UART before or are unfamiliar with the process of identifying one and locating the baud rate, I highly recommend checking out the post I linked previously. It will cover everything you need to know for the following section. </p>
 <p>The first thing we need to do is determine the baud rate; once we have that, we can look at the data being sent over the lines and determine if it is useful to us. Using an oscilloscope, we can monitor this line on startup, which results in the following trace being generated on the scope:</p>
@@ -197,7 +197,7 @@ VoidStar Security Blog            </a>
 <p>So, we have debug output! But this does not get us what we're looking for. We want to extract the firmware and see if we can re-flash it! For these purposes, we will focus on the main MCU and the SPI flash. Let's start by looking at the SPI flash. </p>
 <h2>Target 1: SPI Flash</h2>
 <p>If you are unfamiliar with SPI flash chips and how they work, check out some of our previous blog entries <a href="https://wrongbaud.github.io/posts/BasicFUN-flashing/">here</a>.
-In order to read out this flash we will use <a href="https://flashrom.org/">flashrom</a>. If you are unfamiliar with <code>flashrom</code>, it is an open-source tool for reading and writing SPI flash devices. We've used this tool in previous posts, and you can learn more about it and see more usage examples <a href="https://voidstarsec.com/newblog/router-teardown">here</a></p>
+In order to read out this flash we will use <a href="https://flashrom.org/">flashrom</a>. If you are unfamiliar with <code>flashrom</code>, it is an open-source tool for reading and writing SPI flash devices. We've used this tool in previous posts, and you can learn more about it and see more usage examples <a href="https://voidstarsec.com/blog/router-teardown">here</a></p>
 <p>One of the nice things about <code>flashrom</code> is that we can use it with several hardware adapters. One of the most commonly used is the CH341 adapter, which you can purchase <a href="https://www.amazon.com/CH341A-programmer-socket-programer-support/dp/B077GBTWQP">here</a>. However, you can also use an embedded Linux device with the <code>spidev</code> kernel module loaded, allowing an SPI peripheral to be accessed through the <code>/dev/</code> directory. </p>
 <p>We can attempt to access the SPI flash using a standard SOIC8 clip (<a href="https://www.digikey.com/en/products/detail/pomona-electronics/5250/745102">pomona</a> are the best) as shown in the diagram:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/spi_clip_wiring_v2_no_bb_bb.png"></p>
@@ -431,19 +431,16 @@ pi@pifex:~/targets/toothbrush<span class="w"> </span>$<span class="w"> </span>md
   <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
   <ul class="list-group" id="categories">
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
+      <a href="https://voidstarsec.com/blog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
     </li>
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+      <a href="https://voidstarsec.com/blog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
     </li>
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+      <a href="https://voidstarsec.com/blog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
     </li>
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
-    </li>
-    <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+      <a href="https://voidstarsec.com/blog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
     </li>
   </ul>
 </li>
@@ -451,37 +448,37 @@ pi@pifex:~/targets/toothbrush<span class="w"> </span>$<span class="w"> </span>md
 
 <!-- Sidebar/Tag Cloud -->
 <li class="list-group-item">
-  <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
+      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+      <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+      <a href="https://voidstarsec.com/blog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
+      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
     </li>
   </ul>
 </li>
@@ -529,13 +526,13 @@ pi@pifex:~/targets/toothbrush<span class="w"> </span>$<span class="w"> </span>md
       </div>
    </div>
 </footer>
-<script src="https://voidstarsec.com/newblog/theme/js/jquery.min.js"></script>
+<script src="https://voidstarsec.com/blog/theme/js/jquery.min.js"></script>
 
 <!-- Include all compiled plugins (below), or include individual files as needed -->
-<script src="https://voidstarsec.com/newblog/theme/js/bootstrap.min.js"></script>
+<script src="https://voidstarsec.com/blog/theme/js/bootstrap.min.js"></script>
 
 <!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
-<script src="https://voidstarsec.com/newblog/theme/js/respond.min.js"></script>
+<script src="https://voidstarsec.com/blog/theme/js/respond.min.js"></script>
 
 
 
