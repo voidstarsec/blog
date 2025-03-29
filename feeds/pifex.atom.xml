@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>VoidStar Security Blog - Pifex</title><link href="/" rel="alternate"></link><link href="/feeds/pifex.atom.xml" rel="self"></link><id>/</id><updated>2024-05-05T00:00:00-06:00</updated><entry><title>JTAG Hacking with a Raspberry Pi - Introducing the PiFex</title><link href="/jtag-pifex.html" rel="alternate"></link><published>2024-05-05T00:00:00-06:00</published><updated>2024-05-05T00:00:00-06:00</updated><author><name>"Matthew Alt"</name></author><id>tag:None,2024-05-05:/jtag-pifex.html</id><summary type="html">&lt;p&gt;With this blog post, we'll introduce the PiFex, a basic companion board for the Raspberry Pi designed to teach users the basics of hardware hacking and embedded protocols. We will then demonstrate how to use the PiFex to access a JTAG tap on an undocumented SSD, allowing memory reads and GDB access to the SSD CPU.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Overview&lt;/h1&gt;
+&lt;p&gt;When performing initial hardware analysis and recon, I have become very fond of using Armbian-based single-board computers (SBCs) for things like UART, SPI, I2C, JTAG, and SWD. One of the main benefits of using one of these boards is that since the peripherals we are interested in are exposed as character devices in Linux, a wide variety of tools are available for interfacing with them, including most programming and scripting languages. &lt;/p&gt;
+&lt;p&gt;However, one of the biggest hurdles that stop people from using an Armbian-based device is the initial setup and configuration (not to mention availability!). It takes more time to configure an Orange Pi or Raspberry Pi and enable the various interfaces than plug in an FTDI to your Linux machine. This blog post will help break down some of those barriers and streamline the setup process for those looking to learn hardware hacking with a Linux SBC.&lt;/p&gt;
+&lt;p&gt;With this blog post, we'll introduce the PiFex, a basic companion board for the Raspberry Pi designed to teach users the basics of hardware hacking and embedded protocols. We will then demonstrate how to use the PiFex to access a JTAG tap on an undocumented SSD, allowing memory reads and GDB access to the SSD CPU.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; The design and software for the PiFex will be open-sourced in the coming months as we continue our final rounds of testing&lt;/p&gt;
+&lt;h2&gt;Background Information&lt;/h2&gt;
+&lt;p&gt;If you are unfamiliar with JTAG at a low level, you might want to read my &lt;a href="https://wrongbaud.github.io/posts/jtag-hdd/"&gt;previous&lt;/a&gt; blog post about reverse engineering JTAG taps. &lt;/p&gt;
+&lt;h1&gt;PiFex: An Overview&lt;/h1&gt;
+&lt;p&gt;The Pi Interface Explorer or PiFex, is a simple hat for a Raspberry Pi designed for tinkerers and hardware hackers alike. By breaking out the commonly used interfaces and routing them through bi-directional level shifters, we aimed to streamline some of the initial steps when reverse engineering a new device or trying to learn how a new sensor works. While this device was initially designed for use during our &lt;a href="https://voidstarsec.com/hhb.html"&gt;hardware hacking bootcamp&lt;/a&gt; it has quickly become my go-to when performing initial hardware assessments of COTS devices.&lt;/p&gt;
+&lt;p&gt;The PCB is well documented, and the IO pins are all labeled as shown in the image below:&lt;/p&gt;
+&lt;p&gt;&lt;img src= "https://voidstarsec.com/blog/assets/images/jtag-pifex/pifex.JPG" alt="your-image-description" style="border: 8px solid black;" class="center"&gt;&lt;/p&gt;
+&lt;p&gt;We also have added an I2C OLED screen, which you can customize using the Adafruit CircuitPython libraries:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="JTAG ID Clipped " src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag_id_clipped.jpg"&gt;&lt;/p&gt;
+&lt;h1&gt;PiFex: Hardware&lt;/h1&gt;
+&lt;p&gt;The PiFex exposes the following interfaces to the end user:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;UART via &lt;code&gt;IO14&lt;/code&gt; and &lt;code&gt;IO15&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;SPI via &lt;code&gt;IO8&lt;/code&gt;, &lt;code&gt;IO9&lt;/code&gt;, &lt;code&gt;IO10&lt;/code&gt; and &lt;code&gt;IO11&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;I2C via &lt;code&gt;IO2&lt;/code&gt; and &lt;code&gt;IO3&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;JTAG via &lt;code&gt;IO2&lt;/code&gt;,&lt;code&gt;IO3&lt;/code&gt;,&lt;code&gt;IO14&lt;/code&gt; and &lt;code&gt;IO15&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;SWD via &lt;code&gt;IO9&lt;/code&gt; and &lt;code&gt;IO11&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;There are also an additional eight GPIO pins. These interfaces were chosen because they are the ones that we utilize in our hardware hacking training and are also the most likely to be used by tinkerers and hardware hackers for other projects. &lt;/p&gt;
+&lt;h2&gt;Logic Analyzer Connector&lt;/h2&gt;
+&lt;p&gt;When reverse engineering a target device or inspecting why your custom code controlling a specific peripheral isn't working, a logic analyzer is your best friend. To help simplify the wiring for both our training and standard usage, we also added a logic analyzer connector. This was done to remediate potential wiring issues and make debugging and troubleshooting as easy as possible. An interface board was designed to connect to entry-level logic analyzers that can be seen in the image below:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_connector.JPG"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_1.JPG"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_2.JPG"&gt;&lt;/p&gt;
+&lt;p&gt;This helps streamline connecting a logic analyzer to the PiFex and analyzing the transmitted or monitored signals. &lt;/p&gt;
+&lt;h2&gt;Level Shifter(s)&lt;/h2&gt;
+&lt;p&gt;The Raspberry PI uses 3.3V logic levels, meaning it can only communicate with devices that use that same logic level. If we want to connect to a device that uses lower voltages (1.8V and 1.2V are becoming increasingly common), we need to route those through a level shifter. To streamline this and help reduce issues with wiring during our training, we've added two onboard level shifters.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/level_shifters.JPG"&gt;&lt;/p&gt;
+&lt;p&gt;We chose to use the &lt;a href="https://www.ti.com/product/TXB0108"&gt;TXB0108 Bi-Directional level shifters&lt;/a&gt;; these allow us to communicate with devices at a voltage below 3.3V. In the case where a different logic level is needed, the user can select whether to use an external voltage source for the input voltage using the &lt;code&gt;VCCA_IN&lt;/code&gt; line on the exposed headers. The level shifter then references this voltage by toggling the selector switch at the top of the board to &lt;code&gt;VCCA_IN&lt;/code&gt; as opposed to the default state, which is &lt;code&gt;3.3V&lt;/code&gt;.&lt;/p&gt;
+&lt;h1&gt;PiFex: Software&lt;/h1&gt;
+&lt;p&gt;If you've ever had to set up a headless Raspberry Pi before, you know that it's not always a simple task, and when performing remote training, we can't assume that everyone will be able to manually configure their Pi to connect to their network. This is why we designed the PiFex image to use a USB-Ethernet gadget on startup to present an Ethernet device to the end user over USB. This results in an easy, predictable way to connect to the Pi. After plugging the Pi into their machine, all the user needs to do is set the IP address, and they are all set. A short video walking through the web interface can be seen below:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/multi.gif" style="display:block; margin-left:auto; margin-right:auto"&gt;&lt;/p&gt;
+&lt;p&gt;As mentioned in the previous section, one of the initial hurdles when learning about embedded protocols is selecting what tool or interface you want to learn with. Embedded development boards like the Arduino series or STM32 series are great but require setting up a development environment and understanding the specifics of the target microcontroller. One of the benefits of using an embedded Linux board is that these interfaces are exposed via &lt;code&gt;/dev/&lt;/code&gt; and can be accessed using many programming languages such as Python, Rust, C, and even bash. &lt;/p&gt;
+&lt;h2&gt;Jupyter Notebooks&lt;/h2&gt;
+&lt;p&gt;Throughout our training, we utilize Jupyter Notebooks to help streamline the process and provide students with template notebooks for future assessments. For example, the JTAG notebook contains instructions and tooling to perform:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;JTAG Scan Chain Detection via &lt;code&gt;go-jtagenum&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Example UrJTAG Python Bindings for low-level scan chain access&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Example OpenOCD configurations and Python bindings for scripting JTAG operations&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Screenshots of the included notebooks can be seen below:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag-notebook-2.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/notebook-1.png"&gt;&lt;/p&gt;
+&lt;p&gt;While in class, we will use all of these features on our target, and students will be able to copy this notebook and use the same tools and techniques for future targets. &lt;/p&gt;
+&lt;p&gt;Last but certainly not least, we've configured the PiFex image to allow access to standard tools such as SSH and FTP. Now that we've reviewed the PiFex's features and intended use case, let's reverse-engineer the JTAG TAP for an undocumented target!&lt;/p&gt;
+&lt;h1&gt;PiFex Demo 1 : JTAG&lt;/h1&gt;
+&lt;p&gt;So, we've talked about our new hardware tooling. How about a demonstration of it in action? Let's start with a low-cost SSD purchased on AliExpress. &lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/top_pcb_labelled.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;If we break down the hardware, we have the following:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Component&lt;/th&gt;
+&lt;th&gt;Part Number&lt;/th&gt;
+&lt;th&gt;Datasheet / Information&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;SM2259XT&lt;/td&gt;
+&lt;td&gt;&lt;a href="https://www.siliconmotion.com/download/q/a/SM2259_XT_PB_EN_201910.pdf"&gt;Advertisement / Basic Information&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;SPS64472LBTH2&lt;/td&gt;
+&lt;td&gt;NA - 64GB NAND Flash&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;50.00 MHz&lt;/td&gt;
+&lt;td&gt;Oscilator&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;NA&lt;/td&gt;
+&lt;td&gt;10 pin debug header&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;After searching for datasheets, we were not able to locate much; however, next, we will investigate the mystery header at the end of the board. Let's start by looking at this debug connector at the end of the drive. First, we will attempt to identify the ground connection. To do this, we will use our multimeter in continuity mode and test against a known ground. We will use the large copper fills to connect the SSD to an adapter board in this case. &lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/known_ground.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;After performing this test, we determined that the following pin was ground.
+&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/known_ground_2.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;Now we need to determine what logic levels are in use; remember that the Pi uses a 3.3V logic level by default, so if there are other levels in use, we will need to locate a reference voltage for the level shifter. We will use the following pinout of the SSD for reference:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/connector_pins.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;After measuring the voltages on the connector, we saw the following voltages. &lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Side Note:&lt;/strong&gt; When reversing a new target, I like to place the target platform on top of a blank sheet of paper; that way, I can quickly write down notes as I am probing/reverse engineering without having to turn away from the workspace. You can see this in the video below:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/measurement.gif" style="display:block; margin-left:auto; margin-right:auto"&gt;&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Pin&lt;/th&gt;
+&lt;th&gt;Voltage&lt;/th&gt;
+&lt;th&gt;Usage&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0V&lt;/td&gt;
+&lt;td&gt;GND&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;3.28V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;3.28V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;3.173V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;0.02V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;It is extremely common for voltage sources to have capacitors connected to them called decoupling capacitors. These capacitors help stabilize the power supply in the event of voltage fluctuations. From here, there are two approaches that we can take to finding out which pins &lt;strong&gt;might&lt;/strong&gt; be VCC on our SSD.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Note what pins are connected to large capacitors near the connector&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Monitor the voltage source on power up / power down&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Based on the voltages we collected, we should monitor pins 2,3,4,6,7, and \8 with the oscilloscope and see how they differ. Take a look at the images below and see if you can spot the different one:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/all_drops.png"&gt;&lt;/p&gt;
+&lt;p&gt;If we examine the images highlighted in green below, we see a relatively sharp drop from high to low:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/digital_drops.png"&gt;&lt;/p&gt;
+&lt;p&gt;Looking closely at the images above, you may notice that image 1 has a slightly different shape when it rises and falls than the other lines. This is likely due to a capacitor being present somewhere on this line, which makes it a good candidate for VCC. This was pin two on the debug header, so we can now update our table as shown below.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/analog_drops.png"&gt;&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Pin&lt;/th&gt;
+&lt;th&gt;Voltage&lt;/th&gt;
+&lt;th&gt;Usage&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0V&lt;/td&gt;
+&lt;td&gt;GND&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;3.28V&lt;/td&gt;
+&lt;td&gt;VCC&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;3.28V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;3.173V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;0.02V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;We will connect to the SSD using the clips shown in the image below, these were also purchased on AliExpress.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/clip-only.JPG"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/connected.JPG"&gt;&lt;/p&gt;
+&lt;p&gt;With this assumption, we are left with six unknown pins. Next, we can perform a JTAG IDCODE scan using the &lt;code&gt;go-jtagenum&lt;/code&gt; tools; this will attempt to brute force all of the possible JTAG pin combinations and will report back pin configurations that report a valid ID code or pass the bypass test. If you're unfamiliar with these scans and want to learn more about them, check out my old writeup &lt;a href="https://wrongbaud.github.io/posts/jtag-hdd/"&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;pi@voidstar:~/go/bin/linux_arm&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;./go-jtagenum&lt;span class="w"&gt; &lt;/span&gt;-pins&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;{ &amp;quot;pin2&amp;quot;: 2, &amp;quot;pin3&amp;quot;: 3, &amp;quot;pin14&amp;quot;: 14, &amp;quot;pin15&amp;quot;: 15, &amp;quot;pin10&amp;quot;: 10, &amp;quot;pin9&amp;quot;: 9}&amp;#39;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;-command&lt;span class="w"&gt; &lt;/span&gt;scan_idcode&lt;span class="w"&gt; &lt;/span&gt;-delay-tck&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;50&lt;/span&gt;
+defined&lt;span class="w"&gt; &lt;/span&gt;pins:&lt;span class="w"&gt; &lt;/span&gt;map&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="m"&gt;2&lt;/span&gt;:pin2&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;3&lt;/span&gt;:pin3&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;9&lt;/span&gt;:pin9&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;10&lt;/span&gt;:pin10&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;14&lt;/span&gt;:pin14&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;15&lt;/span&gt;:pin15&lt;span class="o"&gt;]&lt;/span&gt;
+&lt;span class="o"&gt;================================&lt;/span&gt;
+Starting&lt;span class="w"&gt; &lt;/span&gt;scan&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;IDCODE...
+FOUND!&lt;span class="w"&gt; &lt;/span&gt;TCK:pin10&lt;span class="w"&gt; &lt;/span&gt;TMS:pin3&lt;span class="w"&gt; &lt;/span&gt;TDO:pin2
+&lt;span class="w"&gt;     &lt;/span&gt;devices:
+&lt;span class="w"&gt;        &lt;/span&gt;0x459dd1e7&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x0f3&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;Digital&lt;span class="w"&gt; &lt;/span&gt;Microwave&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x59dd,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x4&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xb83b3f6f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x7b7&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x83b3,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xb&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x268b37a3&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x3d1&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;Accelerated&lt;span class="w"&gt; &lt;/span&gt;Memory&lt;span class="w"&gt; &lt;/span&gt;Production&lt;span class="w"&gt; &lt;/span&gt;Inc.&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x68b3,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x2&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x5f5fcedf&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x76f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xf5fc,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x5&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xf79d3aeb&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x575&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x79d3,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xf&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x72ba6a4f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x527&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x2ba6,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x7&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x7bf1f75d&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x3ae&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;Korea&lt;span class="w"&gt; &lt;/span&gt;Uhbele&lt;span class="w"&gt; &lt;/span&gt;International&lt;span class="w"&gt; &lt;/span&gt;Group&lt;span class="w"&gt; &lt;/span&gt;Ltd.&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xbf1f,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x7&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xe7cfffaf&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x7d7&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x7cff,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xe&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xb0cf6bbf&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x5df&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x0cf6,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xb&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xebbfb71f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x38f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;Ericsson&lt;span class="w"&gt; &lt;/span&gt;Modems&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xbbfb,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xe&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xd6f7fc17&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x60b&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x6f7f,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xd&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xedfe967b&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x33d&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;AIM&lt;span class="w"&gt; &lt;/span&gt;Corporation&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xdfe9,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xe&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xfeefd88d&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x446&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xeefd,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xf&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x8ef5b7ff&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x3ff&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xef5b,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x8&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x2fdc8f9f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x7cf&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xfdc8,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x2&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x7ce9726b&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x135&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;API&lt;span class="w"&gt; &lt;/span&gt;NetWorks&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xce97,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x7&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x7ff76d77&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x6bb&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xff76,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x7&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xb9f58fdb&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x7ed&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x9f58,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xb&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xe36f2bb7&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x5db&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x36f2,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xe&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x757fbbdb&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x5ed&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x57fb,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x7&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x4fbeae5f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x72f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xfbea,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x4&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0xddf6f17f&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x0bf&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;Broadcom&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xdf6f,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0xd&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;0x1f3cefbd&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x7de&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;invalid&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0xf3ce,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x1&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;     &lt;/span&gt;possible&lt;span class="w"&gt; &lt;/span&gt;nTRST:&lt;span class="w"&gt; &lt;/span&gt;pin9,&lt;span class="w"&gt; &lt;/span&gt;pin14&lt;span class="w"&gt; &lt;/span&gt;pin15&lt;span class="w"&gt; &lt;/span&gt;
+FOUND!&lt;span class="w"&gt; &lt;/span&gt;TCK:pin10&lt;span class="w"&gt; &lt;/span&gt;TMS:pin14&lt;span class="w"&gt; &lt;/span&gt;TDO:pin15
+&lt;span class="w"&gt;     &lt;/span&gt;devices:
+&lt;span class="w"&gt;        &lt;/span&gt;0x100434b1&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x258&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;Lorom&lt;span class="w"&gt; &lt;/span&gt;Industrial&lt;span class="w"&gt; &lt;/span&gt;Co.&lt;span class="w"&gt; &lt;/span&gt;Ltd.&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x0043,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x1&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;     &lt;/span&gt;possible&lt;span class="w"&gt; &lt;/span&gt;nTRST:&lt;span class="w"&gt; &lt;/span&gt;pin9&lt;span class="w"&gt; &lt;/span&gt;pin2&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;pin3&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
+&lt;span class="o"&gt;================================&lt;/span&gt;
+pi@voidstar:~/go/bin/linux_arm&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;./go-jtagenum&lt;span class="w"&gt; &lt;/span&gt;-pins&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;{ &amp;quot;pin2&amp;quot;: 2, &amp;quot;pin3&amp;quot;: 3, &amp;quot;pin14&amp;quot;: 14, &amp;quot;pin15&amp;quot;: 15, &amp;quot;pin10&amp;quot;: 10, &amp;quot;pin9&amp;quot;: 9}&amp;#39;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;-command&lt;span class="w"&gt; &lt;/span&gt;scan_bypass&lt;span class="w"&gt; &lt;/span&gt;-delay-tck&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;50&lt;/span&gt;
+defined&lt;span class="w"&gt; &lt;/span&gt;pins:&lt;span class="w"&gt; &lt;/span&gt;map&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="m"&gt;2&lt;/span&gt;:pin2&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;3&lt;/span&gt;:pin3&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;9&lt;/span&gt;:pin9&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;10&lt;/span&gt;:pin10&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;14&lt;/span&gt;:pin14&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;15&lt;/span&gt;:pin15&lt;span class="o"&gt;]&lt;/span&gt;
+&lt;span class="o"&gt;================================&lt;/span&gt;
+Starting&lt;span class="w"&gt; &lt;/span&gt;scan&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;pattern&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;0110011101001101101000010111001001&lt;/span&gt;
+FOUND!&lt;span class="w"&gt; &lt;/span&gt;TCK:pin10&lt;span class="w"&gt; &lt;/span&gt;TMS:pin14&lt;span class="w"&gt; &lt;/span&gt;TDO:pin15&lt;span class="w"&gt; &lt;/span&gt;TDI:pin9,&lt;span class="w"&gt; &lt;/span&gt;possible&lt;span class="w"&gt; &lt;/span&gt;nTRST:&lt;span class="w"&gt; &lt;/span&gt;pin2&lt;span class="w"&gt; &lt;/span&gt;pin3&lt;span class="w"&gt; &lt;/span&gt;
+^C
+pi@voidstar:~/go/bin/linux_arm&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;./go-jtagenum&lt;span class="w"&gt; &lt;/span&gt;-pins&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;{ &amp;quot;pin2&amp;quot;: 2, &amp;quot;pin3&amp;quot;: 3, &amp;quot;pin14&amp;quot;: 14, &amp;quot;pin15&amp;quot;: 15, &amp;quot;pin10&amp;quot;: 10, &amp;quot;pin9&amp;quot;: 9}&amp;#39;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;-command&lt;span class="w"&gt; &lt;/span&gt;scan_idcode&lt;span class="w"&gt; &lt;/span&gt;-delay-tck&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;50&lt;/span&gt;
+defined&lt;span class="w"&gt; &lt;/span&gt;pins:&lt;span class="w"&gt; &lt;/span&gt;map&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="m"&gt;2&lt;/span&gt;:pin2&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;3&lt;/span&gt;:pin3&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;9&lt;/span&gt;:pin9&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;10&lt;/span&gt;:pin10&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;14&lt;/span&gt;:pin14&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;15&lt;/span&gt;:pin15&lt;span class="o"&gt;]&lt;/span&gt;
+&lt;span class="o"&gt;================================&lt;/span&gt;
+Starting&lt;span class="w"&gt; &lt;/span&gt;scan&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;IDCODE...
+FOUND!&lt;span class="w"&gt; &lt;/span&gt;TCK:pin10&lt;span class="w"&gt; &lt;/span&gt;TMS:pin14&lt;span class="w"&gt; &lt;/span&gt;TDO:pin15
+&lt;span class="w"&gt;     &lt;/span&gt;devices:
+&lt;span class="w"&gt;        &lt;/span&gt;0x100434b1&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x258&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;Lorom&lt;span class="w"&gt; &lt;/span&gt;Industrial&lt;span class="w"&gt; &lt;/span&gt;Co.&lt;span class="w"&gt; &lt;/span&gt;Ltd.&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x0043,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x1&lt;span class="o"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;     &lt;/span&gt;possible&lt;span class="w"&gt; &lt;/span&gt;nTRST:&lt;span class="w"&gt; &lt;/span&gt;pin2&lt;span class="w"&gt; &lt;/span&gt;pin3&lt;span class="w"&gt; &lt;/span&gt;pin9&lt;span class="w"&gt; &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Before we move forward, let's talk about the output that we're seeing above. You'll notice that &lt;code&gt;go-jtagenum&lt;/code&gt; discovered what it believes to be multiple possible pin mappings, some of which contain more "devices" than others. While it is possible that there &lt;strong&gt;can&lt;/strong&gt; be various devices on a JTAG scan chain, we know that this device is pretty straightforward and will not likely have 10+ devices. This is the one drawback of the &lt;code&gt;IDCODE&lt;/code&gt; scan; it simply checks to see if data is changing** on the assumed &lt;code&gt;TDO&lt;/code&gt; port, which can lead to many false positives. However, the entry displaying just one &lt;code&gt;IDCODE&lt;/code&gt; value looks promising; we can further investigate this TAP using the &lt;code&gt;BYPASS&lt;/code&gt; scan.&lt;/p&gt;
+&lt;p&gt;We can attempt to verify these results with a bypass scan. The &lt;code&gt;BYPASS&lt;/code&gt; scan attempts to leverage the &lt;code&gt;BYPASS&lt;/code&gt; instruction of the JTAG TAP which directly links the &lt;code&gt;TDI&lt;/code&gt; and &lt;code&gt;TDO&lt;/code&gt; lines. The scan attempts to enter the &lt;code&gt;BYPASS&lt;/code&gt; instruction, provides a unique bit pattern on &lt;code&gt;TDI&lt;/code&gt;, and monitors for that same pattern on &lt;code&gt;TDO&lt;/code&gt;. If the data sent on &lt;code&gt;TDI&lt;/code&gt; matches what is read on &lt;code&gt;TDO&lt;/code&gt;, then the scan has determined the correct pinout. The results of the BYPASS scan can be seen below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;[&amp;#39;defined pins: map[2:IO_2 3:IO_3 9:IO_9 10:IO_10 14:IO_14 15:IO_]&amp;#39;,
+ &amp;#39;================================&amp;#39;,
+ &amp;#39;Starting scan for pattern 0110011101001101101000010111001001&amp;#39;,
+ &amp;#39;active, TCK:IO_10 TMS:IO_14 TDO:IO_ TDI:IO_2, wrong data received (0000000000000000000000000000000000)&amp;#39;,
+ &amp;#39; try adjusting frequency, delays, pullup, check hardware connectivity&amp;#39;,
+ &amp;#39;FOUND! TCK:IO_10 TMS:IO_14 TDO:IO_ TDI:IO_9, possible nTRST: IO_3 IO_2 &amp;#39;,
+ &amp;#39;================================&amp;#39;]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Going back to our table of pin usages, we now know the following:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Pin&lt;/th&gt;
+&lt;th&gt;Voltage&lt;/th&gt;
+&lt;th&gt;Usage&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0V&lt;/td&gt;
+&lt;td&gt;GND&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;3.28V&lt;/td&gt;
+&lt;td&gt;VCC&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;3.28V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;3.173V&lt;/td&gt;
+&lt;td&gt;???&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;0.02V&lt;/td&gt;
+&lt;td&gt;TDO&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;TMS&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;TDI&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;3.284V&lt;/td&gt;
+&lt;td&gt;TCK&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: We are not &lt;strong&gt;required&lt;/strong&gt; to use the labeled JTAG pins on the PiFex for JTAG operations, they are configurable via OpenOCD. &lt;/p&gt;
+&lt;p&gt;So now that we know what the pins are, we need to use them to access the test access port (TAP) on the device. There is only one problem: we know our pins, but now we need to figure out how to actually use them. We can now write to the Instruction Register (IR) and Data Registers (DR), but without knowing &lt;strong&gt;what&lt;/strong&gt; to write to them, knowing the JTAG pinout is largely useless. Before we move forward, we need to figure out two things:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;What type of CPU is this?&lt;/li&gt;
+&lt;li&gt;Can we use any open-source tools to interact with it?&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;To determine what type of CPU we're dealing with, we can start with the ID. We can extract this via a tool called UrJTAG.&lt;/p&gt;
+&lt;h2&gt;UrJTAG for Reverse Engineers&lt;/h2&gt;
+&lt;p&gt;&lt;a href="http://urjtag.org/"&gt;UrJTAG&lt;/a&gt; is an open-source tool designed for performing low-level JTAG operations. This tool allows one to programmatically read and write the instruction register and corresponding data registers when connected to a JTAG TAP. It was originally designed to enable developers to use other JTAG tooling besides those provided by the original component manufacturer. Because of this tool's low-level instrumentation and introspection, it is also beneficial to us as reverse engineers when examining a new TAP. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nf"&gt;pi&lt;/span&gt;&lt;span class="nv"&gt;@voidstar&lt;/span&gt;&lt;span class="err"&gt;:&lt;/span&gt;&lt;span class="o"&gt;~/&lt;/span&gt;&lt;span class="n"&gt;pifex&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;software&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;urjtag&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;2021.03&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;$&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;sudo&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;src&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;apps&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;jtag&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;jtag&lt;/span&gt;
+&lt;span class="n"&gt;UrJTAG&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mf"&gt;2021.03&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;#&lt;/span&gt;
+&lt;span class="n"&gt;Copyright&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;C&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2002&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2003&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ETC&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;o&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+&lt;span class="n"&gt;Copyright&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;C&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2007&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2008&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2009&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Kolja&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Waschk&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="ow"&gt;and&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;the&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;respective&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;authors&lt;/span&gt;
+&lt;span class="n"&gt;UrJTAG&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;is&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;free&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;software&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;covered&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;by&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;the&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;GNU&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;General&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;Public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;License&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="ow"&gt;and&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;you&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;are&lt;/span&gt;
+&lt;span class="n"&gt;welcome&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;to&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;change&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;it&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="ow"&gt;and&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="ow"&gt;or&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;distribute&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;copies&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;of&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;it&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;under&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;certain&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;conditions&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+&lt;span class="n"&gt;There&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;is&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;no&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;warranty&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;UrJTAG&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+&lt;span class="nl"&gt;warning&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;UrJTAG&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;may&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;damage&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;your&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;hardware&lt;/span&gt;&lt;span class="err"&gt;!&lt;/span&gt;
+&lt;span class="n"&gt;Type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="ss"&gt;&amp;quot;quit&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;to&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;exit&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="ss"&gt;&amp;quot;help&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;help&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+&lt;span class="n"&gt;jtag&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;cable&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;gpio&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;tck&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;tdi&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;9&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;tms&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;14&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;tdo&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;15&lt;/span&gt;
+&lt;span class="n"&gt;Initializing&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;GPIO&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;JTAG&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;Chain&lt;/span&gt;
+&lt;span class="n"&gt;jtag&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;idcode&lt;/span&gt;
+&lt;span class="n"&gt;Reading&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;bytes&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;of&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;idcode&lt;/span&gt;
+&lt;span class="k"&gt;Read&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;10110001&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0xb1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00110100&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0x34&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00000100&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0x04&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00010000&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0x10&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00000000&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0x00&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00000000&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0x00&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00000000&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0x00&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00000000&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0x00&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;jtag&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;detect&lt;/span&gt;
+&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nl"&gt;length&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;
+&lt;span class="n"&gt;Chain&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nl"&gt;length&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Device&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nl"&gt;Id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00010000000001000011010010110001&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mh"&gt;0x100434B1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="k"&gt;Unknown&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;manufacturer&lt;/span&gt;&lt;span class="err"&gt;!&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;01001011000&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;usr&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="k"&gt;local&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;share&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;urjtag&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;MANUFACTURERS&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;jtag&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;discover&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1111&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0001&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nl"&gt;warning&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;TDO&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;seems&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;to&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;be&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;stuck&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;at&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;
+&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0010&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0011&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0100&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0101&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0110&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0111&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1001&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1010&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;32&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1011&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;32&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1100&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;32&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1101&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;Detecting&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;DR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;length&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;IR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1110&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="n"&gt;jtag&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Using the data that we gathered from our previous scans, we can set up our cable in UrJTAG as follows:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;cable gpio tck=10 tdi=9 tms=14 tdo=15
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This tells UrJTAG that we are connected to our target via GPIO pins on a Linux device; we then follow that with GPIO pin assignments for each JTAG signal. After defining our cable, we can run the &lt;code&gt;detect&lt;/code&gt;, &lt;code&gt;idcode&lt;/code&gt;, and &lt;code&gt;discover&lt;/code&gt; commands, which will attempt to learn more about the TAP that it is connected to, resulting in the output above.&lt;/p&gt;
+&lt;p&gt;After running a UrJTAG scan, we now know the following:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;How many available DRs are present&lt;/li&gt;
+&lt;li&gt;The width of all of the available DRs&lt;/li&gt;
+&lt;li&gt;Confirmation of the CPU ID&lt;/li&gt;
+&lt;li&gt;Confirmation of the JTAG pinout&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This is a lot of great information that we did not have at the beginning of this post, but what can we do with it? In order to read memory, set breakpoints, etc., we need to know more about how to interact with these registers. Without a datasheet, this is a difficult task. However, there are other open-source tools that we can leverage before attempting &lt;a href="https://fahrplan.events.ccc.de/congress/2009/Fahrplan/attachments/1435_JTAG.pdf"&gt;black box reverse engineering of the JTAG TAP&lt;/a&gt;.&lt;/p&gt;
+&lt;h2&gt;OpenOCD for Reverse Engineers&lt;/h2&gt;
+&lt;p&gt;Armed with this information, we can search the ID and determine that this chip uses the ARCompact architecture, and if we check the configuration files for OpenOCD, we can see this ID code in the following files:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;pi@voidstar:~/pifex/software/openocd/tcl/cpu/arc&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;ls
+common.tcl&lt;span class="w"&gt; &lt;/span&gt;em.tcl&lt;span class="w"&gt;  &lt;/span&gt;hs.tcl&lt;span class="w"&gt;  &lt;/span&gt;v2.tcl
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let's see what CPUs reference these files, this will give us a better understanding of how to write a generic OpenOCD config file for an ARCompact target. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;pi@voidstar:~/pifex/software/openocd/tcl&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;grep&lt;span class="w"&gt; &lt;/span&gt;-r&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;arc/common&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;*
+cpu/arc/v2.tcl:source&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;find&lt;span class="w"&gt; &lt;/span&gt;cpu/arc/common.tcl&lt;span class="o"&gt;]&lt;/span&gt;
+pi@voidstar:~/pifex/software/openocd/tcl&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;grep&lt;span class="w"&gt; &lt;/span&gt;-r&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;arc/v2&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;*
+cpu/arc/em.tcl:source&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;find&lt;span class="w"&gt; &lt;/span&gt;cpu/arc/v2.tcl&lt;span class="o"&gt;]&lt;/span&gt;
+cpu/arc/hs.tcl:source&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;find&lt;span class="w"&gt; &lt;/span&gt;cpu/arc/v2.tcl&lt;span class="o"&gt;]&lt;/span&gt;
+pi@voidstar:~/pifex/software/openocd/tcl&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;grep&lt;span class="w"&gt; &lt;/span&gt;-r&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;arc/hs&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;*
+target/snps_hsdk.cfg:source&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;find&lt;span class="w"&gt; &lt;/span&gt;cpu/arc/hs.tcl&lt;span class="o"&gt;]&lt;/span&gt;
+target/snps_hsdk_4xd.cfg:source&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;find&lt;span class="w"&gt; &lt;/span&gt;cpu/arc/hs.tcl&lt;span class="o"&gt;]&lt;/span&gt;
+pi@voidstar:~/pifex/software/openocd/tcl&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;grep&lt;span class="w"&gt; &lt;/span&gt;-r&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;arc/em&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;*
+target/snps_em_sk_fpga.cfg:source&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;find&lt;span class="w"&gt; &lt;/span&gt;cpu/arc/em.tcl&lt;span class="o"&gt;]&lt;/span&gt;
+pi@voidstar:~/pifex/software/openocd/tcl&lt;span class="w"&gt; &lt;/span&gt;$
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;It looks like there is a few target file that uses these config files:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;snps_hsdk&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;snps_hsdk_4xd&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;snps_em_sk_fpga&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Let's do one more quick search before trying to write our own config file; if we search for the above config files, we find the following:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;pi@voidstar:~/pifex/software/openocd/tcl/board&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;ls&lt;span class="w"&gt; &lt;/span&gt;-lathr&lt;span class="w"&gt; &lt;/span&gt;*snps*
+-rw-r--r--&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;411&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;May&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;18&lt;/span&gt;:20&lt;span class="w"&gt; &lt;/span&gt;snps_hsdk_4xd.cfg
+-rw-r--r--&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;416&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;May&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;18&lt;/span&gt;:20&lt;span class="w"&gt; &lt;/span&gt;snps_hsdk.cfg
+-rw-r--r--&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;615&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;May&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;18&lt;/span&gt;:20&lt;span class="w"&gt; &lt;/span&gt;snps_em_sk_v2.2.cfg
+-rw-r--r--&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;659&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;May&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;18&lt;/span&gt;:20&lt;span class="w"&gt; &lt;/span&gt;snps_em_sk_v2.1.cfg
+-rw-r--r--&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;555&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;May&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;18&lt;/span&gt;:20&lt;span class="w"&gt; &lt;/span&gt;snps_em_sk_v1.cfg
+-rw-r--r--&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;pi&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;612&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;May&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;18&lt;/span&gt;:20&lt;span class="w"&gt; &lt;/span&gt;snps_em_sk.cfg
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;All of these config files are very straightforward and essentially import one of the three files located in the &lt;code&gt;target&lt;/code&gt; folder. Taking some basic information from the target folder we will construct our own OpenOCD as shown below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;source&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;find&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;cpu&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;arc&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;hs&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;tcl&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;span class="n"&gt;transport&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;select&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;jtag&lt;/span&gt;
+&lt;span class="c1"&gt;# We don&amp;#39;t know much about this CPU at the moment, until we do we&amp;#39;ll assume that&lt;/span&gt;
+&lt;span class="c1"&gt;# it has one core that we will index at 0 and that the dbg&lt;/span&gt;
+&lt;span class="n"&gt;set&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;_coreid&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;
+&lt;span class="n"&gt;set&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;_dbgbase&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;
+&lt;span class="c1"&gt;# CHIPNAME will be used to choose core family (600, 700 or EM). As far as&lt;/span&gt;
+&lt;span class="c1"&gt;# OpenOCD is concerned EM and HS are identical.&lt;/span&gt;
+&lt;span class="n"&gt;set&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;_CHIPNAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;arc&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;em&lt;/span&gt;
+&lt;span class="n"&gt;set&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;_TARGETNAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="n"&gt;_CHIPNAME&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;cpu&lt;/span&gt;
+&lt;span class="c1"&gt;# Create the TAP using the information we extracted via UrJTAG and the IDCODE scan&lt;/span&gt;
+&lt;span class="n"&gt;jtag&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;newtap&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="n"&gt;_CHIPNAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;cpu&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;irlen&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;ircapture&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mh"&gt;0x1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;expected&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mh"&gt;0x100434b1&lt;/span&gt;
+&lt;span class="c1"&gt;# OpenOCD requires us to create a target for debugging the target; most of the &lt;/span&gt;
+&lt;span class="c1"&gt;# provided arguments are variable names that we&amp;#39;ve already set up; however, we must &lt;/span&gt;
+&lt;span class="c1"&gt;# specify the architecture; in this case we&amp;#39;ll use ARCv2, the assumed architecture of &lt;/span&gt;
+&lt;span class="c1"&gt;# this CPU&lt;/span&gt;
+&lt;span class="n"&gt;target&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;create&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="n"&gt;_TARGETNAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;arcv2&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;chain&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;position&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="n"&gt;_TARGETNAME&lt;/span&gt;
+&lt;span class="c1"&gt;# Next we configure our initial guesses for the coreid and base address for debug regions of memory&lt;/span&gt;
+&lt;span class="c1"&gt;# We&amp;#39;re not using these at the moment, but perhaps after further reversing, we&amp;#39;ll learn more&lt;/span&gt;
+&lt;span class="c1"&gt;# and can come back and update them&lt;/span&gt;
+&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="n"&gt;_TARGETNAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;configure&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;coreid&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;
+&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="n"&gt;_TARGETNAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;configure&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;dbgbase&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;
+&lt;span class="c1"&gt;# Here, we are defining what to do when a reset event occurs&lt;/span&gt;
+&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="n"&gt;_TARGETNAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;configure&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;event&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;reset&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="nb"&gt;assert&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;arc_hs_reset $_TARGETNAME&amp;quot;&lt;/span&gt;
+&lt;span class="c1"&gt;# The following two lines were pulled from the ARC-specific examples in OpenOCD &lt;/span&gt;
+&lt;span class="c1"&gt;# These seem to be used across all ARCompact variants supported by OpenOCD&lt;/span&gt;
+&lt;span class="n"&gt;arc_hs_init_regs&lt;/span&gt;
+&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="n"&gt;_TARGETNAME&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;arc&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;cache&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;l2&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;auto&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This file will let OpenOCD know what pins to use on the Raspberry Pi and the specifics about our target CPU. The following config file can be used to configure the Raspberry Pi GPIO pins.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;source [interface/raspberrypi-native.cfg]
+
+transport select jtag
+
+adapter gpio tck -chip 0 10
+adapter gpio tms -chip 0 14
+adapter gpio tdi -chip 0 9
+adapter gpio tdo -chip 0 15
+
+adapter speed 100
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we run OpenOCD using these config files as an argument, we see the following:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;pi@voidstar:~/pifex/ssd-example&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;openocd&lt;span class="w"&gt; &lt;/span&gt;-f&lt;span class="w"&gt; &lt;/span&gt;raspberrypi-io.cfg&lt;span class="w"&gt; &lt;/span&gt;-f&lt;span class="w"&gt; &lt;/span&gt;ssd_example.cfg
+Open&lt;span class="w"&gt; &lt;/span&gt;On-Chip&lt;span class="w"&gt; &lt;/span&gt;Debugger&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.12.0+dev-01573-gbc9ca5f4a&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="m"&gt;2024&lt;/span&gt;-05-04-18:24&lt;span class="o"&gt;)&lt;/span&gt;
+Licensed&lt;span class="w"&gt; &lt;/span&gt;under&lt;span class="w"&gt; &lt;/span&gt;GNU&lt;span class="w"&gt; &lt;/span&gt;GPL&lt;span class="w"&gt; &lt;/span&gt;v2
+For&lt;span class="w"&gt; &lt;/span&gt;bug&lt;span class="w"&gt; &lt;/span&gt;reports,&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nb"&gt;read&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;http://openocd.org/doc/doxygen/bugs.html
+adapter&lt;span class="w"&gt; &lt;/span&gt;speed:&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;100&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;kHz
+Warn&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;Transport&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;jtag&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;was&lt;span class="w"&gt; &lt;/span&gt;already&lt;span class="w"&gt; &lt;/span&gt;selected
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;target&lt;span class="w"&gt; &lt;/span&gt;has&lt;span class="w"&gt; &lt;/span&gt;l2&lt;span class="w"&gt; &lt;/span&gt;cache&lt;span class="w"&gt; &lt;/span&gt;enabled&lt;span class="w"&gt; &lt;/span&gt;is&lt;span class="w"&gt; &lt;/span&gt;enabled
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;Listening&lt;span class="w"&gt; &lt;/span&gt;on&lt;span class="w"&gt; &lt;/span&gt;port&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;6666&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;tcl&lt;span class="w"&gt; &lt;/span&gt;connections
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;Listening&lt;span class="w"&gt; &lt;/span&gt;on&lt;span class="w"&gt; &lt;/span&gt;port&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;4444&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;telnet&lt;span class="w"&gt; &lt;/span&gt;connections
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;BCM2835&lt;span class="w"&gt; &lt;/span&gt;GPIO&lt;span class="w"&gt; &lt;/span&gt;JTAG/SWD&lt;span class="w"&gt; &lt;/span&gt;bitbang&lt;span class="w"&gt; &lt;/span&gt;driver
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;clock&lt;span class="w"&gt; &lt;/span&gt;speed&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;100&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;kHz
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;JTAG&lt;span class="w"&gt; &lt;/span&gt;tap:&lt;span class="w"&gt; &lt;/span&gt;arc-em.cpu&lt;span class="w"&gt; &lt;/span&gt;tap/device&lt;span class="w"&gt; &lt;/span&gt;found:&lt;span class="w"&gt; &lt;/span&gt;0x100434b1&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;mfg:&lt;span class="w"&gt; &lt;/span&gt;0x258&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;ARC&lt;span class="w"&gt; &lt;/span&gt;International&lt;span class="o"&gt;)&lt;/span&gt;,&lt;span class="w"&gt; &lt;/span&gt;part:&lt;span class="w"&gt; &lt;/span&gt;0x0043,&lt;span class="w"&gt; &lt;/span&gt;ver:&lt;span class="w"&gt; &lt;/span&gt;0x1&lt;span class="o"&gt;)&lt;/span&gt;
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;arc-em.cpu&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;Examination&lt;span class="w"&gt; &lt;/span&gt;succeed
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;starting&lt;span class="w"&gt; &lt;/span&gt;gdb&lt;span class="w"&gt; &lt;/span&gt;server&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;arc-em.cpu&lt;span class="w"&gt; &lt;/span&gt;on&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;3333&lt;/span&gt;
+Info&lt;span class="w"&gt; &lt;/span&gt;:&lt;span class="w"&gt; &lt;/span&gt;Listening&lt;span class="w"&gt; &lt;/span&gt;on&lt;span class="w"&gt; &lt;/span&gt;port&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;3333&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;gdb&lt;span class="w"&gt; &lt;/span&gt;connections
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Success! It looks like we have connected to the JTAG TAP of this SSD using OpenOCD. Next, we will use this to read memory and single-step through the running firmware on the SSD itself. &lt;/p&gt;
+&lt;h3&gt;Reading Memory with OpenOCD&lt;/h3&gt;
+&lt;p&gt;Now that we have a working OpenOCD connection, we can read memory using the &lt;code&gt;mdw&lt;/code&gt; and &lt;code&gt;dump_image&lt;/code&gt; commands. We will dump a small region of memory as a test:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;pi&lt;/span&gt;&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="nx"&gt;voidstar&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="o"&gt;~&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;$&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;telnet&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;localhost&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4444&lt;/span&gt;
+&lt;span class="nx"&gt;Trying&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;...&lt;/span&gt;
+&lt;span class="nx"&gt;Trying&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m m-Double"&gt;127.0.0.1&lt;/span&gt;&lt;span class="o"&gt;...&lt;/span&gt;
+&lt;span class="nx"&gt;Connected&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;to&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;localhost&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+&lt;span class="nx"&gt;Escape&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;character&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;is&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;^&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+&lt;span class="nx"&gt;Open&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;On&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="nx"&gt;Chip&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;Debugger&lt;/span&gt;
+&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;mdw&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;100&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000000&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000214&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000224&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000234&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000244&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000254&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000264&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000274&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000204&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000020&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000214&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000224&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000234&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000244&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000254&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000264&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1000274&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2000204&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000040&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2000214&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2000224&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2000234&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2000244&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2000254&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2000264&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2000274&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3000204&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000060&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3000214&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0000204&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="nx"&gt;f80240a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;80001000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="nx"&gt;f80220a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;26001000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="nx"&gt;f80230a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;80001000&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000080&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3000254&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3000264&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3000274&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7080266&lt;/span&gt;&lt;span class="nx"&gt;b&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00000000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;70&lt;/span&gt;&lt;span class="nx"&gt;c0266b&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00000000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="nx"&gt;f802020&lt;/span&gt;
+&lt;span class="mh"&gt;0x000000a0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;05&lt;/span&gt;&lt;span class="nx"&gt;b00000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00402069&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7000264&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7000264&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7000264&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;ffcf07f1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;500071&lt;/span&gt;&lt;span class="nx"&gt;cf&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1154&lt;/span&gt;&lt;span class="nx"&gt;a000&lt;/span&gt;
+&lt;span class="mh"&gt;0x000000c0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;70&lt;/span&gt;&lt;span class="nx"&gt;cf0802&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;05&lt;/span&gt;&lt;span class="nx"&gt;f81000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00&lt;/span&gt;&lt;span class="nx"&gt;a01800&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;08001000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00201954&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;78&lt;/span&gt;&lt;span class="nx"&gt;e07ee0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;71&lt;/span&gt;&lt;span class="nx"&gt;cfc5e1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00005000&lt;/span&gt;
+&lt;span class="mh"&gt;0x000000e0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0880110&lt;/span&gt;&lt;span class="nx"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;500072&lt;/span&gt;&lt;span class="nx"&gt;cf&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;b8e4a000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;11&lt;/span&gt;&lt;span class="nx"&gt;dcf47f&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;b8810880&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;002219&lt;/span&gt;&lt;span class="nx"&gt;dc&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;08001204&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="nx"&gt;a04b880&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000100&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;db000020&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00&lt;/span&gt;&lt;span class="nx"&gt;e01a4c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="nx"&gt;fa01a44&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;80000000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="nx"&gt;fff208a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00201&lt;/span&gt;&lt;span class="nx"&gt;a58&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;08001268&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00201&lt;/span&gt;&lt;span class="nx"&gt;a68&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000120&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;08001274&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="nx"&gt;fc32086&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="nx"&gt;a822085&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00201&lt;/span&gt;&lt;span class="nx"&gt;a74&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;500075&lt;/span&gt;&lt;span class="nx"&gt;cf&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1517&lt;/span&gt;&lt;span class="nx"&gt;a0a8&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;20861880&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;b88000fc&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000140&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;10221&lt;/span&gt;&lt;span class="nx"&gt;d17&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0800125&lt;/span&gt;&lt;span class="nx"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="nx"&gt;f802004&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="nx"&gt;feefff8&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;00201&lt;/span&gt;&lt;span class="nx"&gt;a5c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0800125&lt;/span&gt;&lt;span class="nx"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="nx"&gt;f802004&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="nx"&gt;fef8ff8&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000160&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="nx"&gt;a5cb89c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;d8010020&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0022190&lt;/span&gt;&lt;span class="nx"&gt;d&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;08001204&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="nx"&gt;a04b881&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;15140020&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;b8841880&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;10221&lt;/span&gt;&lt;span class="nx"&gt;d14&lt;/span&gt;
+&lt;span class="mh"&gt;0x00000180&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;500071&lt;/span&gt;&lt;span class="nx"&gt;cf&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;110&lt;/span&gt;&lt;span class="nx"&gt;d07f0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;b8840880&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0022190&lt;/span&gt;&lt;span class="nx"&gt;d&lt;/span&gt;
+&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;dump_image&lt;/span&gt;
+&lt;span class="nx"&gt;dump_image&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;filename&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;address&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;size&lt;/span&gt;
+&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;dump_image&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;mem&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="nx"&gt;test&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;bin&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mh"&gt;0x100000&lt;/span&gt;
+&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;dumped&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1048576&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;bytes&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;in&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m m-Double"&gt;264.823212&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="m m-Double"&gt;3.867&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;KiB&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, we'll want to review this memory dump to make sure that it's accurate. This creates an interesting problem: we don't know what the memory contents will look like at address &lt;code&gt;0&lt;/code&gt;, especially since we don't have a datasheet or an example firmware image. In this case, we will start by running strings on the resulting binary; some of these results can be seen below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nb"&gt;pi&lt;/span&gt;&lt;span class="p"&gt;@&lt;/span&gt;&lt;span class="n"&gt;voidstar&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="o"&gt;~/&lt;/span&gt;&lt;span class="n"&gt;pifex&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;ssd&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;example&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nb"&gt;strings&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;mem&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;test&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bin&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;|&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;less&lt;/span&gt;
+02023042&lt;span class="n"&gt;MS2295CAX&lt;/span&gt;&lt;span class="o"&gt;--&lt;/span&gt;&lt;span class="n"&gt;XYYYYYYYY&lt;/span&gt;
+&lt;span class="n"&gt;SM2259PARA&lt;/span&gt;
+&lt;span class="s"&gt;SM2259BT&lt;/span&gt;
+&lt;span class="n"&gt;xSM2259BTDS&lt;/span&gt;
+&lt;span class="s"&gt;SM2259AC20200324&lt;/span&gt;
+&lt;span class="n"&gt;L&lt;/span&gt;^&lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="o"&gt;|&lt;/span&gt;
+&lt;span class="c"&gt;%`)$5a94&lt;/span&gt;
+&lt;span class="n"&gt;SMISSDRetryTable&lt;/span&gt;
+&lt;span class="s"&gt;Device_FW_Authentication&lt;/span&gt;
+&lt;span class="n"&gt;xFW_MAC_Key&lt;/span&gt;
+&lt;span class="s"&gt;SM2259ROMCodeTagZZZZ&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We've got human-readable strings, which is a great sign! We also have the part number for the CPU in these strings, which leads me to believe we've correctly extracted this memory region via OpenOCD. However, we need to learn more about this processor and what areas might interest us. We can figure this out using OpenOCD to attach to the target CPU via GDB.&lt;/p&gt;
+&lt;h3&gt;Debugging with OpenOCD&lt;/h3&gt;
+&lt;p&gt;Now that we have OpenOCD connected to our target, we can attempt to debug the target via GDB. However, this does not come without some strings attached; we will need to compile a version of GDB capable of targeting the ARCompact architecture. Luckily for us, the good folks over at Synopsis have released a port of binutils for the ARCompact architecture. We can clone the repository &lt;a href="https://github.com/foss-for-synopsys-dwc-arc-processors/binutils-gdb"&gt;here&lt;/a&gt; and build it on the Raspberry Pi (&lt;strong&gt;Note&lt;/strong&gt;: see the appendix for instructions on how to build this software).&lt;/p&gt;
+&lt;p&gt;After building GDB and attempting to connect to the GDB server presented by OpenOCD, we see the following:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="nt"&gt;gdb&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;x&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="nt"&gt;10i&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;$&lt;/span&gt;&lt;span class="nt"&gt;pc&lt;/span&gt;
+&lt;span class="o"&gt;=&amp;gt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x22b0&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;brne_s&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r0&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="nt"&gt;10&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;&lt;span class="nt"&gt;0x22ba&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22b2&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;ldb&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;di&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r2&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="cp"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;r18&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="cp"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22b6&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;btst_s&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r2&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="nt"&gt;0x7&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22b8&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;beq_s&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;-282&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;&lt;span class="nt"&gt;0x219e&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22ba&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;ldb&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r4&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="cp"&gt;[&lt;/span&gt;&lt;span class="mh"&gt;0x852&lt;/span&gt;&lt;span class="cp"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22c2&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;bbit0&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;t&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r4&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="nt"&gt;18&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;&lt;span class="nt"&gt;0x22d2&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22c6&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;ldb&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;di&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r2&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="cp"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;r13&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;113&lt;/span&gt;&lt;span class="cp"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22ca&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;bset_s&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r2&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="nt"&gt;r2&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22cc&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;stb&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nc"&gt;di&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r2&lt;/span&gt;&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="cp"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;r13&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;113&lt;/span&gt;&lt;span class="cp"&gt;]&lt;/span&gt;
+&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="nt"&gt;0x22d0&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;b_s&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;12&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;;&lt;/span&gt;&lt;span class="nt"&gt;0x22dc&lt;/span&gt;
+&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="nt"&gt;gdb&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;i&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;r&lt;/span&gt;
+&lt;span class="nt"&gt;r0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="nt"&gt;r1&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x101&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;257&lt;/span&gt;
+&lt;span class="nt"&gt;r2&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x10004aac&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;268454572&lt;/span&gt;
+&lt;span class="nt"&gt;r3&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="nt"&gt;r4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x100014b6&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;268440758&lt;/span&gt;
+&lt;span class="nt"&gt;r5&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x50100000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;1343225856&lt;/span&gt;
+&lt;span class="nt"&gt;r6&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x50100000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;1343225856&lt;/span&gt;
+&lt;span class="nt"&gt;r7&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x10&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;16&lt;/span&gt;
+&lt;span class="nt"&gt;r8&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="nt"&gt;r9&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="nt"&gt;r10&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="nt"&gt;r11&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x4&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;4&lt;/span&gt;
+&lt;span class="nt"&gt;r12&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="nt"&gt;r13&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x50000000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;1342177280&lt;/span&gt;
+&lt;span class="nt"&gt;r14&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="nt"&gt;r15&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x0&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0&lt;/span&gt;
+&lt;span class="nt"&gt;r16&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;0x5000a000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;1342218240&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Success! Using OpenOCD and GDB, we are able to single-step through the firmware and read register values. These register values tell us more about potential memory regions of interest that we can read out, specifically &lt;code&gt;0x50000000&lt;/code&gt; and &lt;code&gt;0x10000000&lt;/code&gt;. As a final test, we will load the area of memory we extracted initially into Ghidra and see if the instructions match what we see in GDB.  &lt;/p&gt;
+&lt;h3&gt;Loading the Firmware into Ghidra&lt;/h3&gt;
+&lt;p&gt;While the current Ghidra release does not support ARCompact, a wonderful fork is being maintained &lt;a href="https://github.com/niooss-ledger/ghidra"&gt;here&lt;/a&gt;. We can build this and use it to analyze our firmware image. &lt;/p&gt;
+&lt;p&gt;If we look at offset &lt;code&gt;0&lt;/code&gt; in the firmware image, we have what appears to be an interrupt vector table of some sort:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/ivt.png"&gt;&lt;/p&gt;
+&lt;p&gt;If we look a little further at the image, we can see that there are some branch instructions for a region that we've not extracted yet. We also see that the two areas we previously identified (&lt;code&gt;0x50000000&lt;/code&gt; and &lt;code&gt;0x10000000&lt;/code&gt;) are being referenced as well. These are likely internal/external SRAM regions, while the area starting around &lt;code&gt;0x4007000&lt;/code&gt; appears to be used as code.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/interesting.png"&gt;&lt;/p&gt;
+&lt;p&gt;Let's try to extract that region, load it into our Ghidra database, and see if the results make sense. First, we'll dump the region out using OpenOCD, as shown below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;dump_image 0x40070000.bin 0x40070000 0x100000
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We can then import it into our Ghidra database, resulting in the following:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/imported_new_region.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Success:&lt;/strong&gt; It looks like we have code in this region, and it disassembles properly. &lt;/p&gt;
+&lt;p&gt;From here, we now have the following primitives available to us on the SSD:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Memory R/W&lt;/li&gt;
+&lt;li&gt;Control Flow Monitoring / Modifications&lt;/li&gt;
+&lt;li&gt;Register Reads/Writes&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This puts one in a perfect position to do more software research, look for bugs or errors in their code, or even attempt to modify the firmware or reverse engineer the update process!&lt;/p&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;If you've read this far, thank you for taking the time to read it all. This probably should have been two separate posts!&lt;/p&gt;
+&lt;p&gt;With this blog post, we introduced the PiFex hardware and software tools. These tools utilize open-source software and commercial hardware to aid in embedded device assessments. We then demonstrated how to use these tools to discover and enumerate an undocumented JTAG TAP on an SSD. Using this TAP, we were able to read memory and control execution on the target, giving us full control over the device. &lt;/p&gt;
+&lt;p&gt;If you want to stay up to date on the official release, sign up for our mailing list &lt;a href="http://eepurl.com/hSl31f"&gt;here&lt;/a&gt;, or you can order one &lt;a href="https://voidmalt.gumroad.com/l/pifex"&gt;here&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;If you're interested in a &lt;a href="https://voidstarsec.com/hhb.html"&gt;private training&lt;/a&gt; at your organization, please don't hesitate to &lt;a href="https://voidstarsec.com/#contact"&gt;contact us&lt;/a&gt;. We also have our only public training available this year at &lt;a href="https://ringzer0.training/doubledown24-hardware-hacking-bootcamp/"&gt;RingZer0 DoubleDown Vegas&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;A big thanks goes out to Nash Reilly for his help and review of the initial hardware design; you can check out his blog &lt;a href="https://cushychicken.github.io"&gt;here&lt;/a&gt; and his other two job sites below:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://fpgajobs.com"&gt;fpgajobs.com&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://firmwarejobs.com"&gt;firmwarejobs.com&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1&gt;Appendix&lt;/h1&gt;
+&lt;h2&gt;Building Binutils&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;./configure --target=arc-elf32 --disable-werror
+make
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</content><category term="Pifex"></category><category term="pifex"></category><category term="jtag"></category><category term="hardware"></category><category term="blog"></category></entry></feed>
