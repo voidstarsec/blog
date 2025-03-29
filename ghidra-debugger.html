@@ -202,13 +202,13 @@ sudo ../docker-tpl/run ./build_ghidra.sh
 3. Copying it to Ghidra's extensions directory (so it will show up under the Install Extensions menu)
 4. Exiting the docker container</p>
 <p>Launch Ghidra via <code>ghidraRun</code> and go to <code>File</code>-&gt; <code>Install Extensions</code>. Select the GhidraGBA loader and click <code>OK</code>. You will need to restart Ghidra for the change to take effect. Now when you load a GBA ROM you should see the following:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="GBA" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gba.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="GBA" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gba.png"></p>
 <p>After running the auto analysis, Ghidra seems to make a pretty quick sense of the ROM. There are a lot of functions defined and things are looking good. So the next step is to figure out some way to narrow down what we care about in this ROM image, in other words, we need to find our needle in the haystack. Let's start by examining how the password system works in this game by entering a few passwords.</p>
 <h2>Analyzing the Rom</h2>
 <p>As mentioned before, our goal here is to try to understand the password system in use by this game. If we attempt to enter a password, the following screen is displayed:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="ROM1" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/rom-1.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="ROM1" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/rom-1.png"></p>
 <p>Note that we have all of the consonants and no vowels and numbers "0-9", and our passwords are only 5 characters long. This is a nice starting point for us as reverse engineers. We can use this information to help us narrow down functions of interest. For example- let's look through the strings in the ROM and see if these values are represented in a string somewhere. If we open the strings window, <code>Window</code> -&gt; <code>Defined Strings</code>, and filter for the first 5 characters available to us as password characters we see the following:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/strings-password-characters.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/strings-password-characters.png"></p>
 <p>So far so good - we only have two instances of this string in use. One is located at <code>0x804c11fc</code> and one at <code>0x84b86f0</code>. Upon examination of the first one, we see that this string gets passed to a function in the subroutine located at <code>0x8003358</code>, see below:</p>
 <div class="highlight"><pre><span></span><code><span class="n">undefined4</span><span class="w"> </span><span class="nf">passwd_1</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">param_1</span><span class="p">,</span><span class="kt">int</span><span class="w"> </span><span class="n">param_2</span><span class="p">)</span>
 
@@ -402,37 +402,37 @@ sudo ../docker-tpl/run ./build_ghidra.sh
 <p>So what is happening here? On each iteration, a character from <code>local_14</code> is compared with a value from our available characters in the <code>BCDFGHJKLMNPQRSTVWXYZ0123456789-</code> string. This behavior seems to match up with what we might expect a password checking function to do...but we know that <code>iVar1</code> is incremented by 1 with every iteration, does this mean that the passwords have to be made up of contiguous characters in the <code>BCDFGHJKLMNPQRSTVWXYZ0123456789-</code>? That would seem very silly, there is also no way that this would allow for the string <code>CRDT5</code> to pass this check! If you look again at this comparison, you notice that there is a variable <code>param_1</code> that is also being used as the index, which <code>iVar1</code> and <code>0x520</code> are added to - these values are then used as an INDEX into our available characters. </p>
 <p>So what does this mean for us exactly? The <code>param_1</code> likely points to an array of offsets that represent which characters were typed in the password screen, for example, if we type the password <code>GHDRR</code> the array might contain <code>[0x4,0x5,0x2,0xd,0xd]</code>.</p>
 <p>But let's not get ahead of ourselves, let's try to type in the password <code>CRDT5</code> and see what happens:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="rom2" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/rom-2.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="rom2" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/rom-2.png"></p>
 <p>Aha! We've got a credits scene!</p>
 <p>Seems simple enough right? But what if we could find out a little more about where our password is being stored in memory? If we knew where <code>param_1</code> pointed to, we can calculate where our password is located in RAM and look for cross-references. Now that we have a function of interest, let's break out the debugger!</p>
 <h2>Debugging the ROM</h2>
 <p>If you're following along at home, you might have noticed a new tool showed up in our Ghidra project manager, see the image below:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/debugger.png"></p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Open Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/open-with-debugger.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/debugger.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Open Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/open-with-debugger.png"></p>
 <p>Notice the Bug icon - this is used to open the debugger! When you clock on the bug, the following window will appear:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Full Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/full-debugger.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Full Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/full-debugger.png"></p>
 <p>You'll notice that there are a lot of additional tabs and windows compared to the normal analyzer view. For starters in the top left, we've got the debugger targets view, this is what we will use to establish a connection to our debugger or launch a new debugging session</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Debugger Targets" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/debugger-targets.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Debugger Targets" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/debugger-targets.png"></p>
 <p>Right below that there is an "Objects" window, this shows the active debugging "Objects" that are being debugged. From here you can pause, single step, etc. </p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Objects" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/objects.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Objects" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/objects.png"></p>
 <p>Under that, towards the bottom of the screen, we have the memory regions view, stack view, and standard console view. </p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Regions" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/regions.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Regions" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/regions.png"></p>
 <p>Next to that, we have a view for threads (if applicable to your application) and a Time window - for what we are doing (debugging a single-threaded ARM system) we won't be using these views</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Threads" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/threads.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Threads" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/threads.png"></p>
 <p>Finally, on the right we have a few more tabs than we would normally see in a Ghidra analyzer session, we have Breakpoints, which displays breakpoints that you have set:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Breakpoints" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/breakpoints.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Breakpoints" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/breakpoints.png"></p>
 <p>We also have a Registers view that will update with register values when breakpoints are hit:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Registers" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/registers.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Registers" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/registers.png"></p>
 <p>And finally, we have a modules view - where various loaded modules will show up if necessary - again for this simple application we won't be seeing anything here:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Modules" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/modules.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Modules" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/modules.png"></p>
 <h3>Attaching to the Emulator</h3>
 <p>For this work, I'm using the <code>mGBA</code> emulator, mainly because it has the ability to present a remote GDB stub. We will be connecting to this with <code>gdb-multiarch</code>. To do this from the Debugger view in Ghidra we will do the following, int he debugger targets window - click the green plug (Connect) which will open the following window:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Connect" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/connect.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Connect" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/connect.png"></p>
 <p>There are multiple options here for remote debugging. For this post we will be using the <code>IN-VM GNU gdb local debugger</code></p>
 <p>I have added gdb-multiarch to the gdb launch command path. After clicking connect a standard GDB prompt will appear:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="GDB Prompt" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gdb-prompt.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="GDB Prompt" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gdb-prompt.png"></p>
 <p>Now we have to start the server, from within mGBA, load your ROM and select <code>Tools</code> -&gt; <code>Start GDB Server</code>, the following prompt will appear:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="GDB Server" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gdb-server.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="GDB Server" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gdb-server.png"></p>
 <p>Click start and return to the Ghidra debugger window. Within the gdb prompt - run the following commands:</p>
 <div class="highlight"><pre><span></span><code>set architecture arm
 set arm fallback-mode thumb
@@ -463,7 +463,7 @@ c
 </code></pre></div>
 
 <p>After entering these commands, let's see if our breakpoint gets hit using Ghidra...</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Breakpoint Hit" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/breakpoint-hit.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Breakpoint Hit" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/breakpoint-hit.png"></p>
 <p>Excellent - not only the the breakpoint hit but all of the registers have been updated in the resisters window. Now let's investigate these assumptions that we've made about the password checking and see if they are correct. If we step through a few instructions until we hit <code>0801c474</code>. The assumption at this point is that we r1 will be pointing to an array of indexes representing the characters we entered. Let's examine memory and find out:</p>
 <p><strong>Note:</strong> If you are remotely debugging using <code>gdb-multiarch</code> and are finding that some breakpoints aren't being hit - try using the <code>stepi</code> command instead of <code>c</code>. This is an issues that I've seen in mGBA before and does not have anything to do with Ghidra's GDB server. </p>
 <div class="highlight"><pre><span></span><code>(gdb)x/10x $r1
@@ -657,10 +657,10 @@ Can&#39;t determine the current process&#39;s PID: you must name one.
   <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
@@ -669,13 +669,10 @@ Can&#39;t determine the current process&#39;s PID: you must name one.
       <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
@@ -685,6 +682,9 @@ Can&#39;t determine the current process&#39;s PID: you must name one.
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
   </ul>
 </li>

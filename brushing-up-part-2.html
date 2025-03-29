@@ -135,8 +135,8 @@ VoidStar Security Blog            </a>
 </li>
 </ol>
 <p>One of the first things we want to do with a new embedded target is perform a visual teardown. During this process, we will identify the various components and potential attack vectors (exposed pins/pads) that we will use to extract information from this device. The visual teardown for this device can be seen in the image/tables below:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/20250222_172900.jpg">
-<img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/20250222_172904.jpg"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/20250222_172900.jpg">
+<img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/20250222_172904.jpg"></p>
 <table class="tb tr tc table table-hover">
 <thead>
 <tr>
@@ -173,14 +173,14 @@ VoidStar Security Blog            </a>
 </tr>
 </tbody>
 </table>
-<p>This is a pretty simple target, which makes it great for learning how to do embedded assessments. We have an ARM Cortex MCU, an SPI flash, an IC for managing the charging of the battery, and another IC for controlling the motor. This target also contains a very well-documented silkscreen, which makes our initial analysis much simpler; one thing that likely stuck out to you when examining this PCB was the clearly labeled <code>Tx</code> and <code>Rx</code> pads, as we've discussed in <a href="https://voidstarsec.com/blog/uart-uboot-and-usb">previous posts</a> this is indicative of a UART. Let's start by looking at this toothbrush's UART output.</p>
+<p>This is a pretty simple target, which makes it great for learning how to do embedded assessments. We have an ARM Cortex MCU, an SPI flash, an IC for managing the charging of the battery, and another IC for controlling the motor. This target also contains a very well-documented silkscreen, which makes our initial analysis much simpler; one thing that likely stuck out to you when examining this PCB was the clearly labeled <code>Tx</code> and <code>Rx</code> pads, as we've discussed in <a href="https://voidstarsec.com/newblog/uart-uboot-and-usb">previous posts</a> this is indicative of a UART. Let's start by looking at this toothbrush's UART output.</p>
 <h2>Target 0: UART (?!)</h2>
 <p>If you've never looked at UART before or are unfamiliar with the process of identifying one and locating the baud rate, I highly recommend checking out the post I linked previously. It will cover everything you need to know for the following section. </p>
 <p>The first thing we need to do is determine the baud rate; once we have that, we can look at the data being sent over the lines and determine if it is useful to us. Using an oscilloscope, we can monitor this line on startup, which results in the following trace being generated on the scope:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/none.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/none.png"></p>
 <p>This does not look promising in terms of debug output. However, If you are familiar with UART, you know that the transmit line must be pulled high as bits are (in a standard configuration) transmitted by driving the line low. We can see in this capture that the line is low. This may lead you to think that the UART is not active and we should move on; before we do that, let's try one more thing. Using a 10K resistor, we will pull the Tx line high to 3.3V; if we take a capture in this configuration and press a few buttons on the toothbrush, we see the following:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/UART.png"></p>
-<p>Success! We have traffic, so the lesson here is not to get discouraged if you don't immediately see traffic on a UART interface. It is important to rely on your understanding of the protocol fundamentals at a low level, this is something that we focus on at the core of our <a href="https://voidstarsec.com/training/">hardware reverse engineering training</a>.</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/UART.png"></p>
+<p>Success! We have traffic, so the lesson here is not to get discouraged if you don't immediately see traffic on a UART interface. It is important to rely on your understanding of the protocol fundamentals at a low level, this is something that we focus on at the core of our <a href="https://voidstarsec.com/#training">hardware reverse engineering training</a>.</p>
 <p>Based on the output from the scope, we determine that the baud rate is 115200; this is done by locating the smallest pulse and measuring its frequency. Now that we have this we can connect this to the serial port of the Raspberry Pi and examine the output:</p>
 <div class="highlight"><pre><span></span><code><span class="n">KEY_B</span><span class="w"> </span><span class="n">Down</span><span class="p">.</span>
 <span class="n">KEY_B</span><span class="w"> </span><span class="n">Dn</span><span class="o">-&gt;</span><span class="n">Up</span><span class="p">.</span>
@@ -197,10 +197,10 @@ VoidStar Security Blog            </a>
 <p>So, we have debug output! But this does not get us what we're looking for. We want to extract the firmware and see if we can re-flash it! For these purposes, we will focus on the main MCU and the SPI flash. Let's start by looking at the SPI flash. </p>
 <h2>Target 1: SPI Flash</h2>
 <p>If you are unfamiliar with SPI flash chips and how they work, check out some of our previous blog entries <a href="https://wrongbaud.github.io/posts/BasicFUN-flashing/">here</a>.
-In order to read out this flash we will use <a href="https://flashrom.org/">flashrom</a>. If you are unfamiliar with <code>flashrom</code>, it is an open-source tool for reading and writing SPI flash devices. We've used this tool in previous posts, and you can learn more about it and see more usage examples <a href="https://wrongbaud.github.io/posts/router-teardown/">here</a></p>
+In order to read out this flash we will use <a href="https://flashrom.org/">flashrom</a>. If you are unfamiliar with <code>flashrom</code>, it is an open-source tool for reading and writing SPI flash devices. We've used this tool in previous posts, and you can learn more about it and see more usage examples <a href="https://voidstarsec.com/newblog/router-teardown">here</a></p>
 <p>One of the nice things about <code>flashrom</code> is that we can use it with several hardware adapters. One of the most commonly used is the CH341 adapter, which you can purchase <a href="https://www.amazon.com/CH341A-programmer-socket-programer-support/dp/B077GBTWQP">here</a>. However, you can also use an embedded Linux device with the <code>spidev</code> kernel module loaded, allowing an SPI peripheral to be accessed through the <code>/dev/</code> directory. </p>
 <p>We can attempt to access the SPI flash using a standard SOIC8 clip (<a href="https://www.digikey.com/en/products/detail/pomona-electronics/5250/745102">pomona</a> are the best) as shown in the diagram:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/spi_clip_wiring_v2_no_bb_bb.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/spi_clip_wiring_v2_no_bb_bb.png"></p>
 <h3>Running Flashrom</h3>
 <p>Using a Raspberry Pi with the <code>spidev</code> kernel module enabled, we can attempt to extract the SPI flash as follows:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>flashrom<span class="w"> </span>-p<span class="w"> </span>linux_spi:dev<span class="o">=</span>/dev/spidev0.0<span class="w"> </span>-r<span class="w"> </span>toothbrush-spi.bin
@@ -246,13 +246,13 @@ In order to read out this flash we will use <a href="https://flashrom.org/">flas
 <p>Let's go through all three of these together. For our first example, I have an old blog post <a href="https://wrongbaud.github.io/posts/Holiday-Teardown/">here</a> that walks through the process. </p>
 <h4>Analyzing Data with Pulseview</h4>
 <p>Using the same clip setup as before, we can use a <a href="https://www.amazon.com/HiLetgo-Analyzer-Ferrite-Channel-Arduino/dp/B077LSG5P2">low-cost</a> logic analyzer to view the traffic on startup and during operations:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195449.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195449.png"></p>
 <p>After monitoring the SPI traffic on boot, we have the following:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225190923.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225190923.png"></p>
 <p>With this, we can set up an SPI decoder and assign the signals, as shown below. Pulseview also includes protocol-level decoders that we can use to see exactly what commands are being sent to this SPI flash.</p>
 <p>While we know the pins we have connected to on the SPI flash, let's examine the traffic and see if we can identify them. This skill can be helpful if you are analyzing signals on an undocumented bus or debug header. </p>
 <p><strong>Note:</strong> If you would like more of a deep dive into the SPI protocol and how it is used for EEPROMs, check out my old blog post <a href="**https://wrongbaud.github.io/posts/BasicFUN-flashing/">here</a></p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191456.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191456.png"></p>
 <p>Serial Peripheral Interface (SPI) requires the following four signals:</p>
 <ul>
 <li>Chip Select: Used to select the target chip</li>
@@ -262,9 +262,9 @@ In order to read out this flash we will use <a href="https://flashrom.org/">flas
 </ul>
 <p>Based on what we know about the SPI protocol, the CS line should stay low during each transaction. This behavior is seen on the D0 line in our screenshot above. Next, we know that a clock signal has to be provided by the bus controller; this will be a consistent pulse that aligns with data being transmitted on the target. The fourth row in the screenshot above demonstrates this. Now, all that is left is the SDI and SDO lines. SDO is driven by the controller and used to issue commands; replies are then sent back to the SDI line. </p>
 <p>If we look closely at our captured signals, we can see that one line is active first (3), which is followed by a response on the other line (2). It is a fair assumption to label the third signal as SDO and the second as SDI; we can set this up in our pulseview decoder as shown below: </p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191839.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191839.png"></p>
 <p>With our decoder set up, we can see the bytes that are being sent and what those bytes mean to the SPI flash:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191751.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225191751.png"></p>
 <p>One thing to note is that when a read operation is performed (when cycling through the menus) and new data is displayed on screen, we have the following transactions:</p>
 <ul>
 <li>Thirteen read operations, each consisting of 1,921 bytes (24973 bytes total)</li>
@@ -272,7 +272,7 @@ In order to read out this flash we will use <a href="https://flashrom.org/">flas
 </ul>
 <p>It is a reasonable assumption to say that the data for each image displayed requires roughly 24Kb of data. </p>
 <p>One of the most useful features in Pulseview is the "Binary Decoder Output View." This window will let you view decoded traffic results and export them to a file. In the following screenshot, we have selected the MISO (SDI) line, which shows the responses from the SPI flash. This contains the data that was transmitted back to the CPU from the flash chip. </p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225192446.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225192446.png"></p>
 <p>While this gives us some data, the CPU does not read all of the data in one shot; it reads data from this flash as needed. We can see this when we cycle through the menu options, which generates new traffic. </p>
 <p>We need to dig a little deeper to get the full flash image without removing the chip. </p>
 <h4>Disabling the CPU</h4>
@@ -283,10 +283,10 @@ In order to read out this flash we will use <a href="https://flashrom.org/">flas
 <li>Manipulate an external interrupt or boot-mode pin on our target device to force it to boot into a different mode that will not access the SPI flash.</li>
 </ol>
 <p>Luckily for us, this device has multiple labeled test pads, as seen in the image below:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/reset.jpg"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/reset.jpg"></p>
 <p><strong>Note:</strong> Reset pins are typically active low, but it is worth checking beforehand with a multi-meter to make sure that we don't damage anything before pulling something to the ground.</p>
 <p>We can use this pin to hold the processor in reset if we hold the processor in reset and attempt to read out the flash in the same manner as before, we see the following:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195239.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195239.png"></p>
 <div class="highlight"><pre><span></span><code><span class="nf">pi</span><span class="nv">@pifex</span><span class="err">:</span><span class="o">~/</span><span class="n">targets</span><span class="o">/</span><span class="n">toothbrush</span><span class="w"> </span><span class="err">$</span><span class="w"> </span><span class="p">.</span><span class="o">/</span><span class="n">run</span><span class="o">-</span><span class="n">flashrom</span><span class="p">.</span><span class="n">sh</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="n">spi2</span><span class="p">.</span><span class="n">bin</span>
 <span class="n">flashrom</span><span class="w"> </span><span class="k">unknown</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">Linux</span><span class="w"> </span><span class="mf">6.6.74</span><span class="o">+</span><span class="n">rpt</span><span class="o">-</span><span class="n">rpi</span><span class="o">-</span><span class="n">v8</span><span class="w"> </span><span class="p">(</span><span class="n">aarch64</span><span class="p">)</span>
 <span class="n">flashrom</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">free</span><span class="w"> </span><span class="n">software</span><span class="p">;</span><span class="w"> </span><span class="k">get</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="k">at</span><span class="w"> </span><span class="nl">https</span><span class="p">:</span><span class="o">//</span><span class="n">flashrom</span><span class="p">.</span><span class="n">org</span>
@@ -366,13 +366,13 @@ pi@pifex:~/targets/toothbrush<span class="w"> </span>$<span class="w"> </span>md
 </code></pre></div>
 
 <p><strong>If</strong> this were an ARM Cortex firmware image, we would expect to see an Interrupt Vector Table (IVT). On the Cortex-M, the vector table is preceded by a stack pointer, which will point to somewhere in the CPU's RAM. If we examine the memory map for our processor, we have the following:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250224064652.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250224064652.png"></p>
 <p>If this were a firmware image for this processor, we would expect to see a pointer to somewhere in the SRAM region and a table pointing to offsets in the internal flash; we do not. We also do not see any data that resembles ARM instructions, so what could this data be?</p>
 <p>Recall that this device has a high-(ish) resolution screen, so this data is likely the image data displayed on startup. For devices with OLED displays, it is rare that the data is stored in a standard image format. It is often stored as pixelated RGB data, which can be difficult to parse. Luckily, there are tools available, such as <a href="https://codestation.ch">https://codestation.ch/</a>, that can allow us to test various formats and parameters. </p>
 <p>This introduces a new problem; we know very little about the formatting being used, so let's start with what we <strong>do</strong> know. The width and length of this screen are 11mm by 22mm, which means that our pixel ratio should be similar. Common ratios for these screens include 128x64; however, if we try that, it does not work. After some experimenting, a width of 80 and a height of 160 worked, and I could properly render the images on the screen. See the output below for more details:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250223181553.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250223181553.png"></p>
 <p>Now that we know the size of the images and the screen layout, we can carve out the various images from the binary and load them as shown below. Using the data that we gathered earlier in pulseview, we know the offsets in the flash where som eof these images are stored.Each image was 24kb pixel maps (remember the read size from before?). Now that they are extracted, we should be able to replace them! After looking through the SPI flash image, it was determined that the bitmap for the software information screen is located at offset <code>0x308061</code> in our SPI flash image. It was individually extracted and loaded as shown below:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250223185944.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250223185944.png"></p>
 <p>With all of this information, we can generate an RGB file from an 80x160-pixel image file and overwrite the SPI flash with our modified pixel map to display a custom image. </p>
 <p>As a test, let's take a picture of everyone's favorite owl (Bubo from Clash of the Titans), scale it to 80x160, and then convert it to RGB565 with <code>ffmpeg</code>.</p>
 <div class="highlight"><pre><span></span><code>ffmpeg -i bubo.jpg -pix_fmt rgb565le test.rgb
@@ -383,7 +383,7 @@ pi@pifex:~/targets/toothbrush<span class="w"> </span>$<span class="w"> </span>md
 </code></pre></div>
 
 <p>Result:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195410.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195410.png"></p>
 <p>Our new image worked, and was displayed properly! We now understand how the SPI flash is structured, but we still have not extracted the firmware. We have one more source: the internal flash on the MCU. In our next post, we'll discuss how to communicate with an SWD interface and write an OpenOCD config file for a new microcontroller. </p>
 <h1>Conclusion</h1>
 <p>This series aims to show readers that there are many ways to get familiar with embedded systems reverse engineering without breaking the bank and that interesting targets can be found almost anywhere!</p>
@@ -454,10 +454,10 @@ pi@pifex:~/targets/toothbrush<span class="w"> </span>$<span class="w"> </span>md
   <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
@@ -466,13 +466,10 @@ pi@pifex:~/targets/toothbrush<span class="w"> </span>$<span class="w"> </span>md
       <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
@@ -482,6 +479,9 @@ pi@pifex:~/targets/toothbrush<span class="w"> </span>$<span class="w"> </span>md
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
   </ul>
 </li>

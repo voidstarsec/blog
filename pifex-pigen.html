@@ -120,7 +120,7 @@ VoidStar Security Blog            </a>
 </blockquote>
 <p>This is a very reasonable question; with so many random embedded devices on the market, picking something easy to learn can be difficult. With this three part "brush-up" series, we want to give our readers examples of devices they can use to learn more about reverse engineering embedded devices. For each of these posts, we will provide links to the software used and (non-affiliate) links to the devices we are tearing down. </p>
 <p>The first device in our series will be <a href="https://www.aliexpress.us/item/3256806639061540.html">this</a> electric toothbrush. </p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/brush.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/brush.png"></p>
 <p>Our goal is to extract the firmware from the device and see if we can also get hardware-level debugging working on the target. </p>
 <h1>Pi-Gen + PiFex</h1>
 <p>For this series, we will use a Raspberry Pi as our hardware hacking multi-tool. While we will use the <a href="https://voidstarsec.training">PiFex</a> board, it will not be required for those following along at home. However, one thing that will need to be used is an SD card image with the appropriate software tools and utilities installed. For this, we'll be using the open-source tools in our <a href="https://github.com/voidstarsec/pifex-sw">PiFex software repo</a> as well as the tool <a href="https://github.com/RPi-Distro/pi-gen">PiGen</a>. </p>
@@ -205,7 +205,7 @@ VoidStar Security Blog            </a>
 
 <p>From here, you can access the Pi via either the USB-to-Serial or USB-to-Ethernet gadget. The Ethernet gadget has been configured to use a static IP of 192.168.8.1. You can modify the script on the file system at <code>/home/pi/pifex/gadgets</code>. </p>
 <p>One of the services that gets set up is a basic network service that will display the IP address of the various connected interfaces on the screen of the PiFex; an example of this can be seen below:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/pifex.jpeg"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/pifex.jpeg"></p>
 <p>The following services can be accessed over the network via the USB to Ethernet gadget or other network connections:</p>
 <h1>PiFex Services</h1>
 <h2>Networking</h2>
@@ -221,16 +221,16 @@ Bus 001 Device 034: ID 0421:1410 Nokia Mobile Phones nothing
 <p>The OLED screen displays the IP addresses of any network interfaces currently configured. The default IP address for the USB to Ethernet gadget is 192.168.8.1. The web interface can be accessed by setting the presented interface to a static IP address in the 192.168.8.X range. This allows you to access all the PiFex features and software tools via USB. </p>
 <h2>OpenOCD WebUI - Port 5000</h2>
 <p>I am currently developing a web-based interface for using OpenOCD. A beta version of this is included in the PiFex software repository.</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui-ex.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui-ex.png"></p>
 <p>The search bar at the top can be used to search for config files used by OpenOCD and includes an autocomplete feature:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-cfg.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-cfg.png"></p>
 <p>Once the desired configuration files are selected, OpenOCD can be launched and interfaced with via telnet and gdb.</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui.png.png"></p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-config-files.png.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui.png.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-config-files.png.png"></p>
 <p>With OpenOCD launched, the GDB terminal and telnet interface can be accessed via the web browser:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/gdb-terminal.png.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/gdb-terminal.png.png"></p>
 <p>There is also a memory-view feature that allows users to dump segments of memory via the UI:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/telnet-memdump.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/telnet-memdump.png"></p>
 <p><strong>Note:</strong> This is a WIP interface, so feel free to provide feedback or submit PRs for desired features!</p>
 <h2>Jupyter Notebooks - Port 8888</h2>
 <p>The <a href="https://github.com/voidstarsec/pifex-sw">PiFex software repository</a> includes Jupyter notebooks that demonstrate how to interact with the OLED interface and JTAG peripherals.</p>
@@ -259,11 +259,11 @@ Bus 001 Device 034: ID 0421:1410 Nokia Mobile Phones nothing
 </code></pre></div>
 
 <p>Included in these notebooks are examples of how to interact with the OLED display:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/luma-oled.png.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/luma-oled.png.png"></p>
 <p>We have also included basic JTAG notebooks, which were used in one of our <a href="https://voidstarsec.com/blog/jtag-pifex">previous blog posts</a></p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/jtag-jupyter.png.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/jtag-jupyter.png.png"></p>
 <p>Users can also access a terminal window through Jupyter-Lab as well; this can be done via "<code>File</code> "-&gt; "<code>New</code> "-&gt; "<code>Terminal</code> "</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/jupyter-term.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/jupyter-term.png"></p>
 <p>The goal with the PiFex board and open-sourcing these software utilities is to help newcomers learn more about reverse engineering. These tools are very similar to what we use in our <a href="https://voidstarsec.com/training">training programs</a> and our <a href="https://voidstarsecurity.thinkific.com/">self-paced courses</a>.</p>
 <h1>Conclusion</h1>
 <p>With our Pi configured, we can look at our first target! Stay tuned for part two (releasing 3/14!) for more information. With this post, we have:</p>
@@ -332,10 +332,10 @@ Bus 001 Device 034: ID 0421:1410 Nokia Mobile Phones nothing
   <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
@@ -344,13 +344,10 @@ Bus 001 Device 034: ID 0421:1410 Nokia Mobile Phones nothing
       <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
@@ -360,6 +357,9 @@ Bus 001 Device 034: ID 0421:1410 Nokia Mobile Phones nothing
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
   </ul>
 </li>

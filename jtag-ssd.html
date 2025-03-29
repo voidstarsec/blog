@@ -125,7 +125,7 @@ VoidStar Security Blog            </a>
 </ul>
 <h2>JTAG Overview</h2>
 <p>JTAG is a hardware interface that was developed to assist developers and testers with low level debugging. JTAG was originally developed for testing integrated circuits and more specifically, sampling IO pins on a target under test. This type of debugging interface allows engineers to test connections on PCBs without needing the probe the physical pin itself. The JTAG interface is controlled via the state machine outlined below:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="JTAG State Machine" src="http://openocd.org/doc-release/doxygen/jtag-state-machine-large.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="JTAG State Machine" src="http://openocd.org/doc-release/doxygen/jtag-state-machine-large.png"></p>
 <p>One of the important things to remember about JTAG at this level is that it involves two registers, the instruction register, and the data register. To utilize these registers, the proper states in the above state machine must be entered using the following interface signals:</p>
 <table class="tb tr tc table table-hover">
 <thead>
@@ -159,7 +159,7 @@ VoidStar Security Blog            </a>
 </table>
 <p>The state machine is navigated using the TMS and TCK lines, while data is written to or read from via TDI and TDO respectively. TMS is sampled on the rising edge of TCK, meaning that the TMS line must be asserted before TCK is toggled to navigate through the state machine. Data is then shifted into the instruction register (IR) or data register (DR) depending on the state of the JTAG state machine. When an operation is completed (or after the update DR/IR phase) the resulting data can be <em>shifted</em> out of DR by entering the <code>Shift-DR</code> state.  With these primitives in place, manufacturers can implement whatever features they wish over JTAG. </p>
 <p>The JTAG standard treats IR and DR as shift registers, and due to this, multiple targets can be daisy-chained together. </p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="JTAG Daisy Chain" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Jtag_chain.svg/654px-Jtag_chain.svg.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="JTAG Daisy Chain" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Jtag_chain.svg/654px-Jtag_chain.svg.png"></p>
 <p>In a nutshell, JTAG defines a state machine that is navigated with a minimum of 4 signals. With this state machine in place, end users can write and read from two shift registers, IR and DR.</p>
 <h3>JTAG Registers</h3>
 <p>JTAG utilizes two main registers, the instruction register, and the data register. The instruction register is used to determine what function the JTAG controller is about to carry out such as a memory read, or memory write for example. The data register is then used as an additional input to the instruction register, for the previous example, they may be used to provide an address to read from or write to. These registers can vary in size based on their function.</p>
@@ -174,7 +174,7 @@ VoidStar Security Blog            </a>
 </ol>
 <p>Following this, if there were no data registers required, the operation would be performed, and the result (if any) would be loaded into the data register to be shifted out. However, many instructions require a data register to be filled out as well before operating. In that case, once the data register is written to and updated, the operation will be performed and the result can be shifted out of the data register.</p>
 <p>Some instructions do not require the DR to be loaded, for example, if we had loaded the <code>IDCODE</code> instruction into IR (1110b), this would load the processor's IDCODE value into the data register for us to then clock out and read it on <code>TDO</code>. To read the result out of <code>TDO</code>, one would navigate to the <code>Shift-DR</code> state, and clock in 32 bits on <code>TDI</code>, this would cause the data in the data register to be shifted out on the <code>TDO</code> line. See the image below for a visual representation of what would happen if one loaded the IR with the <code>IDCODE</code> instruction</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="IDCODE Instruction" src="https://www.embecosm.com/appnotes/ean5/images/jtag-architecture-2.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="IDCODE Instruction" src="https://www.embecosm.com/appnotes/ean5/images/jtag-architecture-2.png"></p>
 <p>It's important to remember, that <code>IR</code> and <code>DR</code> can be thought of as shift registers, meaning that when we update them with new values, the old values are then shifted out on <code>TDO</code>. </p>
 <p>The JTAG standard defines the following instruction registers:</p>
 <ul>
@@ -212,7 +212,7 @@ VoidStar Security Blog            </a>
 <p>It's extremely important to have a solid understanding of the protocol fundamentals when approaching something like this from a reverse engineer's perspective. When reverse engineering hardware (or software) you want to have your ground truth covered since there are always infinite unknowns. These next few sections will go over how we can take advantage of our low-level knowledge of these protocols to assist us on our path to gaining access to hardware level debugging via JTAG. The first thing that we need to do is determine the pinout, and if the pins exposed allow access to the JTAG interface. </p>
 <h3>Determining the pinout</h3>
 <p>JTAG signal lines are often grouped together, sometimes (if you're extremely lucky!) you will see one of the following headers:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="JTAG Headers" src="https://elinux.org/images/4/48/Ti_arm_jtag.jpg"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="JTAG Headers" src="https://elinux.org/images/4/48/Ti_arm_jtag.jpg"></p>
 <p>If you find something like this however, it may not have the exact signal groupings, so we will discuss how to determine a pinout if one assumes it's used for JTAG.</p>
 <p>When reverse engineering something like this, you want to start with what you know. Since we know that most manufacturers at <em>least</em> implement <code>IDCODE</code> and <code>BYPASS</code> let's talk about how we can take advantage of those two instructions. </p>
 <p>If you have identified what you believe to be a potential JTAG header or pinout, but do not know the pins, we can use the behavior of these two registers to determine the pinout. </p>
@@ -238,8 +238,8 @@ VoidStar Security Blog            </a>
 <p>Once you have determined the pinout of the target, then the real fun can begin. The next step is to then determine the length of the IR / DR. To do this, starting with IR, enter the <code>Shift IR</code> state and flood the chain with 1's on <code>TDI</code>, using a large number like 1024 or 4096, and then clock in a 0. Once this has been done, simply continue to clock in 1's on <code>TDI</code>, counting the number of clock cycles that it takes before a 0 appears on <code>TDO</code>. This will tell you the length of the IR. Once you have that, you can enter the <code>Shift DR</code> state and repeat the process to determine the state of the DR. This is something that <a href="http://urjtag.org/">urjtag</a> does very well.</p>
 <h2>Practical Example: Samsung M.2 SSD</h2>
 <p>The target for this post is going to be a Samsung M.2 SSD that I recently recovered from an older laptop. After looking at the PCB and spotting what could potentially be JTAG headers, I wanted to outline the process from start to finish.</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="PCB Target" src="https://wrongbaud.github.io/assets/img/jtag-ssd/hdd.jpg">
-<img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="PCB Target" src="https://wrongbaud.github.io/assets/img/jtag-ssd/PCB.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="PCB Target" src="https://wrongbaud.github.io/assets/img/jtag-ssd/hdd.jpg">
+<img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="PCB Target" src="https://wrongbaud.github.io/assets/img/jtag-ssd/PCB.png"></p>
 <h3>Practical Example: Locating JTAG Headers / Determining Pinout</h3>
 <p>As mentioned before JTAG lines are often grouped - so when looking at a new platform from a hardware perspective, looking for pin groupings greater than 5 is always a good start. Luckily for us on this target, there are 9 vias located along the outside of the PCB. Let's start by examining the voltage levels of these pins with the drive in a normal operating state</p>
 <table class="tb tr tc table table-hover">
@@ -305,7 +305,7 @@ VoidStar Security Blog            </a>
 <span class="err">#</span><span class="w"> </span><span class="mi">3</span><span class="n">v</span><span class="w">  </span><span class="mi">2</span><span class="w">  </span><span class="mi">3</span><span class="w">  </span><span class="mi">4</span><span class="w">  </span><span class="n">g</span><span class="w"> </span><span class="mi">17</span><span class="w"> </span><span class="mi">27</span><span class="w"> </span><span class="mi">22</span><span class="w"> </span><span class="mi">3</span><span class="n">v</span><span class="w"> </span><span class="mi">10</span><span class="w">  </span><span class="mi">9</span><span class="w"> </span><span class="mi">11</span><span class="w">  </span><span class="n">g</span><span class="w">  </span><span class="mi">0</span><span class="w">  </span><span class="mi">5</span><span class="w">  </span><span class="mi">6</span><span class="w"> </span><span class="mi">13</span><span class="w"> </span><span class="mi">19</span><span class="w"> </span><span class="mi">26</span><span class="w">  </span><span class="n">g</span>
 </code></pre></div>
 
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="RPI" src="https://www.bigmessowires.com/wp-content/uploads/2018/05/Raspberry-GPIO.jpg"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="RPI" src="https://www.bigmessowires.com/wp-content/uploads/2018/05/Raspberry-GPIO.jpg"></p>
 <p>Using our table above, we will wire the following GPIOs to the unknown header:</p>
 <table class="tb tr tc table table-hover">
 <thead>
@@ -661,7 +661,7 @@ D-Cache: disabled, I-Cache: disabled
 </code></pre></div>
 
 <p>Finally, let's take these RAM dumps and load them into GHIDRA to see if they make sense:</p>
-<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Ghidra Refs" src="https://wrongbaud.github.io/assets/img/jtag-ssd/debug-xrefs.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Ghidra Refs" src="https://wrongbaud.github.io/assets/img/jtag-ssd/debug-xrefs.png"></p>
 <p>Excellent, we have some xrefs and the init code looks fairly sane. It also looks like there is some sort of debug menu that is presented over the UART, these are likely pins 8/9 on our pinout! Safe to say that this is a valid RAM dump, and with this, I will finish up this post.</p>
 <h2>Conclusion</h2>
 <p>This was quite a long post - realistically it probably should have been broken up into 2-3 parts. With this post, we learned how JTAG functions at a low level, as well as how to approach JTAG as a reverse engineer. We were also able to get JTAG access to an undocumented target, extract memory, and single-step through the running firmware. There are lots of things left to do here, like determine if the flash chips themselves can be dumped via JTAG, RE the firmware to look for interesting ways to recover data from the drive (<a href="http://www2.futureware.at/~philipp/ssd/TheMissingManual.pdf">I recently discovered that lots of cool work has been done here already!</a>). As always, if you have any questions or comments, please feel free to reach out on <a href="https://twitter.com/wrongbaud">twitter</a>.</p>
@@ -725,10 +725,10 @@ D-Cache: disabled, I-Cache: disabled
   <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
@@ -737,13 +737,10 @@ D-Cache: disabled, I-Cache: disabled
       <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
@@ -753,6 +750,9 @@ D-Cache: disabled, I-Cache: disabled
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
   </ul>
 </li>
