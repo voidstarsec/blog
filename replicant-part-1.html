@@ -21,7 +21,7 @@
         <meta property="og:url" content="https://voidstarsec.com/newblog/replicant-part-1.html"/>
         <meta property="og:description" content="This post aims to provide a road map and example of how to replicate a fault injection attack and the hurdles and shortcomings that can occur when attempting to do so. Furthermore, by outlining the process of replicating one of these attacks, we hope that readers come away from this post more confident in generating their own fault injection attacks or replicating pre-existing work."/>
         <meta property="article:published_time" content="2022-08-19" />
-            <meta property="article:section" content="Glitching" />
+            <meta property="article:section" content="Fault Injection" />
             <meta property="article:tag" content="fault-injection" />
             <meta property="article:tag" content="chipwhisperer" />
             <meta property="article:author" content=""Matthew Alt"" />
@@ -38,8 +38,8 @@
         <link href="https://voidstarsec.com/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog ATOM Feed"/>
 
-        <link href="https://voidstarsec.com/newblog/feeds/glitching.atom.xml" type="application/atom+xml" rel="alternate"
-              title="VoidStar Security Blog Glitching ATOM Feed"/>
+        <link href="https://voidstarsec.com/newblog/feeds/fault-injection.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog Fault Injection ATOM Feed"/>
 
 </head>
 <body>
@@ -96,7 +96,7 @@ VoidStar Security Blog            </a>
             <a href="https://voidstarsec.com/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
         <span class="label label-default">Category</span>
-        <a href="https://voidstarsec.com/newblog/category/glitching.html">Glitching</a>
+        <a href="https://voidstarsec.com/newblog/category/fault-injection.html">Fault Injection</a>
 
 
 <span class="label label-default">Tags</span>
@@ -527,22 +527,16 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
   <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
   <ul class="list-group" id="categories">
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+      <a href="https://voidstarsec.com/newblog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
     </li>
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
+      <a href="https://voidstarsec.com/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
     </li>
     <li class="list-group-item">
       <a href="https://voidstarsec.com/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
     </li>
     <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/hardware-hacking.html"><i class="fa fa-folder-open fa-lg"></i>Hardware Hacking</a>
-    </li>
-    <li class="list-group-item">
       <a href="https://voidstarsec.com/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
-    </li>
-    <li class="list-group-item">
-      <a href="https://voidstarsec.com/newblog/category/pifex-hardware-hacking.html"><i class="fa fa-folder-open fa-lg"></i>Pifex, Hardware Hacking</a>
     </li>
     <li class="list-group-item">
       <a href="https://voidstarsec.com/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
@@ -562,6 +556,9 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
       <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-2">
@@ -570,17 +567,14 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/blog.html">blog</a>
     </li>
-    <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/fault-injection.html">fault-injection</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/chipwhisperer.html">chipwhisperer</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
