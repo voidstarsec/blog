@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>VoidStar Security Blog - Glitching</title><link href="https://wrongbaud.github.io/newblog/" rel="alternate"></link><link href="https://wrongbaud.github.io/newblog/feeds/glitching.atom.xml" rel="self"></link><id>https://wrongbaud.github.io/newblog/</id><updated>2022-08-19T00:00:00-06:00</updated><entry><title>Replicant: Reproducing a Fault Injection Attack on the Trezor One</title><link href="https://wrongbaud.github.io/newblog/replicant-part-1.html" rel="alternate"></link><published>2022-08-19T00:00:00-06:00</published><updated>2022-08-19T00:00:00-06:00</updated><author><name>"Matthew Alt"</name></author><id>tag:wrongbaud.github.io,2022-08-19:/newblog/replicant-part-1.html</id><summary type="html">&lt;p&gt;This post aims to provide a road map and example of how to replicate a fault injection attack and the hurdles and shortcomings that can occur when attempting to do so. Furthermore, by outlining the process of replicating one of these attacks, we hope that readers come away from this post more confident in generating their own fault injection attacks or replicating pre-existing work.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Overview&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>VoidStar Security Blog - Glitching</title><link href="/" rel="alternate"></link><link href="/feeds/glitching.atom.xml" rel="self"></link><id>/</id><updated>2022-08-19T00:00:00-06:00</updated><entry><title>Replicant: Reproducing a Fault Injection Attack on the Trezor One</title><link href="/replicant-part-1.html" rel="alternate"></link><published>2022-08-19T00:00:00-06:00</published><updated>2022-08-19T00:00:00-06:00</updated><author><name>"Matthew Alt"</name></author><id>tag:None,2022-08-19:/replicant-part-1.html</id><summary type="html">&lt;p&gt;This post aims to provide a road map and example of how to replicate a fault injection attack and the hurdles and shortcomings that can occur when attempting to do so. Furthermore, by outlining the process of replicating one of these attacks, we hope that readers come away from this post more confident in generating their own fault injection attacks or replicating pre-existing work.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Overview&lt;/h1&gt;
 &lt;p&gt;There has been a lot of public work in the last four or five years surrounding the security of cryptocurrency wallets. Much of this research has been in the realm of fault injection, which is the art/science of disrupting an embedded system just enough that it will cause undefined behavior to occur. The goal is to find a fault that allows one to modify the device's behavior to grant an attacker escalated levels of access. Examples of this might include skipping instructions, corrupting memory read operations, etc. &lt;/p&gt;
 &lt;h1&gt;Goals&lt;/h1&gt;
 &lt;p&gt;This post aims to provide a road map and example of how to replicate a fault injection attack and the hurdles and shortcomings that can occur when attempting to do so. Furthermore, by outlining the process of replicating one of these attacks, we hope that readers come away from this post more confident in generating their own fault injection attacks or replicating pre-existing work.&lt;/p&gt;
@@ -164,7 +164,7 @@
 &lt;p&gt;The overall flow of the program is simple:&lt;/p&gt;
 &lt;p&gt;&lt;img alt="Glitch" src="https://voidstarsec.com/blog/assets/images/glitch/glitch_sequence.drawio.png"&gt;&lt;/p&gt;
 &lt;p&gt;Let's start with connecting to our CW; this can be done with the following code:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;chipwhisperer&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="nn"&gt;cw&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;chipwhisperer&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;as&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;cw&lt;/span&gt;
 &lt;span class="n"&gt;scope&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;cw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
@@ -180,7 +180,7 @@
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The &lt;code&gt;reboot_flush&lt;/code&gt; function is responsible for completely resetting the device and arming the glitch. We will call this function whenever we want to reset the STM32 and test new glitch parameters:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;reboot_flush&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="k"&gt;def&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;reboot_flush&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
     &lt;span class="k"&gt;global&lt;/span&gt; &lt;span class="n"&gt;scope&lt;/span&gt;
     &lt;span class="c1"&gt;# Cut power to target device&lt;/span&gt;
     &lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;io&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;target_pwr&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;False&lt;/span&gt;
@@ -223,9 +223,9 @@
 &lt;span class="sd"&gt;swd_check&lt;/span&gt;
 &lt;span class="sd"&gt;Use the link to attempt to connect via SWD&lt;/span&gt;
 &lt;span class="sd"&gt;&amp;#39;&amp;#39;&amp;#39;&lt;/span&gt;
-&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;swd_check&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;swd_check&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
     &lt;span class="k"&gt;global&lt;/span&gt; &lt;span class="n"&gt;dev&lt;/span&gt;
-    &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;swd&lt;/span&gt;
+    &lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;swd&lt;/span&gt;
     &lt;span class="n"&gt;pc&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
     &lt;span class="k"&gt;try&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
         &lt;span class="n"&gt;dev&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;swd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Swd&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
@@ -245,9 +245,9 @@
 &lt;span class="sd"&gt;swd_check&lt;/span&gt;
 &lt;span class="sd"&gt;Use the link to attempt to connect via SWD&lt;/span&gt;
 &lt;span class="sd"&gt;&amp;#39;&amp;#39;&amp;#39;&lt;/span&gt;
-&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;swd_check&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;swd_check&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
     &lt;span class="k"&gt;global&lt;/span&gt; &lt;span class="n"&gt;dev&lt;/span&gt;
-    &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;swd&lt;/span&gt;
+    &lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;swd&lt;/span&gt;
     &lt;span class="n"&gt;pc&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
     &lt;span class="k"&gt;try&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
         &lt;span class="c1"&gt;# Reset the STLink&lt;/span&gt;
