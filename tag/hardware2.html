@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>hardware - VoidStar Security Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+
+    <meta name="author" content="VoidStar Security" />
+    <meta name="keywords" content="hardware" />
+
+    <!-- Open Graph tags -->
+        <meta property="og:site_name" content="VoidStar Security Blog" />
+        <meta property="og:type" content="website"/>
+        <meta property="og:title" content="VoidStar Security Blog"/>
+        <meta property="og:url" content="https://wrongbaud.github.io/newblog"/>
+        <meta property="og:description" content="VoidStar Security Blog"/>
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/bootstrap.spacelab.min.css" type="text/css"/>
+    <link href="https://wrongbaud.github.io/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://wrongbaud.github.io/newblog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/style.css" type="text/css"/>
+
+        <link href="https://wrongbaud.github.io/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog ATOM Feed"/>
+
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="https://wrongbaud.github.io/newblog/" class="navbar-brand">
+VoidStar Security Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-sm-push-3">
+            <article>
+                <h2><a href="https://wrongbaud.github.io/newblog/intro-to-embedded-re-part-1-tools-and-series-overview.html">Intro to Embedded RE Part 1: Tools and Series Overview</a></h2>
+                    <div class="well well-sm">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2022-01-17T00:00:00-07:00"> Mon 17 January 2022</time>
+    </span>
+
+
+            <span class="label label-default">By</span>
+            <a href="https://wrongbaud.github.io/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+
+        <span class="label label-default">Category</span>
+        <a href="https://wrongbaud.github.io/newblog/category/blog.html">blog</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>This post reviews some of the tools needed when setting up a lab for reverse engineering embedded systems. There will be two sections, one for hardware tools and one for software tools. After reading this blog post, the reader should know what is needed to set up an introductory lab for reverse engineering embedded systems and firmware images.</p>
+                    <a class="btn btn-default btn-xs" href="https://wrongbaud.github.io/newblog/intro-to-embedded-re-part-1-tools-and-series-overview.html">more ...</a>
+                </div>
+            </article>
+            <hr/>
+
+        <ul class="pagination">
+                <li class="prev"><a href="https://wrongbaud.github.io/newblog/tag/hardware.html">&laquo;</a>
+                </li>
+                    <li class=""><a
+                            href="https://wrongbaud.github.io/newblog/tag/hardware.html">1</a></li>
+                    <li class="active"><a
+                            href="https://wrongbaud.github.io/newblog/tag/hardware2.html">2</a></li>
+                <li class="next disabled"><a href="#">&raquo;</a></li>
+        </ul>
+        </div>
+        <div class="col-sm-3 col-sm-pull-9" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="http://twitter.com/voidstarsec"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+    <li class="list-group-item"><a href="http://www.linkedin.com/in/voidstarsec"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+    <li class="list-group-item"><a href="http://github.com/voidstarsec"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+
+<!-- Sidebar/Categories -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
+  <ul class="list-group" id="categories">
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/blog.html"><i class="fa fa-folder-open fa-lg"></i>blog</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/misc.html"><i class="fa fa-folder-open fa-lg"></i>misc</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Categories -->
+
+<!-- Sidebar/Links -->
+<li class="list-group-item">
+  <h4><i class="fa fa-external-link-square fa-lg"></i><span class="icon-label">Links</span></h4>
+  <ul class="list-group" id="links">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/" target="_blank">VoidStar Security Website</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.training/" target="_blank">VoidStar Security Training</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.wiki/" target="_blank">Build a Hardware Hacking Lab</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra" target="_blank">Free Ghidra Course</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.wrongbaud.github.io/" target="_blank">Wrongbauds Blog (fun intro hacks)</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Links -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2024 VoidStar Security
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://wrongbaud.github.io/newblog/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://wrongbaud.github.io/newblog/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://wrongbaud.github.io/newblog/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

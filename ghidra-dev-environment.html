@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Extending Ghidra Part 1: Setting up a Development Environment - VoidStar Security Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://wrongbaud.github.io/newblog/ghidra-dev-environment.html">
+
+        <meta name="author" content=""Matthew Alt"" />
+        <meta name="keywords" content="ghidra,tutorial" />
+        <meta name="description" content="With this post, I hope to explain how to set up a development environment for the latest Ghidra release on Ubuntu 20.04. After following the steps outlined below, we will have the ability to write, debug and export custom Ghidra plugins, modules, and scripts." />
+
+        <meta property="og:site_name" content="VoidStar Security Blog" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Extending Ghidra Part 1: Setting up a Development Environment"/>
+        <meta property="og:url" content="https://wrongbaud.github.io/newblog/ghidra-dev-environment.html"/>
+        <meta property="og:description" content="With this post, I hope to explain how to set up a development environment for the latest Ghidra release on Ubuntu 20.04. After following the steps outlined below, we will have the ability to write, debug and export custom Ghidra plugins, modules, and scripts."/>
+        <meta property="article:published_time" content="2021-12-24" />
+            <meta property="article:section" content="Ghidra" />
+            <meta property="article:tag" content="ghidra" />
+            <meta property="article:tag" content="tutorial" />
+            <meta property="article:author" content=""Matthew Alt"" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/bootstrap.sandstone.min.css" type="text/css"/>
+    <link href="https://wrongbaud.github.io/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://wrongbaud.github.io/newblog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/style.css" type="text/css"/>
+
+        <link href="https://wrongbaud.github.io/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog ATOM Feed"/>
+
+        <link href="https://wrongbaud.github.io/newblog/feeds/ghidra.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog Ghidra ATOM Feed"/>
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="https://wrongbaud.github.io/newblog/" class="navbar-brand">
+VoidStar Security Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-sm-push-3">
+            <ol class="breadcrumb">
+                <li><a href="https://wrongbaud.github.io/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li class="active">Extending Ghidra Part 1: Setting up a Development Environment</li>
+            </ol>
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://wrongbaud.github.io/newblog/ghidra-dev-environment.html"
+                       rel="bookmark"
+                       title="Permalink to Extending Ghidra Part 1: Setting up a Development Environment">
+                        Extending Ghidra Part 1: Setting up a Development Environment
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2021-12-24T00:00:00-07:00"> Fri 24 December 2021</time>
+    </span>
+
+
+            <span class="label label-default">By</span>
+            <a href="https://wrongbaud.github.io/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+
+        <span class="label label-default">Category</span>
+        <a href="https://wrongbaud.github.io/newblog/category/ghidra.html">Ghidra</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://wrongbaud.github.io/newblog/tag/ghidra.html">ghidra</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/tutorial.html">tutorial</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <h1>Extending Ghidra Part 1: Setting up a Development Environment</h1>
+<h1>Overview</h1>
+<p>This post is the first in a series of posts to discuss and review how to extend and augment Ghidra for firmware analysis. </p>
+<p><a href="https://ghidra-sre.org/">Ghidra</a> is a software reverse engineering tool developed by NSA. If you are familiar with IDA-Pro, r2, or Binary Ninja, you are already likely familiar with Ghidra. While one can use any of the above for reverse engineering, Ghidra is quickly gaining traction in the SRE community because it is open source and has a well-documented API for scripting and analyzing binaries. Ghidra is also growing with contributions from the community; most notably for me was the addition of the Infineon Tricore architecture to the list of supported CPUs.</p>
+<p>Throughout your reverse engineering efforts, you may find yourself wanting to augment or extend Ghidra by writing additional plugins or scripts when dealing with embedded systems and bespoke firmware image formats. You may also want to debug some of the applicable <a href="https://wrongbaud.github.io/posts/ghidra-debugger/">pre-existing</a> scripts or scripts that others have developed. Setting up a proper development environment lets you easily export processor modules and <a href="https://wrongbaud.github.io/posts/kong-vs-ghidra/">scripts</a>, making them more accessible for other people.</p>
+<p><strong>Note:</strong> If you're not familiar with reverse engineering / Ghidra, you may find <a href="https://wrongbaud.github.io/posts/ghidra-training/">this course</a> helpful!</p>
+<h2>Goals</h2>
+<p>With this post, I hope to explain how to set up a development environment for the latest Ghidra release on Ubuntu 20.04. After following the steps outlined below, we will have the ability to write, debug and export custom Ghidra plugins, modules, and scripts. </p>
+<h2>Prerequisites</h2>
+<p>If you wish to follow along with this post, prepare the following:</p>
+<ul>
+<li>Ubuntu 20.04 VM</li>
+<li>Eclipse <ul>
+<li><a href="https://www.eclipse.org/downloads/">Download page</a></li>
+</ul>
+</li>
+<li>Docker<ul>
+<li>Follow install instructions <a href="https://docs.docker.com/engine/install/ubuntu/">here</a></li>
+</ul>
+</li>
+<li>Java<ul>
+<li><code>sudo apt install openjdk-11-jre openjdk-11-dbg</code></li>
+</ul>
+</li>
+</ul>
+<h1>Building Ghidra</h1>
+<p>We will be basing this tutorial on the latest release version of Ghidra; at the time of writing, this is 10.2, and <a href="https://github.com/NationalSecurityAgency/ghidra/commit/fe7585b49207b440f99927a1b46d20a878ad17e7">this</a> is the newest commit. To build Ghidra, we will use dukebarman's <a href="https://github.com/dukebarman/ghidra-builder">ghidra-builder</a>. This docker container will assist us in the process of building Ghidra. Follow the steps below to build the latest version of Ghidra.</p>
+<ul>
+<li>Install docker on your host machine following <a href="https://docs.docker.com/engine/install/ubuntu/">these instructions</a></li>
+<li>Clone the <a href="https://github.com/dukebarman/ghidra-builder">ghidra-builder</a> repository, and follow the build instructions as shown below:</li>
+</ul>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:dukebarman/ghidra-builder.git
+<span class="nb">cd</span><span class="w"> </span>ghidra-builder
+<span class="nb">cd</span><span class="w"> </span>workdir
+sudo<span class="w"> </span>../docker-tpl/run<span class="w"> </span>./build_ghidra.sh
+</code></pre></div>
+
+<p>When you run these commands, you might see the following error:</p>
+<div class="highlight"><pre><span></span><code><span class="n">FAILURE</span><span class="o">:</span><span class="w"> </span><span class="n">Build</span><span class="w"> </span><span class="n">failed</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">an</span><span class="w"> </span><span class="n">exception</span><span class="o">.</span>
+
+<span class="o">*</span><span class="w"> </span><span class="n">Where</span><span class="o">:</span>
+<span class="n">Build</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="s1">&#39;/files/ghidra/build.gradle&#39;</span><span class="w"> </span><span class="n">line</span><span class="o">:</span><span class="w"> </span><span class="mi">29</span>
+
+<span class="o">*</span><span class="w"> </span><span class="n">What</span><span class="w"> </span><span class="n">went</span><span class="w"> </span><span class="n">wrong</span><span class="o">:</span>
+<span class="n">A</span><span class="w"> </span><span class="n">problem</span><span class="w"> </span><span class="n">occurred</span><span class="w"> </span><span class="n">evaluating</span><span class="w"> </span><span class="n">root</span><span class="w"> </span><span class="n">project</span><span class="w"> </span><span class="s1">&#39;ghidra.&#39;</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">Requires</span><span class="w"> </span><span class="n">at</span><span class="w"> </span><span class="n">least</span><span class="w"> </span><span class="n">Gradle</span><span class="w"> </span><span class="mf">6.4</span><span class="o">,</span><span class="w"> </span><span class="n">but</span><span class="w"> </span><span class="n">was</span><span class="w"> </span><span class="n">run</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="mf">6.0</span>
+
+<span class="o">*</span><span class="w"> </span><span class="n">Try</span><span class="o">:</span>
+<span class="n">Run</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="o">--</span><span class="n">stacktrace</span><span class="w"> </span><span class="n">option</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="kd">get</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">stack</span><span class="w"> </span><span class="nf">trace</span><span class="o">.</span><span class="w"> </span><span class="n">Run</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="o">--</span><span class="n">info</span><span class="w"> </span><span class="n">or</span><span class="w"> </span><span class="o">--</span><span class="n">debug</span><span class="w"> </span><span class="n">option</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="kd">get</span><span class="w"> </span><span class="n">more</span><span class="w"> </span><span class="n">log</span><span class="w"> </span><span class="n">output</span><span class="o">.</span><span class="w"> </span><span class="n">Run</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="o">--</span><span class="n">scan</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="kd">get</span><span class="w"> </span><span class="n">full</span><span class="w"> </span><span class="n">insights</span><span class="o">.</span>
+
+<span class="o">*</span><span class="w"> </span><span class="n">Get</span><span class="w"> </span><span class="n">more</span><span class="w"> </span><span class="n">help</span><span class="w"> </span><span class="n">at</span><span class="w"> </span><span class="n">https</span><span class="o">://</span><span class="n">help</span><span class="o">.</span><span class="na">gradle</span><span class="o">.</span><span class="na">org</span>
+
+<span class="n">BUILD</span><span class="w"> </span><span class="n">FAILED</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="mi">43</span><span class="n">s</span>
+</code></pre></div>
+
+<ul>
+<li>Update the Dockerfile</li>
+</ul>
+<p>To fix these, we need to update the version of Gradle used by the docker container and the environment variable used to reference Gradle. Locate the following lines in the <code>Dockerfile</code> and modify them as shown below</p>
+<div class="highlight"><pre><span></span><code><span class="n">dev</span><span class="err">@</span><span class="n">ubuntu</span><span class="p">:</span><span class="o">~/</span><span class="n">tools</span><span class="o">/</span><span class="n">ghidra</span><span class="o">/</span><span class="n">ghidra</span><span class="o">-</span><span class="n">builder</span><span class="o">$</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="n">diff</span><span class="w"> </span><span class="n">docker</span><span class="o">-</span><span class="n">tpl</span><span class="o">/</span><span class="n">Dockerfile</span>
+<span class="n">diff</span><span class="w"> </span><span class="o">--</span><span class="n">git</span><span class="w"> </span><span class="n">a</span><span class="o">/</span><span class="n">docker</span><span class="o">-</span><span class="n">tpl</span><span class="o">/</span><span class="n">Dockerfile</span><span class="w"> </span><span class="n">b</span><span class="o">/</span><span class="n">docker</span><span class="o">-</span><span class="n">tpl</span><span class="o">/</span><span class="n">Dockerfile</span>
+<span class="n">index</span><span class="w"> </span><span class="mi">6391</span><span class="n">c29</span><span class="o">..</span><span class="mi">9</span><span class="n">ccf7fa</span><span class="w"> </span><span class="mi">100644</span>
+<span class="o">---</span><span class="w"> </span><span class="n">a</span><span class="o">/</span><span class="n">docker</span><span class="o">-</span><span class="n">tpl</span><span class="o">/</span><span class="n">Dockerfile</span>
+<span class="o">+++</span><span class="w"> </span><span class="n">b</span><span class="o">/</span><span class="n">docker</span><span class="o">-</span><span class="n">tpl</span><span class="o">/</span><span class="n">Dockerfile</span>
+<span class="o">-</span><span class="n">RUN</span><span class="w"> </span><span class="n">wget</span><span class="w"> </span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">services</span><span class="o">.</span><span class="n">gradle</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">distributions</span><span class="o">/</span><span class="n">gradle</span><span class="o">-</span><span class="mf">6.0</span><span class="o">-</span><span class="n">bin</span><span class="o">.</span><span class="n">zip</span><span class="w"> </span><span class="o">-</span><span class="n">P</span><span class="w"> </span><span class="o">/</span><span class="n">tmp</span>
+<span class="o">+</span><span class="n">RUN</span><span class="w"> </span><span class="n">wget</span><span class="w"> </span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">services</span><span class="o">.</span><span class="n">gradle</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">distributions</span><span class="o">/</span><span class="n">gradle</span><span class="o">-</span><span class="mf">7.3</span><span class="o">-</span><span class="n">bin</span><span class="o">.</span><span class="n">zip</span><span class="w"> </span><span class="o">-</span><span class="n">P</span><span class="w"> </span><span class="o">/</span><span class="n">tmp</span>
+<span class="o">-</span><span class="n">ENV</span><span class="w"> </span><span class="n">GRADLE_HOME</span><span class="o">=/</span><span class="n">home</span><span class="o">/</span><span class="n">dockerbot</span><span class="o">/</span><span class="n">gradle</span><span class="o">/</span><span class="n">gradle</span><span class="o">-</span><span class="mf">6.0</span>
+<span class="o">+</span><span class="n">ENV</span><span class="w"> </span><span class="n">GRADLE_HOME</span><span class="o">=/</span><span class="n">home</span><span class="o">/</span><span class="n">dockerbot</span><span class="o">/</span><span class="n">gradle</span><span class="o">/</span><span class="n">gradle</span><span class="o">-</span><span class="mf">7.3</span>
+</code></pre></div>
+
+<ul>
+<li>Update <code>build_ghidra.sh</code> to build the GhidraDev project</li>
+</ul>
+<p>Before we try to build Ghidra again, we need to make a few other modifications. In addition to building Ghidra, we also want to generate the Ghidra Eclipse plugin. Integrating this plugin with Eclipse allows us to launch Ghidra <em>from</em> Eclipse, giving us the ability to debug our plugins and scripts.</p>
+<p>We can generate the Eclipse plugin when building Ghidra by adding the following lines to the <code>workdir/build_ghidra.sh</code> script after the <code>gradle buildGhidra</code> line:</p>
+<div class="highlight"><pre><span></span><code>Gradle prepDev
+Gradle eclipse -PeclipsePDE 
+</code></pre></div>
+
+<ul>
+<li>Run the Docker container, building Ghidra and the GhidraDev Eclipse project</li>
+</ul>
+<div class="highlight"><pre><span></span><code>rm<span class="w"> </span>ghidra.bin
+<span class="nb">cd</span><span class="w"> </span>../
+sudo<span class="w"> </span>workdir-tpl/build
+<span class="nb">cd</span><span class="w"> </span>workdir
+sudo<span class="w"> </span>../docker-tpl/run<span class="w"> </span>./build_ghidra.sh
+</code></pre></div>
+
+<p>With these modifications, ghidra will properly build within the docker container, and the results can be found in the <code>out</code> directory as shown below: </p>
+<div class="highlight"><pre><span></span><code>dev@ubuntu:~/tools/ghidra/blog/ghidra-builder/workdir$<span class="w"> </span>ls<span class="w"> </span>out/
+ghidra_10.2_DEV_20211221_linux_x86_64.zip
+</code></pre></div>
+
+<p>Before moving on to configure Eclipse with our GhidraDev extension, we will unzip our freshly built Ghidra to the workdir directory:</p>
+<div class="highlight"><pre><span></span><code>dev@ubuntu:~/tools/ghidra/blog/ghidra-builder/workdir/out$<span class="w"> </span>unzip<span class="w"> </span>-q<span class="w"> </span>ghidra_10.2_DEV_20211221_linux_x86_64.zip<span class="w"> </span>-d<span class="w"> </span>../
+dev@ubuntu:~/tools/ghidra/blog/ghidra-builder/workdir/out$<span class="w"> </span>ls<span class="w"> </span>../
+build_ghidra.sh<span class="w">  </span>ghidra<span class="w">  </span>ghidra_10.2_DEV<span class="w">  </span>out<span class="w">  </span>set_exec_flag.sh
+</code></pre></div>
+
+<p>At this point, we now have generated the following:</p>
+<ul>
+<li>Ghidra 10.2 </li>
+<li>Ghidra's eclipse projects/plugins (located in the <code>ghidra/GhidraBuild/EclipsePlugins</code> folder)</li>
+</ul>
+<p>If you're following along, your <code>workdir</code> directory should look like this:</p>
+<div class="highlight"><pre><span></span><code>dev@ubuntu:~/tools/ghidra/blog/ghidra-builder/workdir$<span class="w"> </span>ls
+build_ghidra.sh<span class="w">  </span>ghidra<span class="w">  </span>ghidra_10.2_DEV<span class="w">  </span>out<span class="w">  </span>set_exec_flag.sh
+dev@ubuntu:~/tools/ghidra/blog/ghidra-builder/workdir$<span class="w"> </span>ls<span class="w"> </span>ghidra/GhidraBuild/EclipsePlugins/
+GhidraDev<span class="w">  </span>GhidraSleighEditor
+</code></pre></div>
+
+<p>Next, we need to build these Eclipse plugins and then install them. </p>
+<h1>Configuring Eclipse for Ghidra Development</h1>
+<p>First, we need to install Eclipse; you can get the latest release <a href="https://www.eclipse.org/downloads/">here</a></p>
+<p>In the previous section, we generated the project for the GhidraDev Eclipse plugin. Next, we need to import the <code>GhidraDev</code> project into Eclipse and build it. Before we do that, however, we need to install the following Eclipse plugins:</p>
+<ul>
+<li>Eclipse CDT (C/C++ Development Tooling) 10.4 (2021-09)</li>
+<li>PyDev Python IDE for Eclipse 9.2.0</li>
+<li>Eclipse Plugin Development Environment</li>
+</ul>
+<p>To install the plugins, open Eclipse and navigate to <code>Help</code> &gt; <code>Eclipse Marketplace</code>, the following window will appear:</p>
+<p><img class="center" style="border: 8px solid black;" alt="Eclipse Marketplace" src="https://voidstarsec.com/blog/assets/images/marketplace.png"></p>
+<p>First, install the Eclipse plugin development environment by typing <code>Plugin development</code> in the search bar and installing what is displayed in the images below:</p>
+<p><img class="center" style="border: 8px solid black;" alt="PDE Plugin" src="https://voidstarsec.com/blog/assets/images/eclipse_pde.png"></p>
+<p>Next, we need to install the C/C++ development plugin. Type CDT in the search bar, and install the plugin shown below:</p>
+<p><img class="center" style="border: 8px solid black;" alt="CDT Plugin" src="https://voidstarsec.com/blog/assets/images/cdt.png"></p>
+<p>Next, we need to install the PyDeV plugin:</p>
+<p><img class="center" style="border: 8px solid black;" alt="PyDev Plugin" src="https://voidstarsec.com/blog/assets/images/pydev.png"></p>
+<p>After installing these three plugins, your installed plugins window should match what is shown below:</p>
+<p><img class="center" style="border: 8px solid black;" alt="Installed Plugins" src="https://voidstarsec.com/blog/assets/images/plugins.png"></p>
+<h1>Building and Installing the GhidraDev Plugin</h1>
+<p>We can now import the GhidraDev plugin into Eclipse with the plugins installed. Once the plugin is imported, we will export it and install it in Eclipse, allowing us to launch Ghidra from Eclipse and debug our various plugins and scripts. </p>
+<p>First, we import the GhidraDev project into Eclipse; this will be in your <code>ghidra/GhidraBuild/EclipsePlugins</code> folder. To import the project, navigate to the following menu:</p>
+<p><code>File</code> &gt; <code>Import</code> &gt; <code>General</code> &gt; <code>Existing Projects into Workspace</code></p>
+<p><img class="center" style="border: 8px solid black;" alt="Importing GhidraDev" src="https://voidstarsec.com/blog/assets/images/import_ghidradev_project.png"></p>
+<p>After importing the projects, your Eclipse window should look like this, with the <code>EclipseGhidraDevFeature</code> and <code>EclipseGhidraDevPlugin</code> projects displayed: </p>
+<p><img class="center" style="border: 8px solid black;" alt="Imported Projects" src="https://voidstarsec.com/blog/assets/images/projects_imported.png"></p>
+<p>Now that the project has been imported and built, we need to export it. To do that, navigate to the following menu:</p>
+<p><code>File</code> &gt; <code>Export</code> &gt; <code>Plug-in Development</code> &gt; <code>Deployable Features</code></p>
+<p><img class="center" style="border: 8px solid black;" alt="Export Window" src="https://voidstarsec.com/blog/assets/images/deployable_features.png"></p>
+<p>From this window, select the <code>ghidra.ghiradev</code> feature in the checkbox and specify a location for the archive to be exported; in the window shown below, I have set that to <code>/home/dev/ghidraDev.zip</code>. Please note this location because, in the next section, we will be importing this archive into Eclipse!</p>
+<p><img class="center" style="border: 8px solid black;" alt="Export" src="https://voidstarsec.com/blog/assets/images/export.png"></p>
+<p>Now that the plugin has been exported, we can install it in Eclipse. Do this by opening the following window:</p>
+<p><code>Help</code> &gt; <code>Install New Software</code></p>
+<p><img class="center" style="border: 8px solid black;" alt="Install New Software" src="https://voidstarsec.com/blog/assets/images/install_new_software.png"></p>
+<p>Click the <code>Add</code> button, which will cause the following window to appear:</p>
+<p><img class="center" style="border: 8px solid black;" alt="Add New Software" src="https://voidstarsec.com/blog/assets/images/add.png"></p>
+<p>Next, we will load the previously generated archive by clicking on the <code>Archive</code> button. Then, navigate to the location where you exported your <code>ghidraDev.zip</code> file in the previous steps and select it. </p>
+<p><img class="center" style="border: 8px solid black;" alt="Install Plugin" src="https://voidstarsec.com/blog/assets/images/install_plugin.png"></p>
+<p>Click next to install the plugin; once the installation is finished, you will be prompted to restart Eclipse, do this, and upon restart, you will see the <code>GhidraDev</code> menu option in the top menu.</p>
+<p>Now that we have installed the plugin, we can generate our first Ghidra Script project; to do this, navigate to the following menu:</p>
+<p><code>GhidraDev</code> &gt; <code>New</code> &gt; <code>Ghidra Script Project</code></p>
+<p>Select a name for your project; I'll use GhidraScriptsVSS for this example. </p>
+<p><img class="center" style="border: 8px solid black;" alt="GhidraScriptsVSS" src="https://voidstarsec.com/blog/assets/images/ghidrascriptsvss.png"></p>
+<p>Click next to continue project configuration and then click next on the following window:</p>
+<p><img class="center" style="border: 8px solid black;" alt="Configure Ghidra Script Project" src="https://voidstarsec.com/blog/assets/images/configure.png"></p>
+<p>Next, we need to link our current Ghidra installation; if you followed the previous steps and built Ghidra in the docker container, this will be our <code>ghidra_10.2_DEV</code> directory that we extracted earlier.</p>
+<p><img class="center" style="border: 8px solid black;" alt="Ghidra Installation" src="https://voidstarsec.com/blog/assets/images/ghidra_installation.png"></p>
+<p>Next, you can enable Python support using the Jython interpreter bundled with the Ghidra installation pointed to in the previous section. </p>
+<p>The Ghidra project will show up in your Eclipse projects, and we can add our first script!</p>
+<h1>Using the GhidraDev Plugin</h1>
+<p>In a <a href="https://wrongbaud.github.io/posts/kong-vs-ghidra/">previous post on my blog</a>, I wrote a Ghidra script to analyze ARM thumb mode binaries (Game Boy Advance ROMs are excellent test targets!), with a focus on finding function prologues. Let's load download that script and run it against a new binary. </p>
+<ul>
+<li><a href="https://github.com/wrongbaud/ghidra-utils">Ghidra Utilities Repository</a></li>
+</ul>
+<p>To add a new Java file to our project, download the <a href="https://github.com/wrongbaud/ghidra-utils/blob/main/GBA/MakeFunctionsScriptGBA.java"><code>MakeFunctionsScriptGBA.java</code></a> file and copy it into the project location. In my case, this is in the <code>~/ghidra_scripts</code> directory. If you do not have that directory, you can determine the location by right-clicking on the <code>Home Scripts</code> folder in the project directory and clicking <code>Properties</code> causing the following window to appear:</p>
+<p><img class="center" style="border: 8px solid black;" alt="Home Scripts Properties" src="https://voidstarsec.com/blog/assets/images/home_scripts_properties.png"></p>
+<p>After downloading the <a href="https://github.com/wrongbaud/ghidra-utils"><code>ghidra-utils</code></a> repository and copying the <a href="https://github.com/wrongbaud/ghidra-utils/blob/main/GBA/MakeFunctionsScriptGBA.java">function discovery script</a> into our project directory, we can now see the script in our Eclipse workspace.</p>
+<p>Let's take this script and run it on another ROM image from a different game; this time, we will use Monster Rancher Advance as a test case. </p>
+<p>We can launch this script in Ghidra by right-clicking on the script in the project explorer and clicking</p>
+<p><code>Run As</code> &gt; <code>Ghidra</code></p>
+<p><img class="center" style="border: 8px solid black;" alt="Run as &gt; Ghidra" src="https://voidstarsec.com/blog/assets/images/run_as_ghidra.png"></p>
+<p>This will cause the previously linked  Ghidra installation to launch. Once it launches, we will select our target binary and then open up the <code>Script Manager</code> window by clicking <code>Window</code> &gt; <code>Script Manager</code> displaying the following:</p>
+<p><img class="center" style="border: 8px solid black;" alt="Script Manager" src="https://voidstarsec.com/blog/assets/images/script_manager.png"></p>
+<p>We can locate our script by typing it into the search bar; we can double click it to launch it on our new unanalyzed ROM. Below are the parameters I ran the script with; we will run it over the entire ROM and denote the results. </p>
+<p><img class="center" style="border: 8px solid black;" alt="Plugin Option 1" src="https://voidstarsec.com/blog/assets/images/plugin_1.png"></p>
+<p><img class="center" style="border: 8px solid black;" alt="Plugin Option 2" src="https://voidstarsec.com/blog/assets/images/plugin_2.png"></p>
+<p><img class="center" style="border: 8px solid black;" alt="Plugin Option 3" src="https://voidstarsec.com/blog/assets/images/plugin_3.png"></p>
+<p>After entering the third option, the script will run and look for functions in the ROM image. For this example, the script was able to identify 240 functions.</p>
+<p>If we wanted to modify or debug this script as it is running, we can now easily do that within Eclipse. </p>
+<p>Let's say we wanted to break after the user inputs the number of memory regions they wish to analyze. To do this, we can go to the relevant line in our script and set a breakpoint by double-clicking the line number. We also will need to relaunch Ghidra using the <code>Debug As</code> option in the project manager. </p>
+<p><img class="center" style="border: 8px solid black;" alt="Set a Breakpoint" src="https://voidstarsec.com/blog/assets/images/breakpoint.png"></p>
+<p>When we launch Ghidra in debugging mode, Eclipse will appear as follows:</p>
+<p><img class="center" style="border: 8px solid black;" alt="Debugging Mode" src="https://voidstarsec.com/blog/assets/images/breakpoints_debugging.png"></p>
+<p>Now, if we rerun the script from Ghidra, the following will occur:</p>
+<p><img class="center" style="border: 8px solid black;" alt="Ghidra Halted" src="https://voidstarsec.com/blog/assets/images/halted.png"></p>
+<p>We can see that our breakpoint hit, allowing us to single-step through our script. In addition, debugger integration helps debug our scripts and step through other scripts to help us understand how they work. </p>
+<p>Using the GhidraDev plugin, we can set breakpoints, log more information, and run our script in Ghidra. </p>
+<h1>Conclusion</h1>
+<p>With this post, we have reviewed how to:</p>
+<ul>
+<li>Build the latest version of Ghidra using docker</li>
+<li>Set up an Eclipse development environment for extending Ghidra</li>
+<li>Build and install the GhidraDev plugin</li>
+<li>Load a Ghidra script into an existing project and debug it using Eclipse</li>
+</ul>
+<p>With this, we now have all the tools in place needed to extend and augment Ghidra. For some examples of what can be done through Ghidra scripting, check out the following posts:</p>
+<ul>
+<li><a href="https://wrongbaud.github.io/posts/writing-a-ghidra-loader/">Ghidra Loader</a></li>
+<li><a href="https://wrongbaud.github.io/posts/kong-vs-ghidra/">PCode Emulation</a></li>
+</ul>
+<p>If you would like to learn more about Ghidra, check out <a href="https://wrongbaud.github.io/posts/ghidra-training/">this course</a> that I authored at hackaday.
+- <a href="https://github.com/wrongbaud/hackaday-u">Github Repository</a>
+- <a href="https://www.youtube.com/watch?v=d4Pgi5XML8E">YouTube Playlist</a>
+- <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra">Hackaday Page</a></p>
+<p>As always, if you have any questions about this post or would like to submit any corrections or steps that I have missed, please feel free to reach out to me via <a href="https://twitter.com/wrongbaud">Twitter</a> or <a href="mailto:contact@voidstarsec.com">email</a> and let me know!</p>
+<h1>Patches / References</h1>
+<ul>
+<li>Patches for Ghidra builder</li>
+</ul>
+<div class="highlight"><pre><span></span><code>dev@ubuntu:~/tools/ghidra/ghidra-builder$<span class="w"> </span>git<span class="w"> </span>diff<span class="w"> </span>docker-tpl/Dockerfile
+diff<span class="w"> </span>--git<span class="w"> </span>a/docker-tpl/Dockerfile<span class="w"> </span>b/docker-tpl/Dockerfile
+index<span class="w"> </span>6391c29..9ccf7fa<span class="w"> </span><span class="m">100644</span>
+---<span class="w"> </span>a/docker-tpl/Dockerfile
++++<span class="w"> </span>b/docker-tpl/Dockerfile
+@@<span class="w"> </span>-33,10<span class="w"> </span>+33,10<span class="w"> </span>@@<span class="w"> </span>USER<span class="w"> </span>dockerbot
+<span class="w"> </span><span class="c1"># Build tools are part of the builder image; project code is mounted</span>
+<span class="w"> </span>RUN<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$HOME</span>/.gradle/init.d/
+
+-RUN<span class="w"> </span>wget<span class="w"> </span>https://services.gradle.org/distributions/gradle-6.0-bin.zip<span class="w"> </span>-P<span class="w"> </span>/tmp
++RUN<span class="w"> </span>wget<span class="w"> </span>https://services.gradle.org/distributions/gradle-7.3-bin.zip<span class="w"> </span>-P<span class="w"> </span>/tmp
+<span class="w"> </span>RUN<span class="w"> </span>unzip<span class="w"> </span>-d<span class="w"> </span><span class="nv">$HOME</span>/gradle<span class="w"> </span>/tmp/gradle-*.zip
+
+-ENV<span class="w"> </span><span class="nv">GRADLE_HOME</span><span class="o">=</span>/home/dockerbot/gradle/gradle-6.0
++ENV<span class="w"> </span><span class="nv">GRADLE_HOME</span><span class="o">=</span>/home/dockerbot/gradle/gradle-7.3
+<span class="w"> </span>ENV<span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$GRADLE_HOME</span>/bin:<span class="nv">$PATH</span>
+
+<span class="w"> </span>RUN<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;\</span>
+<span class="s2">dev@ubuntu:~/tools/ghidra/ghidra-builder</span>$<span class="s2"> git diff workdir/build_ghidra.sh</span>
+<span class="s2">diff --git a/workdir/build_ghidra.sh b/workdir/build_ghidra.sh</span>
+<span class="s2">index 50d350d..dbe9494 100755</span>
+<span class="s2">--- a/workdir/build_ghidra.sh</span>
+<span class="s2">+++ b/workdir/build_ghidra.sh</span>
+<span class="s2">@@ -17,7 +17,8 @@ cd </span><span class="nv">$START_DIR</span><span class="s2">/ghidra</span>
+<span class="s2"> gradle --init-script gradle/support/fetchDependencies.gradle init</span>
+<span class="s2"> gradle yajswDevUnpack</span>
+<span class="s2"> gradle buildGhidra</span>
+<span class="s2">-</span>
+<span class="s2">+gradle prepDev</span>
+<span class="s2">+gradle eclipse -PeclipsePDE</span>
+</code></pre></div>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3 col-sm-pull-9" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://voidstarsec.com"><i class="fa fa-vss-website-square fa-lg"></i> VSS website</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/voidstarsec"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/voidstarsec"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+    <li class="list-group-item"><a href="https://github.com/voidstarsec"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+
+<!-- Sidebar/Categories -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
+  <ul class="list-group" id="categories">
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Categories -->
+
+<!-- Sidebar/Tag Cloud -->
+<li class="list-group-item">
+  <a href="https://wrongbaud.github.io/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <ul class="list-group " id="tags">
+    <li class="list-group-item tag-1">
+      <a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://wrongbaud.github.io/newblog/tag/blog.html">blog</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/fault-injection.html">fault-injection</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/chipwhisperer.html">chipwhisperer</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/training.html">training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Tag Cloud -->
+
+<!-- Sidebar/Links -->
+<li class="list-group-item">
+  <h4><i class="fa fa-external-link-square fa-lg"></i><span class="icon-label">Links</span></h4>
+  <ul class="list-group" id="links">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/" target="_blank">VoidStar Security Website</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.training/" target="_blank">VoidStar Security Training</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.wiki/" target="_blank">Build a Hardware Hacking Lab</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra" target="_blank">Free Ghidra Course</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.wrongbaud.github.io/" target="_blank">Wrongbauds Blog (fun intro hacks)</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Links -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2024 VoidStar Security
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://wrongbaud.github.io/newblog/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://wrongbaud.github.io/newblog/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://wrongbaud.github.io/newblog/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>
