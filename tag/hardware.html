@@ -1,752 +1,325 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
 <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="generator" content="Pelican" />
-        <title>VoidStar Security Blog - hardware</title>
-        <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/main.css" />
-        <link href="https://wrongbaud.github.io/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Atom Feed" />
+    <title>hardware - VoidStar Security Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+
+    <meta name="author" content="VoidStar Security" />
+    <meta name="keywords" content="hardware" />
+
+    <!-- Open Graph tags -->
+        <meta property="og:site_name" content="VoidStar Security Blog" />
+        <meta property="og:type" content="website"/>
+        <meta property="og:title" content="VoidStar Security Blog"/>
+        <meta property="og:url" content="https://wrongbaud.github.io/newblog"/>
+        <meta property="og:description" content="VoidStar Security Blog"/>
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/bootstrap.sandstone.min.css" type="text/css"/>
+    <link href="https://wrongbaud.github.io/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://wrongbaud.github.io/newblog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/style.css" type="text/css"/>
+
+        <link href="https://wrongbaud.github.io/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog ATOM Feed"/>
+
+
+
 </head>
+<body>
 
-<body id="index" class="home">
-        <header id="banner" class="body">
-                <h1><a href="https://wrongbaud.github.io/newblog/">VoidStar Security Blog</a></h1>
-                <nav><ul>
-                </ul></nav>
-        </header><!-- /#banner -->
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="https://wrongbaud.github.io/newblog/" class="navbar-brand">
+VoidStar Security Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
 
-            <aside id="featured" class="body">
-                <article>
-                    <h1 class="entry-title"><a href="https://wrongbaud.github.io/newblog/jtag-pifex.html">JTAG Hacking with a Raspberry Pi - Introducing the PiFex</a></h1>
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-sm-push-3">
+    <ol class="breadcrumb">
+        <li><a href="https://wrongbaud.github.io/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+        <li><a href="https://wrongbaud.github.io/newblog/" title="Tags">Tags</a></li>
+        <li class="active">hardware</li>
+    </ol>
+            <article>
+                <h2><a href="https://wrongbaud.github.io/newblog/jtag-pifex.html">JTAG Hacking with a Raspberry Pi - Introducing the PiFex</a></h2>
+                    <div class="well well-sm">
 <footer class="post-info">
-        <abbr class="published" title="2024-05-05T00:00:00-06:00">
-                Published: Sun 05 May 2024
-        </abbr>
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2024-05-05T00:00:00-06:00"> Sun 05 May 2024</time>
+    </span>
 
-        <address class="vcard author">
-                By                         <a class="url fn" href="https://wrongbaud.github.io/newblog/author/matthew-alt.html">"Matthew Alt"</a>
-        </address>
-<p>In <a href="https://wrongbaud.github.io/newblog/category/pifex.html">Pifex</a>.</p>
-<p>tags: <a href="https://wrongbaud.github.io/newblog/tag/pifex.html">pifex</a> <a href="https://wrongbaud.github.io/newblog/tag/jtag.html">jtag</a> <a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a> <a href="https://wrongbaud.github.io/newblog/tag/blog.html">blog</a> </p>
-</footer><!-- /.post-info --><h1>Overview</h1>
-<p>When performing initial hardware analysis and recon, I have become very fond of using Armbian-based single-board computers (SBCs) for things like UART, SPI, I2C, JTAG, and SWD. One of the main benefits of using one of these boards is that since the peripherals we are interested in are exposed as character devices in Linux, a wide variety of tools are available for interfacing with them, including most programming and scripting languages. </p>
-<p>However, one of the biggest hurdles that stop people from using an Armbian-based device is the initial setup and configuration (not to mention availability!). It takes more time to configure an Orange Pi or Raspberry Pi and enable the various interfaces than plug in an FTDI to your Linux machine. This blog post will help break down some of those barriers and streamline the setup process for those looking to learn hardware hacking with a Linux SBC.</p>
-<p>With this blog post, we'll introduce the PiFex, a basic companion board for the Raspberry Pi designed to teach users the basics of hardware hacking and embedded protocols. We will then demonstrate how to use the PiFex to access a JTAG tap on an undocumented SSD, allowing memory reads and GDB access to the SSD CPU.</p>
-<p><strong>Note:</strong> The design and software for the PiFex will be open-sourced in the coming months as we continue our final rounds of testing</p>
-<h2>Background Information</h2>
-<p>If you are unfamiliar with JTAG at a low level, you might want to read my <a href="https://wrongbaud.github.io/posts/jtag-hdd/">previous</a> blog post about reverse engineering JTAG taps. </p>
-<h1>PiFex: An Overview</h1>
-<p>The Pi Interface Explorer or PiFex, is a simple hat for a Raspberry Pi designed for tinkerers and hardware hackers alike. By breaking out the commonly used interfaces and routing them through bi-directional level shifters, we aimed to streamline some of the initial steps when reverse engineering a new device or trying to learn how a new sensor works. While this device was initially designed for use during our <a href="https://voidstarsec.com/hhb.html">hardware hacking bootcamp</a> it has quickly become my go-to when performing initial hardware assessments of COTS devices.</p>
-<p>The PCB is well documented, and the IO pins are all labeled as shown in the image below:</p>
-<p><img src= "https://voidstarsec.com/blog/assets/images/jtag-pifex/pifex.JPG" alt="your-image-description" style="border: 8px solid black;" class="center"></p>
-<p>We also have added an I2C OLED screen, which you can customize using the Adafruit CircuitPython libraries:</p>
-<p><img alt="JTAG ID Clipped " src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag_id_clipped.jpg"></p>
-<h1>PiFex: Hardware</h1>
-<p>The PiFex exposes the following interfaces to the end user:</p>
-<ul>
-<li>UART via <code>IO14</code> and <code>IO15</code></li>
-<li>SPI via <code>IO8</code>, <code>IO9</code>, <code>IO10</code> and <code>IO11</code></li>
-<li>I2C via <code>IO2</code> and <code>IO3</code></li>
-<li>JTAG via <code>IO2</code>,<code>IO3</code>,<code>IO14</code> and <code>IO15</code></li>
-<li>SWD via <code>IO9</code> and <code>IO11</code></li>
-</ul>
-<p>There are also an additional eight GPIO pins. These interfaces were chosen because they are the ones that we utilize in our hardware hacking training and are also the most likely to be used by tinkerers and hardware hackers for other projects. </p>
-<h2>Logic Analyzer Connector</h2>
-<p>When reverse engineering a target device or inspecting why your custom code controlling a specific peripheral isn't working, a logic analyzer is your best friend. To help simplify the wiring for both our training and standard usage, we also added a logic analyzer connector. This was done to remediate potential wiring issues and make debugging and troubleshooting as easy as possible. An interface board was designed to connect to entry-level logic analyzers that can be seen in the image below:</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_connector.JPG"></p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_1.JPG"></p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_2.JPG"></p>
-<p>This helps streamline connecting a logic analyzer to the PiFex and analyzing the transmitted or monitored signals. </p>
-<h2>Level Shifter(s)</h2>
-<p>The Raspberry PI uses 3.3V logic levels, meaning it can only communicate with devices that use that same logic level. If we want to connect to a device that uses lower voltages (1.8V and 1.2V are becoming increasingly common), we need to route those through a level shifter. To streamline this and help reduce issues with wiring during our training, we've added two onboard level shifters.</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/level_shifters.JPG"></p>
-<p>We chose to use the <a href="https://www.ti.com/product/TXB0108">TXB0108 Bi-Directional level shifters</a>; these allow us to communicate with devices at a voltage below 3.3V. In the case where a different logic level is needed, the user can select whether to use an external voltage source for the input voltage using the <code>VCCA_IN</code> line on the exposed headers. The level shifter then references this voltage by toggling the selector switch at the top of the board to <code>VCCA_IN</code> as opposed to the default state, which is <code>3.3V</code>.</p>
-<h1>PiFex: Software</h1>
-<p>If you've ever had to set up a headless Raspberry Pi before, you know that it's not always a simple task, and when performing remote training, we can't assume that everyone will be able to manually configure their Pi to connect to their network. This is why we designed the PiFex image to use a USB-Ethernet gadget on startup to present an Ethernet device to the end user over USB. This results in an easy, predictable way to connect to the Pi. After plugging the Pi into their machine, all the user needs to do is set the IP address, and they are all set. A short video walking through the web interface can be seen below:</p>
-<p><img alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/multi.gif" style="display:block; margin-left:auto; margin-right:auto"></p>
-<p>As mentioned in the previous section, one of the initial hurdles when learning about embedded protocols is selecting what tool or interface you want to learn with. Embedded development boards like the Arduino series or STM32 series are great but require setting up a development environment and understanding the specifics of the target microcontroller. One of the benefits of using an embedded Linux board is that these interfaces are exposed via <code>/dev/</code> and can be accessed using many programming languages such as Python, Rust, C, and even bash. </p>
-<h2>Jupyter Notebooks</h2>
-<p>Throughout our training, we utilize Jupyter Notebooks to help streamline the process and provide students with template notebooks for future assessments. For example, the JTAG notebook contains instructions and tooling to perform:</p>
-<ol>
-<li>
-<p>JTAG Scan Chain Detection via <code>go-jtagenum</code></p>
-</li>
-<li>
-<p>Example UrJTAG Python Bindings for low-level scan chain access</p>
-</li>
-<li>
-<p>Example OpenOCD configurations and Python bindings for scripting JTAG operations</p>
-</li>
-</ol>
-<p>Screenshots of the included notebooks can be seen below:</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag-notebook-2.png"></p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag.png"></p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/notebook-1.png"></p>
-<p>While in class, we will use all of these features on our target, and students will be able to copy this notebook and use the same tools and techniques for future targets. </p>
-<p>Last but certainly not least, we've configured the PiFex image to allow access to standard tools such as SSH and FTP. Now that we've reviewed the PiFex's features and intended use case, let's reverse-engineer the JTAG TAP for an undocumented target!</p>
-<h1>PiFex Demo 1 : JTAG</h1>
-<p>So, we've talked about our new hardware tooling. How about a demonstration of it in action? Let's start with a low-cost SSD purchased on AliExpress. </p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/top_pcb_labelled.jpg"></p>
-<p>If we break down the hardware, we have the following:</p>
-<table>
-<thead>
-<tr>
-<th>Component</th>
-<th>Part Number</th>
-<th>Datasheet / Information</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>SM2259XT</td>
-<td><a href="https://www.siliconmotion.com/download/q/a/SM2259_XT_PB_EN_201910.pdf">Advertisement / Basic Information</a></td>
-</tr>
-<tr>
-<td>2</td>
-<td>SPS64472LBTH2</td>
-<td>NA - 64GB NAND Flash</td>
-</tr>
-<tr>
-<td>3</td>
-<td>50.00 MHz</td>
-<td>Oscilator</td>
-</tr>
-<tr>
-<td>4</td>
-<td>NA</td>
-<td>10 pin debug header</td>
-</tr>
-</tbody>
-</table>
-<p>After searching for datasheets, we were not able to locate much; however, next, we will investigate the mystery header at the end of the board. Let's start by looking at this debug connector at the end of the drive. First, we will attempt to identify the ground connection. To do this, we will use our multimeter in continuity mode and test against a known ground. We will use the large copper fills to connect the SSD to an adapter board in this case. </p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/known_ground.jpg"></p>
-<p>After performing this test, we determined that the following pin was ground.
-<img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/known_ground_2.jpg"></p>
-<p>Now we need to determine what logic levels are in use; remember that the Pi uses a 3.3V logic level by default, so if there are other levels in use, we will need to locate a reference voltage for the level shifter. We will use the following pinout of the SSD for reference:</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/connector_pins.jpg"></p>
-<p>After measuring the voltages on the connector, we saw the following voltages. </p>
-<ul>
-<li><strong>Side Note:</strong> When reversing a new target, I like to place the target platform on top of a blank sheet of paper; that way, I can quickly write down notes as I am probing/reverse engineering without having to turn away from the workspace. You can see this in the video below:</li>
-</ul>
-<p><img alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/measurement.gif" style="display:block; margin-left:auto; margin-right:auto"></p>
-<table>
-<thead>
-<tr>
-<th>Pin</th>
-<th>Voltage</th>
-<th>Usage</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>0V</td>
-<td>GND</td>
-</tr>
-<tr>
-<td>2</td>
-<td>3.28V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>3</td>
-<td>3.28V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>4</td>
-<td>3.173V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>5</td>
-<td>0.02V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>6</td>
-<td>3.284V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>7</td>
-<td>3.284V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>8</td>
-<td>3.284V</td>
-<td>???</td>
-</tr>
-</tbody>
-</table>
-<p>It is extremely common for voltage sources to have capacitors connected to them called decoupling capacitors. These capacitors help stabilize the power supply in the event of voltage fluctuations. From here, there are two approaches that we can take to finding out which pins <strong>might</strong> be VCC on our SSD.</p>
-<ol>
-<li>
-<p>Note what pins are connected to large capacitors near the connector</p>
-</li>
-<li>
-<p>Monitor the voltage source on power up / power down</p>
-</li>
-</ol>
-<p>Based on the voltages we collected, we should monitor pins 2,3,4,6,7, and \8 with the oscilloscope and see how they differ. Take a look at the images below and see if you can spot the different one:</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/all_drops.png"></p>
-<p>If we examine the images highlighted in green below, we see a relatively sharp drop from high to low:</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/digital_drops.png"></p>
-<p>Looking closely at the images above, you may notice that image 1 has a slightly different shape when it rises and falls than the other lines. This is likely due to a capacitor being present somewhere on this line, which makes it a good candidate for VCC. This was pin two on the debug header, so we can now update our table as shown below.</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/analog_drops.png"></p>
-<table>
-<thead>
-<tr>
-<th>Pin</th>
-<th>Voltage</th>
-<th>Usage</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>0V</td>
-<td>GND</td>
-</tr>
-<tr>
-<td>2</td>
-<td>3.28V</td>
-<td>VCC</td>
-</tr>
-<tr>
-<td>3</td>
-<td>3.28V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>4</td>
-<td>3.173V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>5</td>
-<td>0.02V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>6</td>
-<td>3.284V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>7</td>
-<td>3.284V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>8</td>
-<td>3.284V</td>
-<td>???</td>
-</tr>
-</tbody>
-</table>
-<p>We will connect to the SSD using the clips shown in the image below, these were also purchased on AliExpress.</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/clip-only.JPG"></p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/connected.JPG"></p>
-<p>With this assumption, we are left with six unknown pins. Next, we can perform a JTAG IDCODE scan using the <code>go-jtagenum</code> tools; this will attempt to brute force all of the possible JTAG pin combinations and will report back pin configurations that report a valid ID code or pass the bypass test. If you're unfamiliar with these scans and want to learn more about them, check out my old writeup <a href="https://wrongbaud.github.io/posts/jtag-hdd/">here</a>.</p>
-<div class="highlight"><pre><span></span><code>pi@voidstar:~/go/bin/linux_arm<span class="w"> </span>$<span class="w"> </span>./go-jtagenum<span class="w"> </span>-pins<span class="w"> </span><span class="s1">&#39;{ &quot;pin2&quot;: 2, &quot;pin3&quot;: 3, &quot;pin14&quot;: 14, &quot;pin15&quot;: 15, &quot;pin10&quot;: 10, &quot;pin9&quot;: 9}&#39;</span><span class="w"> </span>-command<span class="w"> </span>scan_idcode<span class="w"> </span>-delay-tck<span class="w"> </span><span class="m">50</span>
-defined<span class="w"> </span>pins:<span class="w"> </span>map<span class="o">[</span><span class="m">2</span>:pin2<span class="w"> </span><span class="m">3</span>:pin3<span class="w"> </span><span class="m">9</span>:pin9<span class="w"> </span><span class="m">10</span>:pin10<span class="w"> </span><span class="m">14</span>:pin14<span class="w"> </span><span class="m">15</span>:pin15<span class="o">]</span>
-<span class="o">================================</span>
-Starting<span class="w"> </span>scan<span class="w"> </span><span class="k">for</span><span class="w"> </span>IDCODE...
-FOUND!<span class="w"> </span>TCK:pin10<span class="w"> </span>TMS:pin3<span class="w"> </span>TDO:pin2
-<span class="w">     </span>devices:
-<span class="w">        </span>0x459dd1e7<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x0f3<span class="w"> </span><span class="o">(</span>Digital<span class="w"> </span>Microwave<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x59dd,<span class="w"> </span>ver:<span class="w"> </span>0x4<span class="o">)</span>
-<span class="w">        </span>0xb83b3f6f<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x7b7<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x83b3,<span class="w"> </span>ver:<span class="w"> </span>0xb<span class="o">)</span>
-<span class="w">        </span>0x268b37a3<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x3d1<span class="w"> </span><span class="o">(</span>Accelerated<span class="w"> </span>Memory<span class="w"> </span>Production<span class="w"> </span>Inc.<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x68b3,<span class="w"> </span>ver:<span class="w"> </span>0x2<span class="o">)</span>
-<span class="w">        </span>0x5f5fcedf<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x76f<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xf5fc,<span class="w"> </span>ver:<span class="w"> </span>0x5<span class="o">)</span>
-<span class="w">        </span>0xf79d3aeb<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x575<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x79d3,<span class="w"> </span>ver:<span class="w"> </span>0xf<span class="o">)</span>
-<span class="w">        </span>0x72ba6a4f<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x527<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x2ba6,<span class="w"> </span>ver:<span class="w"> </span>0x7<span class="o">)</span>
-<span class="w">        </span>0x7bf1f75d<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x3ae<span class="w"> </span><span class="o">(</span>Korea<span class="w"> </span>Uhbele<span class="w"> </span>International<span class="w"> </span>Group<span class="w"> </span>Ltd.<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xbf1f,<span class="w"> </span>ver:<span class="w"> </span>0x7<span class="o">)</span>
-<span class="w">        </span>0xe7cfffaf<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x7d7<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x7cff,<span class="w"> </span>ver:<span class="w"> </span>0xe<span class="o">)</span>
-<span class="w">        </span>0xb0cf6bbf<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x5df<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x0cf6,<span class="w"> </span>ver:<span class="w"> </span>0xb<span class="o">)</span>
-<span class="w">        </span>0xebbfb71f<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x38f<span class="w"> </span><span class="o">(</span>Ericsson<span class="w"> </span>Modems<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xbbfb,<span class="w"> </span>ver:<span class="w"> </span>0xe<span class="o">)</span>
-<span class="w">        </span>0xd6f7fc17<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x60b<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x6f7f,<span class="w"> </span>ver:<span class="w"> </span>0xd<span class="o">)</span>
-<span class="w">        </span>0xedfe967b<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x33d<span class="w"> </span><span class="o">(</span>AIM<span class="w"> </span>Corporation<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xdfe9,<span class="w"> </span>ver:<span class="w"> </span>0xe<span class="o">)</span>
-<span class="w">        </span>0xfeefd88d<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x446<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xeefd,<span class="w"> </span>ver:<span class="w"> </span>0xf<span class="o">)</span>
-<span class="w">        </span>0x8ef5b7ff<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x3ff<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xef5b,<span class="w"> </span>ver:<span class="w"> </span>0x8<span class="o">)</span>
-<span class="w">        </span>0x2fdc8f9f<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x7cf<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xfdc8,<span class="w"> </span>ver:<span class="w"> </span>0x2<span class="o">)</span>
-<span class="w">        </span>0x7ce9726b<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x135<span class="w"> </span><span class="o">(</span>API<span class="w"> </span>NetWorks<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xce97,<span class="w"> </span>ver:<span class="w"> </span>0x7<span class="o">)</span>
-<span class="w">        </span>0x7ff76d77<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x6bb<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xff76,<span class="w"> </span>ver:<span class="w"> </span>0x7<span class="o">)</span>
-<span class="w">        </span>0xb9f58fdb<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x7ed<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x9f58,<span class="w"> </span>ver:<span class="w"> </span>0xb<span class="o">)</span>
-<span class="w">        </span>0xe36f2bb7<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x5db<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x36f2,<span class="w"> </span>ver:<span class="w"> </span>0xe<span class="o">)</span>
-<span class="w">        </span>0x757fbbdb<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x5ed<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x57fb,<span class="w"> </span>ver:<span class="w"> </span>0x7<span class="o">)</span>
-<span class="w">        </span>0x4fbeae5f<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x72f<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xfbea,<span class="w"> </span>ver:<span class="w"> </span>0x4<span class="o">)</span>
-<span class="w">        </span>0xddf6f17f<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x0bf<span class="w"> </span><span class="o">(</span>Broadcom<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xdf6f,<span class="w"> </span>ver:<span class="w"> </span>0xd<span class="o">)</span>
-<span class="w">        </span>0x1f3cefbd<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x7de<span class="w"> </span><span class="o">(</span>invalid<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0xf3ce,<span class="w"> </span>ver:<span class="w"> </span>0x1<span class="o">)</span>
-<span class="w">     </span>possible<span class="w"> </span>nTRST:<span class="w"> </span>pin9,<span class="w"> </span>pin14<span class="w"> </span>pin15<span class="w"> </span>
-FOUND!<span class="w"> </span>TCK:pin10<span class="w"> </span>TMS:pin14<span class="w"> </span>TDO:pin15
-<span class="w">     </span>devices:
-<span class="w">        </span>0x100434b1<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x258<span class="w"> </span><span class="o">(</span>Lorom<span class="w"> </span>Industrial<span class="w"> </span>Co.<span class="w"> </span>Ltd.<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x0043,<span class="w"> </span>ver:<span class="w"> </span>0x1<span class="o">)</span>
-<span class="w">     </span>possible<span class="w"> </span>nTRST:<span class="w"> </span>pin9<span class="w"> </span>pin2<span class="w"> </span><span class="nv">pin3</span><span class="w"> </span>
-<span class="o">================================</span>
-pi@voidstar:~/go/bin/linux_arm<span class="w"> </span>$<span class="w"> </span>./go-jtagenum<span class="w"> </span>-pins<span class="w"> </span><span class="s1">&#39;{ &quot;pin2&quot;: 2, &quot;pin3&quot;: 3, &quot;pin14&quot;: 14, &quot;pin15&quot;: 15, &quot;pin10&quot;: 10, &quot;pin9&quot;: 9}&#39;</span><span class="w"> </span>-command<span class="w"> </span>scan_bypass<span class="w"> </span>-delay-tck<span class="w"> </span><span class="m">50</span>
-defined<span class="w"> </span>pins:<span class="w"> </span>map<span class="o">[</span><span class="m">2</span>:pin2<span class="w"> </span><span class="m">3</span>:pin3<span class="w"> </span><span class="m">9</span>:pin9<span class="w"> </span><span class="m">10</span>:pin10<span class="w"> </span><span class="m">14</span>:pin14<span class="w"> </span><span class="m">15</span>:pin15<span class="o">]</span>
-<span class="o">================================</span>
-Starting<span class="w"> </span>scan<span class="w"> </span><span class="k">for</span><span class="w"> </span>pattern<span class="w"> </span><span class="m">0110011101001101101000010111001001</span>
-FOUND!<span class="w"> </span>TCK:pin10<span class="w"> </span>TMS:pin14<span class="w"> </span>TDO:pin15<span class="w"> </span>TDI:pin9,<span class="w"> </span>possible<span class="w"> </span>nTRST:<span class="w"> </span>pin2<span class="w"> </span>pin3<span class="w"> </span>
-^C
-pi@voidstar:~/go/bin/linux_arm<span class="w"> </span>$<span class="w"> </span>./go-jtagenum<span class="w"> </span>-pins<span class="w"> </span><span class="s1">&#39;{ &quot;pin2&quot;: 2, &quot;pin3&quot;: 3, &quot;pin14&quot;: 14, &quot;pin15&quot;: 15, &quot;pin10&quot;: 10, &quot;pin9&quot;: 9}&#39;</span><span class="w"> </span>-command<span class="w"> </span>scan_idcode<span class="w"> </span>-delay-tck<span class="w"> </span><span class="m">50</span>
-defined<span class="w"> </span>pins:<span class="w"> </span>map<span class="o">[</span><span class="m">2</span>:pin2<span class="w"> </span><span class="m">3</span>:pin3<span class="w"> </span><span class="m">9</span>:pin9<span class="w"> </span><span class="m">10</span>:pin10<span class="w"> </span><span class="m">14</span>:pin14<span class="w"> </span><span class="m">15</span>:pin15<span class="o">]</span>
-<span class="o">================================</span>
-Starting<span class="w"> </span>scan<span class="w"> </span><span class="k">for</span><span class="w"> </span>IDCODE...
-FOUND!<span class="w"> </span>TCK:pin10<span class="w"> </span>TMS:pin14<span class="w"> </span>TDO:pin15
-<span class="w">     </span>devices:
-<span class="w">        </span>0x100434b1<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x258<span class="w"> </span><span class="o">(</span>Lorom<span class="w"> </span>Industrial<span class="w"> </span>Co.<span class="w"> </span>Ltd.<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x0043,<span class="w"> </span>ver:<span class="w"> </span>0x1<span class="o">)</span>
-<span class="w">     </span>possible<span class="w"> </span>nTRST:<span class="w"> </span>pin2<span class="w"> </span>pin3<span class="w"> </span>pin9<span class="w"> </span>
-</code></pre></div>
 
-<p>Before we move forward, let's talk about the output that we're seeing above. You'll notice that <code>go-jtagenum</code> discovered what it believes to be multiple possible pin mappings, some of which contain more "devices" than others. While it is possible that there <strong>can</strong> be various devices on a JTAG scan chain, we know that this device is pretty straightforward and will not likely have 10+ devices. This is the one drawback of the <code>IDCODE</code> scan; it simply checks to see if data is changing** on the assumed <code>TDO</code> port, which can lead to many false positives. However, the entry displaying just one <code>IDCODE</code> value looks promising; we can further investigate this TAP using the <code>BYPASS</code> scan.</p>
-<p>We can attempt to verify these results with a bypass scan. The <code>BYPASS</code> scan attempts to leverage the <code>BYPASS</code> instruction of the JTAG TAP which directly links the <code>TDI</code> and <code>TDO</code> lines. The scan attempts to enter the <code>BYPASS</code> instruction, provides a unique bit pattern on <code>TDI</code>, and monitors for that same pattern on <code>TDO</code>. If the data sent on <code>TDI</code> matches what is read on <code>TDO</code>, then the scan has determined the correct pinout. The results of the BYPASS scan can be seen below:</p>
-<div class="highlight"><pre><span></span><code>[&#39;defined pins: map[2:IO_2 3:IO_3 9:IO_9 10:IO_10 14:IO_14 15:IO_]&#39;,
- &#39;================================&#39;,
- &#39;Starting scan for pattern 0110011101001101101000010111001001&#39;,
- &#39;active, TCK:IO_10 TMS:IO_14 TDO:IO_ TDI:IO_2, wrong data received (0000000000000000000000000000000000)&#39;,
- &#39; try adjusting frequency, delays, pullup, check hardware connectivity&#39;,
- &#39;FOUND! TCK:IO_10 TMS:IO_14 TDO:IO_ TDI:IO_9, possible nTRST: IO_3 IO_2 &#39;,
- &#39;================================&#39;]
-</code></pre></div>
+            <span class="label label-default">By</span>
+            <a href="https://wrongbaud.github.io/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
-<p>Going back to our table of pin usages, we now know the following:</p>
-<table>
-<thead>
-<tr>
-<th>Pin</th>
-<th>Voltage</th>
-<th>Usage</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>0V</td>
-<td>GND</td>
-</tr>
-<tr>
-<td>2</td>
-<td>3.28V</td>
-<td>VCC</td>
-</tr>
-<tr>
-<td>3</td>
-<td>3.28V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>4</td>
-<td>3.173V</td>
-<td>???</td>
-</tr>
-<tr>
-<td>5</td>
-<td>0.02V</td>
-<td>TDO</td>
-</tr>
-<tr>
-<td>6</td>
-<td>3.284V</td>
-<td>TMS</td>
-</tr>
-<tr>
-<td>7</td>
-<td>3.284V</td>
-<td>TDI</td>
-</tr>
-<tr>
-<td>8</td>
-<td>3.284V</td>
-<td>TCK</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Note</strong>: We are not <strong>required</strong> to use the labeled JTAG pins on the PiFex for JTAG operations, they are configurable via OpenOCD. </p>
-<p>So now that we know what the pins are, we need to use them to access the test access port (TAP) on the device. There is only one problem: we know our pins, but now we need to figure out how to actually use them. We can now write to the Instruction Register (IR) and Data Registers (DR), but without knowing <strong>what</strong> to write to them, knowing the JTAG pinout is largely useless. Before we move forward, we need to figure out two things:</p>
-<ol>
-<li>What type of CPU is this?</li>
-<li>Can we use any open-source tools to interact with it?</li>
-</ol>
-<p>To determine what type of CPU we're dealing with, we can start with the ID. We can extract this via a tool called UrJTAG.</p>
-<h2>UrJTAG for Reverse Engineers</h2>
-<p><a href="http://urjtag.org/">UrJTAG</a> is an open-source tool designed for performing low-level JTAG operations. This tool allows one to programmatically read and write the instruction register and corresponding data registers when connected to a JTAG TAP. It was originally designed to enable developers to use other JTAG tooling besides those provided by the original component manufacturer. Because of this tool's low-level instrumentation and introspection, it is also beneficial to us as reverse engineers when examining a new TAP. </p>
-<div class="highlight"><pre><span></span><code><span class="nf">pi</span><span class="nv">@voidstar</span><span class="err">:</span><span class="o">~/</span><span class="n">pifex</span><span class="o">/</span><span class="n">software</span><span class="o">/</span><span class="n">urjtag</span><span class="o">-</span><span class="mf">2021.03</span><span class="w"> </span><span class="err">$</span><span class="w"> </span><span class="n">sudo</span><span class="w"> </span><span class="p">.</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">apps</span><span class="o">/</span><span class="n">jtag</span><span class="o">/</span><span class="n">jtag</span>
-<span class="n">UrJTAG</span><span class="w"> </span><span class="mf">2021.03</span><span class="w"> </span><span class="err">#</span>
-<span class="n">Copyright</span><span class="w"> </span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="w"> </span><span class="mi">2002</span><span class="p">,</span><span class="w"> </span><span class="mi">2003</span><span class="w"> </span><span class="n">ETC</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">r</span><span class="p">.</span><span class="n">o</span><span class="p">.</span>
-<span class="n">Copyright</span><span class="w"> </span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="w"> </span><span class="mi">2007</span><span class="p">,</span><span class="w"> </span><span class="mi">2008</span><span class="p">,</span><span class="w"> </span><span class="mi">2009</span><span class="w"> </span><span class="n">Kolja</span><span class="w"> </span><span class="n">Waschk</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">respective</span><span class="w"> </span><span class="n">authors</span>
-<span class="n">UrJTAG</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">free</span><span class="w"> </span><span class="n">software</span><span class="p">,</span><span class="w"> </span><span class="n">covered</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">GNU</span><span class="w"> </span><span class="k">General</span><span class="w"> </span><span class="k">Public</span><span class="w"> </span><span class="n">License</span><span class="p">,</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">you</span><span class="w"> </span><span class="k">are</span>
-<span class="n">welcome</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">change</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="ow">and</span><span class="o">/</span><span class="ow">or</span><span class="w"> </span><span class="n">distribute</span><span class="w"> </span><span class="n">copies</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">under</span><span class="w"> </span><span class="n">certain</span><span class="w"> </span><span class="n">conditions</span><span class="p">.</span>
-<span class="n">There</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">no</span><span class="w"> </span><span class="n">warranty</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">UrJTAG</span><span class="p">.</span>
-<span class="nl">warning</span><span class="p">:</span><span class="w"> </span><span class="n">UrJTAG</span><span class="w"> </span><span class="n">may</span><span class="w"> </span><span class="n">damage</span><span class="w"> </span><span class="n">your</span><span class="w"> </span><span class="n">hardware</span><span class="err">!</span>
-<span class="n">Type</span><span class="w"> </span><span class="ss">&quot;quit&quot;</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">exit</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;help&quot;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">help</span><span class="p">.</span>
-<span class="n">jtag</span><span class="o">&gt;</span><span class="w"> </span><span class="n">cable</span><span class="w"> </span><span class="n">gpio</span><span class="w"> </span><span class="n">tck</span><span class="o">=</span><span class="mi">10</span><span class="w"> </span><span class="n">tdi</span><span class="o">=</span><span class="mi">9</span><span class="w"> </span><span class="n">tms</span><span class="o">=</span><span class="mi">14</span><span class="w"> </span><span class="n">tdo</span><span class="o">=</span><span class="mi">15</span>
-<span class="n">Initializing</span><span class="w"> </span><span class="n">GPIO</span><span class="w"> </span><span class="n">JTAG</span><span class="w"> </span><span class="n">Chain</span>
-<span class="n">jtag</span><span class="o">&gt;</span><span class="w"> </span><span class="n">idcode</span>
-<span class="n">Reading</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">bytes</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">idcode</span>
-<span class="k">Read</span><span class="w"> </span><span class="mi">10110001</span><span class="p">(</span><span class="mh">0xb1</span><span class="p">)</span><span class="w"> </span><span class="mi">00110100</span><span class="p">(</span><span class="mh">0x34</span><span class="p">)</span><span class="w"> </span><span class="mi">00000100</span><span class="p">(</span><span class="mh">0x04</span><span class="p">)</span><span class="w"> </span><span class="mi">00010000</span><span class="p">(</span><span class="mh">0x10</span><span class="p">)</span><span class="w"> </span><span class="mi">00000000</span><span class="p">(</span><span class="mh">0x00</span><span class="p">)</span><span class="w"> </span><span class="mi">00000000</span><span class="p">(</span><span class="mh">0x00</span><span class="p">)</span><span class="w"> </span><span class="mi">00000000</span><span class="p">(</span><span class="mh">0x00</span><span class="p">)</span><span class="w"> </span><span class="mi">00000000</span><span class="p">(</span><span class="mh">0x00</span><span class="p">)</span>
-<span class="n">jtag</span><span class="o">&gt;</span><span class="w"> </span><span class="n">detect</span>
-<span class="n">IR</span><span class="w"> </span><span class="nl">length</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span>
-<span class="n">Chain</span><span class="w"> </span><span class="nl">length</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Device</span><span class="w"> </span><span class="nl">Id</span><span class="p">:</span><span class="w"> </span><span class="mi">00010000000001000011010010110001</span><span class="w"> </span><span class="p">(</span><span class="mh">0x100434B1</span><span class="p">)</span>
-<span class="w">  </span><span class="k">Unknown</span><span class="w"> </span><span class="n">manufacturer</span><span class="err">!</span><span class="w"> </span><span class="p">(</span><span class="mi">01001011000</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="k">local</span><span class="o">/</span><span class="n">share</span><span class="o">/</span><span class="n">urjtag</span><span class="o">/</span><span class="n">MANUFACTURERS</span><span class="p">)</span>
-<span class="n">jtag</span><span class="o">&gt;</span><span class="w"> </span><span class="n">discover</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">4</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1111</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0000</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0001</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="nl">warning</span><span class="p">:</span><span class="w"> </span><span class="n">TDO</span><span class="w"> </span><span class="n">seems</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">stuck</span><span class="w"> </span><span class="k">at</span><span class="w"> </span><span class="mi">0</span>
-<span class="o">-</span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0010</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0011</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0100</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0101</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0110</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0111</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1000</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">4</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1001</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">4</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1010</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">32</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1011</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">32</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1100</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">32</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1101</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1110</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
-<span class="n">jtag</span><span class="o">&gt;</span>
-</code></pre></div>
+        <span class="label label-default">Category</span>
+        <a href="https://wrongbaud.github.io/newblog/category/pifex.html">Pifex</a>
 
-<p>Using the data that we gathered from our previous scans, we can set up our cable in UrJTAG as follows:</p>
-<div class="highlight"><pre><span></span><code>cable gpio tck=10 tdi=9 tms=14 tdo=15
-</code></pre></div>
 
-<p>This tells UrJTAG that we are connected to our target via GPIO pins on a Linux device; we then follow that with GPIO pin assignments for each JTAG signal. After defining our cable, we can run the <code>detect</code>, <code>idcode</code>, and <code>discover</code> commands, which will attempt to learn more about the TAP that it is connected to, resulting in the output above.</p>
-<p>After running a UrJTAG scan, we now know the following:</p>
-<ul>
-<li>How many available DRs are present</li>
-<li>The width of all of the available DRs</li>
-<li>Confirmation of the CPU ID</li>
-<li>Confirmation of the JTAG pinout</li>
-</ul>
-<p>This is a lot of great information that we did not have at the beginning of this post, but what can we do with it? In order to read memory, set breakpoints, etc., we need to know more about how to interact with these registers. Without a datasheet, this is a difficult task. However, there are other open-source tools that we can leverage before attempting <a href="https://fahrplan.events.ccc.de/congress/2009/Fahrplan/attachments/1435_JTAG.pdf">black box reverse engineering of the JTAG TAP</a>.</p>
-<h2>OpenOCD for Reverse Engineers</h2>
-<p>Armed with this information, we can search the ID and determine that this chip uses the ARCompact architecture, and if we check the configuration files for OpenOCD, we can see this ID code in the following files:</p>
-<div class="highlight"><pre><span></span><code>pi@voidstar:~/pifex/software/openocd/tcl/cpu/arc<span class="w"> </span>$<span class="w"> </span>ls
-common.tcl<span class="w"> </span>em.tcl<span class="w">  </span>hs.tcl<span class="w">  </span>v2.tcl
-</code></pre></div>
-
-<p>Let's see what CPUs reference these files, this will give us a better understanding of how to write a generic OpenOCD config file for an ARCompact target. </p>
-<div class="highlight"><pre><span></span><code>pi@voidstar:~/pifex/software/openocd/tcl<span class="w"> </span>$<span class="w"> </span>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;arc/common&quot;</span><span class="w"> </span>*
-cpu/arc/v2.tcl:source<span class="w"> </span><span class="o">[</span>find<span class="w"> </span>cpu/arc/common.tcl<span class="o">]</span>
-pi@voidstar:~/pifex/software/openocd/tcl<span class="w"> </span>$<span class="w"> </span>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;arc/v2&quot;</span><span class="w"> </span>*
-cpu/arc/em.tcl:source<span class="w"> </span><span class="o">[</span>find<span class="w"> </span>cpu/arc/v2.tcl<span class="o">]</span>
-cpu/arc/hs.tcl:source<span class="w"> </span><span class="o">[</span>find<span class="w"> </span>cpu/arc/v2.tcl<span class="o">]</span>
-pi@voidstar:~/pifex/software/openocd/tcl<span class="w"> </span>$<span class="w"> </span>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;arc/hs&quot;</span><span class="w"> </span>*
-target/snps_hsdk.cfg:source<span class="w"> </span><span class="o">[</span>find<span class="w"> </span>cpu/arc/hs.tcl<span class="o">]</span>
-target/snps_hsdk_4xd.cfg:source<span class="w"> </span><span class="o">[</span>find<span class="w"> </span>cpu/arc/hs.tcl<span class="o">]</span>
-pi@voidstar:~/pifex/software/openocd/tcl<span class="w"> </span>$<span class="w"> </span>grep<span class="w"> </span>-r<span class="w"> </span><span class="s2">&quot;arc/em&quot;</span><span class="w"> </span>*
-target/snps_em_sk_fpga.cfg:source<span class="w"> </span><span class="o">[</span>find<span class="w"> </span>cpu/arc/em.tcl<span class="o">]</span>
-pi@voidstar:~/pifex/software/openocd/tcl<span class="w"> </span>$
-</code></pre></div>
-
-<p>It looks like there is a few target file that uses these config files:</p>
-<ul>
-<li><code>snps_hsdk</code></li>
-<li><code>snps_hsdk_4xd</code></li>
-<li><code>snps_em_sk_fpga</code></li>
-</ul>
-<p>Let's do one more quick search before trying to write our own config file; if we search for the above config files, we find the following:</p>
-<div class="highlight"><pre><span></span><code>pi@voidstar:~/pifex/software/openocd/tcl/board<span class="w"> </span>$<span class="w"> </span>ls<span class="w"> </span>-lathr<span class="w"> </span>*snps*
--rw-r--r--<span class="w"> </span><span class="m">1</span><span class="w"> </span>pi<span class="w"> </span>pi<span class="w"> </span><span class="m">411</span><span class="w"> </span>May<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">18</span>:20<span class="w"> </span>snps_hsdk_4xd.cfg
--rw-r--r--<span class="w"> </span><span class="m">1</span><span class="w"> </span>pi<span class="w"> </span>pi<span class="w"> </span><span class="m">416</span><span class="w"> </span>May<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">18</span>:20<span class="w"> </span>snps_hsdk.cfg
--rw-r--r--<span class="w"> </span><span class="m">1</span><span class="w"> </span>pi<span class="w"> </span>pi<span class="w"> </span><span class="m">615</span><span class="w"> </span>May<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">18</span>:20<span class="w"> </span>snps_em_sk_v2.2.cfg
--rw-r--r--<span class="w"> </span><span class="m">1</span><span class="w"> </span>pi<span class="w"> </span>pi<span class="w"> </span><span class="m">659</span><span class="w"> </span>May<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">18</span>:20<span class="w"> </span>snps_em_sk_v2.1.cfg
--rw-r--r--<span class="w"> </span><span class="m">1</span><span class="w"> </span>pi<span class="w"> </span>pi<span class="w"> </span><span class="m">555</span><span class="w"> </span>May<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">18</span>:20<span class="w"> </span>snps_em_sk_v1.cfg
--rw-r--r--<span class="w"> </span><span class="m">1</span><span class="w"> </span>pi<span class="w"> </span>pi<span class="w"> </span><span class="m">612</span><span class="w"> </span>May<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">18</span>:20<span class="w"> </span>snps_em_sk.cfg
-</code></pre></div>
-
-<p>All of these config files are very straightforward and essentially import one of the three files located in the <code>target</code> folder. Taking some basic information from the target folder we will construct our own OpenOCD as shown below:</p>
-<div class="highlight"><pre><span></span><code><span class="n">source</span><span class="w"> </span><span class="p">[</span><span class="n">find</span><span class="w"> </span><span class="n">cpu</span><span class="o">/</span><span class="n">arc</span><span class="o">/</span><span class="n">hs</span><span class="o">.</span><span class="n">tcl</span><span class="p">]</span>
-<span class="n">transport</span><span class="w"> </span><span class="n">select</span><span class="w"> </span><span class="n">jtag</span>
-<span class="c1"># We don&#39;t know much about this CPU at the moment, until we do we&#39;ll assume that</span>
-<span class="c1"># it has one core that we will index at 0 and that the dbg</span>
-<span class="n">set</span><span class="w"> </span><span class="n">_coreid</span><span class="w"> </span><span class="mi">0</span>
-<span class="n">set</span><span class="w"> </span><span class="n">_dbgbase</span><span class="w"> </span><span class="mi">0</span>
-<span class="c1"># CHIPNAME will be used to choose core family (600, 700 or EM). As far as</span>
-<span class="c1"># OpenOCD is concerned EM and HS are identical.</span>
-<span class="n">set</span><span class="w"> </span><span class="n">_CHIPNAME</span><span class="w"> </span><span class="n">arc</span><span class="o">-</span><span class="n">em</span>
-<span class="n">set</span><span class="w"> </span><span class="n">_TARGETNAME</span><span class="w"> </span><span class="o">$</span><span class="n">_CHIPNAME</span><span class="o">.</span><span class="n">cpu</span>
-<span class="c1"># Create the TAP using the information we extracted via UrJTAG and the IDCODE scan</span>
-<span class="n">jtag</span><span class="w"> </span><span class="n">newtap</span><span class="w"> </span><span class="o">$</span><span class="n">_CHIPNAME</span><span class="w"> </span><span class="n">cpu</span><span class="w"> </span><span class="o">-</span><span class="n">irlen</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="o">-</span><span class="n">ircapture</span><span class="w"> </span><span class="mh">0x1</span><span class="w"> </span><span class="o">-</span><span class="n">expected</span><span class="o">-</span><span class="n">id</span><span class="w"> </span><span class="mh">0x100434b1</span>
-<span class="c1"># OpenOCD requires us to create a target for debugging the target; most of the </span>
-<span class="c1"># provided arguments are variable names that we&#39;ve already set up; however, we must </span>
-<span class="c1"># specify the architecture; in this case we&#39;ll use ARCv2, the assumed architecture of </span>
-<span class="c1"># this CPU</span>
-<span class="n">target</span><span class="w"> </span><span class="n">create</span><span class="w"> </span><span class="o">$</span><span class="n">_TARGETNAME</span><span class="w"> </span><span class="n">arcv2</span><span class="w"> </span><span class="o">-</span><span class="n">chain</span><span class="o">-</span><span class="n">position</span><span class="w"> </span><span class="o">$</span><span class="n">_TARGETNAME</span>
-<span class="c1"># Next we configure our initial guesses for the coreid and base address for debug regions of memory</span>
-<span class="c1"># We&#39;re not using these at the moment, but perhaps after further reversing, we&#39;ll learn more</span>
-<span class="c1"># and can come back and update them</span>
-<span class="o">$</span><span class="n">_TARGETNAME</span><span class="w"> </span><span class="n">configure</span><span class="w"> </span><span class="o">-</span><span class="n">coreid</span><span class="w"> </span><span class="mi">0</span>
-<span class="o">$</span><span class="n">_TARGETNAME</span><span class="w"> </span><span class="n">configure</span><span class="w"> </span><span class="o">-</span><span class="n">dbgbase</span><span class="w"> </span><span class="mi">0</span>
-<span class="c1"># Here, we are defining what to do when a reset event occurs</span>
-<span class="o">$</span><span class="n">_TARGETNAME</span><span class="w"> </span><span class="n">configure</span><span class="w"> </span><span class="o">-</span><span class="n">event</span><span class="w"> </span><span class="n">reset</span><span class="o">-</span><span class="nb">assert</span><span class="w"> </span><span class="s2">&quot;arc_hs_reset $_TARGETNAME&quot;</span>
-<span class="c1"># The following two lines were pulled from the ARC-specific examples in OpenOCD </span>
-<span class="c1"># These seem to be used across all ARCompact variants supported by OpenOCD</span>
-<span class="n">arc_hs_init_regs</span>
-<span class="o">$</span><span class="n">_TARGETNAME</span><span class="w"> </span><span class="n">arc</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="n">l2</span><span class="w"> </span><span class="n">auto</span><span class="w"> </span><span class="mi">1</span>
-</code></pre></div>
-
-<p>This file will let OpenOCD know what pins to use on the Raspberry Pi and the specifics about our target CPU. The following config file can be used to configure the Raspberry Pi GPIO pins.</p>
-<div class="highlight"><pre><span></span><code>source [interface/raspberrypi-native.cfg]
-
-transport select jtag
-
-adapter gpio tck -chip 0 10
-adapter gpio tms -chip 0 14
-adapter gpio tdi -chip 0 9
-adapter gpio tdo -chip 0 15
-
-adapter speed 100
-</code></pre></div>
-
-<p>If we run OpenOCD using these config files as an argument, we see the following:</p>
-<div class="highlight"><pre><span></span><code>pi@voidstar:~/pifex/ssd-example<span class="w"> </span>$<span class="w"> </span>openocd<span class="w"> </span>-f<span class="w"> </span>raspberrypi-io.cfg<span class="w"> </span>-f<span class="w"> </span>ssd_example.cfg
-Open<span class="w"> </span>On-Chip<span class="w"> </span>Debugger<span class="w"> </span><span class="m">0</span>.12.0+dev-01573-gbc9ca5f4a<span class="w"> </span><span class="o">(</span><span class="m">2024</span>-05-04-18:24<span class="o">)</span>
-Licensed<span class="w"> </span>under<span class="w"> </span>GNU<span class="w"> </span>GPL<span class="w"> </span>v2
-For<span class="w"> </span>bug<span class="w"> </span>reports,<span class="w"> </span><span class="nb">read</span>
-<span class="w">        </span>http://openocd.org/doc/doxygen/bugs.html
-adapter<span class="w"> </span>speed:<span class="w"> </span><span class="m">100</span><span class="w"> </span>kHz
-Warn<span class="w"> </span>:<span class="w"> </span>Transport<span class="w"> </span><span class="s2">&quot;jtag&quot;</span><span class="w"> </span>was<span class="w"> </span>already<span class="w"> </span>selected
-Info<span class="w"> </span>:<span class="w"> </span>target<span class="w"> </span>has<span class="w"> </span>l2<span class="w"> </span>cache<span class="w"> </span>enabled<span class="w"> </span>is<span class="w"> </span>enabled
-Info<span class="w"> </span>:<span class="w"> </span>Listening<span class="w"> </span>on<span class="w"> </span>port<span class="w"> </span><span class="m">6666</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>tcl<span class="w"> </span>connections
-Info<span class="w"> </span>:<span class="w"> </span>Listening<span class="w"> </span>on<span class="w"> </span>port<span class="w"> </span><span class="m">4444</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>telnet<span class="w"> </span>connections
-Info<span class="w"> </span>:<span class="w"> </span>BCM2835<span class="w"> </span>GPIO<span class="w"> </span>JTAG/SWD<span class="w"> </span>bitbang<span class="w"> </span>driver
-Info<span class="w"> </span>:<span class="w"> </span>clock<span class="w"> </span>speed<span class="w"> </span><span class="m">100</span><span class="w"> </span>kHz
-Info<span class="w"> </span>:<span class="w"> </span>JTAG<span class="w"> </span>tap:<span class="w"> </span>arc-em.cpu<span class="w"> </span>tap/device<span class="w"> </span>found:<span class="w"> </span>0x100434b1<span class="w"> </span><span class="o">(</span>mfg:<span class="w"> </span>0x258<span class="w"> </span><span class="o">(</span>ARC<span class="w"> </span>International<span class="o">)</span>,<span class="w"> </span>part:<span class="w"> </span>0x0043,<span class="w"> </span>ver:<span class="w"> </span>0x1<span class="o">)</span>
-Info<span class="w"> </span>:<span class="w"> </span><span class="o">[</span>arc-em.cpu<span class="o">]</span><span class="w"> </span>Examination<span class="w"> </span>succeed
-Info<span class="w"> </span>:<span class="w"> </span>starting<span class="w"> </span>gdb<span class="w"> </span>server<span class="w"> </span><span class="k">for</span><span class="w"> </span>arc-em.cpu<span class="w"> </span>on<span class="w"> </span><span class="m">3333</span>
-Info<span class="w"> </span>:<span class="w"> </span>Listening<span class="w"> </span>on<span class="w"> </span>port<span class="w"> </span><span class="m">3333</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>gdb<span class="w"> </span>connections
-</code></pre></div>
-
-<p>Success! It looks like we have connected to the JTAG TAP of this SSD using OpenOCD. Next, we will use this to read memory and single-step through the running firmware on the SSD itself. </p>
-<h3>Reading Memory with OpenOCD</h3>
-<p>Now that we have a working OpenOCD connection, we can read memory using the <code>mdw</code> and <code>dump_image</code> commands. We will dump a small region of memory as a test:</p>
-<div class="highlight"><pre><span></span><code><span class="nx">pi</span><span class="err">@</span><span class="nx">voidstar</span><span class="p">:</span><span class="o">~</span><span class="w"> </span><span class="err">$</span><span class="w"> </span><span class="nx">telnet</span><span class="w"> </span><span class="nx">localhost</span><span class="w"> </span><span class="mi">4444</span>
-<span class="nx">Trying</span><span class="w"> </span><span class="o">::</span><span class="mi">1</span><span class="o">...</span>
-<span class="nx">Trying</span><span class="w"> </span><span class="m m-Double">127.0.0.1</span><span class="o">...</span>
-<span class="nx">Connected</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">localhost</span><span class="p">.</span>
-<span class="nx">Escape</span><span class="w"> </span><span class="nx">character</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="err">&#39;</span><span class="o">^</span><span class="p">]</span><span class="err">&#39;</span><span class="p">.</span>
-<span class="nx">Open</span><span class="w"> </span><span class="nx">On</span><span class="o">-</span><span class="nx">Chip</span><span class="w"> </span><span class="nx">Debugger</span>
-<span class="p">&gt;</span><span class="w"> </span><span class="nx">mdw</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">100</span>
-<span class="mh">0x00000000</span><span class="p">:</span><span class="w"> </span><span class="mi">0000214</span><span class="nx">a</span><span class="w"> </span><span class="mi">0000224</span><span class="nx">a</span><span class="w"> </span><span class="mi">0000234</span><span class="nx">a</span><span class="w"> </span><span class="mi">0000244</span><span class="nx">a</span><span class="w"> </span><span class="mi">0000254</span><span class="nx">a</span><span class="w"> </span><span class="mi">0000264</span><span class="nx">a</span><span class="w"> </span><span class="mi">0000274</span><span class="nx">a</span><span class="w"> </span><span class="mi">1000204</span><span class="nx">a</span>
-<span class="mh">0x00000020</span><span class="p">:</span><span class="w"> </span><span class="mi">1000214</span><span class="nx">a</span><span class="w"> </span><span class="mi">1000224</span><span class="nx">a</span><span class="w"> </span><span class="mi">1000234</span><span class="nx">a</span><span class="w"> </span><span class="mi">1000244</span><span class="nx">a</span><span class="w"> </span><span class="mi">1000254</span><span class="nx">a</span><span class="w"> </span><span class="mi">1000264</span><span class="nx">a</span><span class="w"> </span><span class="mi">1000274</span><span class="nx">a</span><span class="w"> </span><span class="mi">2000204</span><span class="nx">a</span>
-<span class="mh">0x00000040</span><span class="p">:</span><span class="w"> </span><span class="mi">2000214</span><span class="nx">a</span><span class="w"> </span><span class="mi">2000224</span><span class="nx">a</span><span class="w"> </span><span class="mi">2000234</span><span class="nx">a</span><span class="w"> </span><span class="mi">2000244</span><span class="nx">a</span><span class="w"> </span><span class="mi">2000254</span><span class="nx">a</span><span class="w"> </span><span class="mi">2000264</span><span class="nx">a</span><span class="w"> </span><span class="mi">2000274</span><span class="nx">a</span><span class="w"> </span><span class="mi">3000204</span><span class="nx">a</span>
-<span class="mh">0x00000060</span><span class="p">:</span><span class="w"> </span><span class="mi">3000214</span><span class="nx">a</span><span class="w"> </span><span class="mi">0000204</span><span class="nx">a</span><span class="w"> </span><span class="mi">3</span><span class="nx">f80240a</span><span class="w"> </span><span class="mi">80001000</span><span class="w"> </span><span class="mi">3</span><span class="nx">f80220a</span><span class="w"> </span><span class="mi">26001000</span><span class="w"> </span><span class="mi">3</span><span class="nx">f80230a</span><span class="w"> </span><span class="mi">80001000</span>
-<span class="mh">0x00000080</span><span class="p">:</span><span class="w"> </span><span class="mi">3000254</span><span class="nx">a</span><span class="w"> </span><span class="mi">3000264</span><span class="nx">a</span><span class="w"> </span><span class="mi">3000274</span><span class="nx">a</span><span class="w"> </span><span class="mi">7080266</span><span class="nx">b</span><span class="w"> </span><span class="mi">00000000</span><span class="w"> </span><span class="mi">70</span><span class="nx">c0266b</span><span class="w"> </span><span class="mi">00000000</span><span class="w"> </span><span class="mi">0</span><span class="nx">f802020</span>
-<span class="mh">0x000000a0</span><span class="p">:</span><span class="w"> </span><span class="mi">05</span><span class="nx">b00000</span><span class="w"> </span><span class="mi">00402069</span><span class="w"> </span><span class="mi">7000264</span><span class="nx">a</span><span class="w"> </span><span class="mi">7000264</span><span class="nx">a</span><span class="w"> </span><span class="mi">7000264</span><span class="nx">a</span><span class="w"> </span><span class="nx">ffcf07f1</span><span class="w"> </span><span class="mi">500071</span><span class="nx">cf</span><span class="w"> </span><span class="mi">1154</span><span class="nx">a000</span>
-<span class="mh">0x000000c0</span><span class="p">:</span><span class="w"> </span><span class="mi">70</span><span class="nx">cf0802</span><span class="w"> </span><span class="mi">05</span><span class="nx">f81000</span><span class="w"> </span><span class="mi">00</span><span class="nx">a01800</span><span class="w"> </span><span class="mi">08001000</span><span class="w"> </span><span class="mi">00201954</span><span class="w"> </span><span class="mi">78</span><span class="nx">e07ee0</span><span class="w"> </span><span class="mi">71</span><span class="nx">cfc5e1</span><span class="w"> </span><span class="mi">00005000</span>
-<span class="mh">0x000000e0</span><span class="p">:</span><span class="w"> </span><span class="mi">0880110</span><span class="nx">c</span><span class="w"> </span><span class="mi">500072</span><span class="nx">cf</span><span class="w"> </span><span class="nx">b8e4a000</span><span class="w"> </span><span class="mi">11</span><span class="nx">dcf47f</span><span class="w"> </span><span class="nx">b8810880</span><span class="w"> </span><span class="mi">002219</span><span class="nx">dc</span><span class="w"> </span><span class="mi">08001204</span><span class="w"> </span><span class="mi">1</span><span class="nx">a04b880</span>
-<span class="mh">0x00000100</span><span class="p">:</span><span class="w"> </span><span class="nx">db000020</span><span class="w"> </span><span class="mi">00</span><span class="nx">e01a4c</span><span class="w"> </span><span class="mi">0</span><span class="nx">fa01a44</span><span class="w"> </span><span class="mi">80000000</span><span class="w"> </span><span class="mi">0</span><span class="nx">fff208a</span><span class="w"> </span><span class="mi">00201</span><span class="nx">a58</span><span class="w"> </span><span class="mi">08001268</span><span class="w"> </span><span class="mi">00201</span><span class="nx">a68</span>
-<span class="mh">0x00000120</span><span class="p">:</span><span class="w"> </span><span class="mi">08001274</span><span class="w"> </span><span class="mi">0</span><span class="nx">fc32086</span><span class="w"> </span><span class="mi">0</span><span class="nx">a822085</span><span class="w"> </span><span class="mi">00201</span><span class="nx">a74</span><span class="w"> </span><span class="mi">500075</span><span class="nx">cf</span><span class="w"> </span><span class="mi">1517</span><span class="nx">a0a8</span><span class="w"> </span><span class="mi">20861880</span><span class="w"> </span><span class="nx">b88000fc</span>
-<span class="mh">0x00000140</span><span class="p">:</span><span class="w"> </span><span class="mi">10221</span><span class="nx">d17</span><span class="w"> </span><span class="mi">0800125</span><span class="nx">c</span><span class="w"> </span><span class="mi">0</span><span class="nx">f802004</span><span class="w"> </span><span class="mi">1</span><span class="nx">feefff8</span><span class="w"> </span><span class="mi">00201</span><span class="nx">a5c</span><span class="w"> </span><span class="mi">0800125</span><span class="nx">c</span><span class="w"> </span><span class="mi">0</span><span class="nx">f802004</span><span class="w"> </span><span class="mi">1</span><span class="nx">fef8ff8</span>
-<span class="mh">0x00000160</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="nx">a5cb89c</span><span class="w"> </span><span class="nx">d8010020</span><span class="w"> </span><span class="mi">0022190</span><span class="nx">d</span><span class="w"> </span><span class="mi">08001204</span><span class="w"> </span><span class="mi">1</span><span class="nx">a04b881</span><span class="w"> </span><span class="mi">15140020</span><span class="w"> </span><span class="nx">b8841880</span><span class="w"> </span><span class="mi">10221</span><span class="nx">d14</span>
-<span class="mh">0x00000180</span><span class="p">:</span><span class="w"> </span><span class="mi">500071</span><span class="nx">cf</span><span class="w"> </span><span class="mi">110</span><span class="nx">d07f0</span><span class="w"> </span><span class="nx">b8840880</span><span class="w"> </span><span class="mi">0022190</span><span class="nx">d</span>
-<span class="p">&gt;</span><span class="w"> </span><span class="nx">dump_image</span>
-<span class="nx">dump_image</span><span class="w"> </span><span class="nx">filename</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="nx">size</span>
-<span class="p">&gt;</span><span class="w"> </span><span class="nx">dump_image</span><span class="w"> </span><span class="nx">mem</span><span class="o">-</span><span class="nx">test</span><span class="p">.</span><span class="nx">bin</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mh">0x100000</span>
-<span class="p">&gt;</span><span class="w"> </span><span class="nx">dumped</span><span class="w"> </span><span class="mi">1048576</span><span class="w"> </span><span class="nx">bytes</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m m-Double">264.823212</span><span class="nx">s</span><span class="w"> </span><span class="p">(</span><span class="m m-Double">3.867</span><span class="w"> </span><span class="nx">KiB</span><span class="o">/</span><span class="nx">s</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Next, we'll want to review this memory dump to make sure that it's accurate. This creates an interesting problem: we don't know what the memory contents will look like at address <code>0</code>, especially since we don't have a datasheet or an example firmware image. In this case, we will start by running strings on the resulting binary; some of these results can be seen below:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">pi</span><span class="p">@</span><span class="n">voidstar</span><span class="p">:</span><span class="o">~/</span><span class="n">pifex</span><span class="o">/</span><span class="n">ssd</span><span class="o">-</span><span class="n">example</span><span class="w"> </span>$<span class="w"> </span><span class="nb">strings</span><span class="w"> </span><span class="n">mem</span><span class="o">-</span><span class="n">test</span><span class="p">.</span><span class="n">bin</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">less</span>
-02023042<span class="n">MS2295CAX</span><span class="o">--</span><span class="n">XYYYYYYYY</span>
-<span class="n">SM2259PARA</span>
-<span class="s">SM2259BT</span>
-<span class="n">xSM2259BTDS</span>
-<span class="s">SM2259AC20200324</span>
-<span class="n">L</span><span class="o">^</span><span class="n">r</span><span class="o">|</span>
-<span class="c">%`)$5a94</span>
-<span class="n">SMISSDRetryTable</span>
-<span class="s">Device_FW_Authentication</span>
-<span class="n">xFW_MAC_Key</span>
-<span class="s">SM2259ROMCodeTagZZZZ</span>
-</code></pre></div>
-
-<p>We've got human-readable strings, which is a great sign! We also have the part number for the CPU in these strings, which leads me to believe we've correctly extracted this memory region via OpenOCD. However, we need to learn more about this processor and what areas might interest us. We can figure this out using OpenOCD to attach to the target CPU via GDB.</p>
-<h3>Debugging with OpenOCD</h3>
-<p>Now that we have OpenOCD connected to our target, we can attempt to debug the target via GDB. However, this does not come without some strings attached; we will need to compile a version of GDB capable of targeting the ARCompact architecture. Luckily for us, the good folks over at Synopsis have released a port of binutils for the ARCompact architecture. We can clone the repository <a href="https://github.com/foss-for-synopsys-dwc-arc-processors/binutils-gdb">here</a> and build it on the Raspberry Pi (<strong>Note</strong>: see the appendix for instructions on how to build this software).</p>
-<p>After building GDB and attempting to connect to the GDB server presented by OpenOCD, we see the following:</p>
-<div class="highlight"><pre><span></span><code><span class="o">(</span><span class="nt">gdb</span><span class="o">)</span><span class="w"> </span><span class="nt">x</span><span class="o">/</span><span class="nt">10i</span><span class="w"> </span><span class="o">$</span><span class="nt">pc</span>
-<span class="o">=&gt;</span><span class="w"> </span><span class="nt">0x22b0</span><span class="o">:</span><span class="w"> </span><span class="nt">brne_s</span><span class="w"> </span><span class="nt">r0</span><span class="o">,</span><span class="nt">0</span><span class="o">,</span><span class="nt">10</span><span class="w"> </span><span class="o">;</span><span class="nt">0x22ba</span>
-<span class="w">   </span><span class="nt">0x22b2</span><span class="o">:</span><span class="w"> </span><span class="nt">ldb</span><span class="p">.</span><span class="nc">di</span><span class="w"> </span><span class="nt">r2</span><span class="o">,</span><span class="cp">[</span><span class="nx">r18</span><span class="p">,</span><span class="mi">3</span><span class="cp">]</span>
-<span class="w">   </span><span class="nt">0x22b6</span><span class="o">:</span><span class="w"> </span><span class="nt">btst_s</span><span class="w"> </span><span class="nt">r2</span><span class="o">,</span><span class="nt">0x7</span>
-<span class="w">   </span><span class="nt">0x22b8</span><span class="o">:</span><span class="w"> </span><span class="nt">beq_s</span><span class="w"> </span><span class="nt">-282</span><span class="w"> </span><span class="o">;</span><span class="nt">0x219e</span>
-<span class="w">   </span><span class="nt">0x22ba</span><span class="o">:</span><span class="w"> </span><span class="nt">ldb</span><span class="w"> </span><span class="nt">r4</span><span class="o">,</span><span class="cp">[</span><span class="mh">0x852</span><span class="cp">]</span>
-<span class="w">   </span><span class="nt">0x22c2</span><span class="o">:</span><span class="w"> </span><span class="nt">bbit0</span><span class="p">.</span><span class="nc">t</span><span class="w"> </span><span class="nt">r4</span><span class="o">,</span><span class="nt">0</span><span class="o">,</span><span class="nt">18</span><span class="w"> </span><span class="o">;</span><span class="nt">0x22d2</span>
-<span class="w">   </span><span class="nt">0x22c6</span><span class="o">:</span><span class="w"> </span><span class="nt">ldb</span><span class="p">.</span><span class="nc">di</span><span class="w"> </span><span class="nt">r2</span><span class="o">,</span><span class="cp">[</span><span class="nx">r13</span><span class="p">,</span><span class="mi">113</span><span class="cp">]</span>
-<span class="w">   </span><span class="nt">0x22ca</span><span class="o">:</span><span class="w"> </span><span class="nt">bset_s</span><span class="w"> </span><span class="nt">r2</span><span class="o">,</span><span class="nt">r2</span><span class="o">,</span><span class="nt">0</span>
-<span class="w">   </span><span class="nt">0x22cc</span><span class="o">:</span><span class="w"> </span><span class="nt">stb</span><span class="p">.</span><span class="nc">di</span><span class="w"> </span><span class="nt">r2</span><span class="o">,</span><span class="cp">[</span><span class="nx">r13</span><span class="p">,</span><span class="mi">113</span><span class="cp">]</span>
-<span class="w">   </span><span class="nt">0x22d0</span><span class="o">:</span><span class="w"> </span><span class="nt">b_s</span><span class="w"> </span><span class="nt">12</span><span class="w"> </span><span class="o">;</span><span class="nt">0x22dc</span>
-<span class="o">(</span><span class="nt">gdb</span><span class="o">)</span><span class="w"> </span><span class="nt">i</span><span class="w"> </span><span class="nt">r</span>
-<span class="nt">r0</span><span class="w"> </span><span class="nt">0x0</span><span class="w"> </span><span class="nt">0</span>
-<span class="nt">r1</span><span class="w"> </span><span class="nt">0x101</span><span class="w"> </span><span class="nt">257</span>
-<span class="nt">r2</span><span class="w"> </span><span class="nt">0x10004aac</span><span class="w"> </span><span class="nt">268454572</span>
-<span class="nt">r3</span><span class="w"> </span><span class="nt">0x0</span><span class="w"> </span><span class="nt">0</span>
-<span class="nt">r4</span><span class="w"> </span><span class="nt">0x100014b6</span><span class="w"> </span><span class="nt">268440758</span>
-<span class="nt">r5</span><span class="w"> </span><span class="nt">0x50100000</span><span class="w"> </span><span class="nt">1343225856</span>
-<span class="nt">r6</span><span class="w"> </span><span class="nt">0x50100000</span><span class="w"> </span><span class="nt">1343225856</span>
-<span class="nt">r7</span><span class="w"> </span><span class="nt">0x10</span><span class="w"> </span><span class="nt">16</span>
-<span class="nt">r8</span><span class="w"> </span><span class="nt">0x0</span><span class="w"> </span><span class="nt">0</span>
-<span class="nt">r9</span><span class="w"> </span><span class="nt">0x0</span><span class="w"> </span><span class="nt">0</span>
-<span class="nt">r10</span><span class="w"> </span><span class="nt">0x0</span><span class="w"> </span><span class="nt">0</span>
-<span class="nt">r11</span><span class="w"> </span><span class="nt">0x4</span><span class="w"> </span><span class="nt">4</span>
-<span class="nt">r12</span><span class="w"> </span><span class="nt">0x0</span><span class="w"> </span><span class="nt">0</span>
-<span class="nt">r13</span><span class="w"> </span><span class="nt">0x50000000</span><span class="w"> </span><span class="nt">1342177280</span>
-<span class="nt">r14</span><span class="w"> </span><span class="nt">0x0</span><span class="w"> </span><span class="nt">0</span>
-<span class="nt">r15</span><span class="w"> </span><span class="nt">0x0</span><span class="w"> </span><span class="nt">0</span>
-<span class="nt">r16</span><span class="w"> </span><span class="nt">0x5000a000</span><span class="w"> </span><span class="nt">1342218240</span>
-</code></pre></div>
-
-<p>Success! Using OpenOCD and GDB, we are able to single-step through the firmware and read register values. These register values tell us more about potential memory regions of interest that we can read out, specifically <code>0x50000000</code> and <code>0x10000000</code>. As a final test, we will load the area of memory we extracted initially into Ghidra and see if the instructions match what we see in GDB.  </p>
-<h3>Loading the Firmware into Ghidra</h3>
-<p>While the current Ghidra release does not support ARCompact, a wonderful fork is being maintained <a href="https://github.com/niooss-ledger/ghidra">here</a>. We can build this and use it to analyze our firmware image. </p>
-<p>If we look at offset <code>0</code> in the firmware image, we have what appears to be an interrupt vector table of some sort:</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/ivt.png"></p>
-<p>If we look a little further at the image, we can see that there are some branch instructions for a region that we've not extracted yet. We also see that the two areas we previously identified (<code>0x50000000</code> and <code>0x10000000</code>) are being referenced as well. These are likely internal/external SRAM regions, while the area starting around <code>0x4007000</code> appears to be used as code.</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/interesting.png"></p>
-<p>Let's try to extract that region, load it into our Ghidra database, and see if the results make sense. First, we'll dump the region out using OpenOCD, as shown below:</p>
-<div class="highlight"><pre><span></span><code>dump_image 0x40070000.bin 0x40070000 0x100000
-</code></pre></div>
-
-<p>We can then import it into our Ghidra database, resulting in the following:</p>
-<p><img alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/imported_new_region.jpg"></p>
-<p><strong>Success:</strong> It looks like we have code in this region, and it disassembles properly. </p>
-<p>From here, we now have the following primitives available to us on the SSD:</p>
-<ul>
-<li>Memory R/W</li>
-<li>Control Flow Monitoring / Modifications</li>
-<li>Register Reads/Writes</li>
-</ul>
-<p>This puts one in a perfect position to do more software research, look for bugs or errors in their code, or even attempt to modify the firmware or reverse engineer the update process!</p>
-<h1>Conclusion</h1>
-<p>If you've read this far, thank you for taking the time to read it all. This probably should have been two separate posts!</p>
-<p>With this blog post, we introduced the PiFex hardware and software tools. These tools utilize open-source software and commercial hardware to aid in embedded device assessments. We then demonstrated how to use these tools to discover and enumerate an undocumented JTAG TAP on an SSD. Using this TAP, we were able to read memory and control execution on the target, giving us full control over the device. </p>
-<p>If you want to stay up to date on the official release, sign up for our mailing list <a href="http://eepurl.com/hSl31f">here</a>, or you can order one <a href="https://voidmalt.gumroad.com/l/pifex">here</a></p>
-<p>If you're interested in a <a href="https://voidstarsec.com/hhb.html">private training</a> at your organization, please don't hesitate to <a href="https://voidstarsec.com/#contact">contact us</a>. We also have our only public training available this year at <a href="https://ringzer0.training/doubledown24-hardware-hacking-bootcamp/">RingZer0 DoubleDown Vegas</a></p>
-<p>A big thanks goes out to Nash Reilly for his help and review of the initial hardware design; you can check out his blog <a href="https://cushychicken.github.io">here</a> and his other two job sites below:</p>
-<ul>
-<li><a href="https://fpgajobs.com">fpgajobs.com</a></li>
-<li><a href="https://firmwarejobs.com">firmwarejobs.com</a></li>
-</ul>
-<h1>Appendix</h1>
-<h2>Building Binutils</h2>
-<div class="highlight"><pre><span></span><code>./configure --target=arc-elf32 --disable-werror
-make
-</code></pre></div>                </article>
-            </aside><!-- /#featured -->
-                <section id="content" class="body">
-                    <h1>Other articles</h1>
-                    <hr />
-                    <ol id="posts-list" class="hfeed">
-
-            <li><article class="hentry">
-                <header>
-                    <h1><a href="https://wrongbaud.github.io/newblog/2023-year-in-review.html" rel="bookmark"
-                           title="Permalink to VoidStar Security - 2023 Year In Review">VoidStar Security - 2023 Year In Review</a></h1>
-                </header>
-
-                <div class="entry-content">
+<span class="label label-default">Tags</span>
+	<a href="https://wrongbaud.github.io/newblog/tag/pifex.html">pifex</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/jtag.html">jtag</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/blog.html">blog</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>With this blog post, we'll introduce the PiFex, a basic companion board for the Raspberry Pi designed to teach users the basics of hardware hacking and embedded protocols. We will then demonstrate how to use the PiFex to access a JTAG tap on an undocumented SSD, allowing memory reads and GDB access to the SSD CPU.</p>
+                    <a class="btn btn-default btn-xs" href="https://wrongbaud.github.io/newblog/jtag-pifex.html">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="https://wrongbaud.github.io/newblog/2023-year-in-review.html">VoidStar Security - 2023 Year In Review</a></h2>
+                    <div class="well well-sm">
 <footer class="post-info">
-        <abbr class="published" title="2023-12-29T00:00:00-07:00">
-                Published: Fri 29 December 2023
-        </abbr>
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2023-12-29T00:00:00-07:00"> Fri 29 December 2023</time>
+    </span>
 
-        <address class="vcard author">
-                By                         <a class="url fn" href="https://wrongbaud.github.io/newblog/author/matthew-alt.html">"Matthew Alt"</a>
-        </address>
-<p>In <a href="https://wrongbaud.github.io/newblog/category/training.html">Training</a>.</p>
-<p>tags: <a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a> <a href="https://wrongbaud.github.io/newblog/tag/blog.html">blog</a> <a href="https://wrongbaud.github.io/newblog/tag/tools.html">tools</a> </p>
-</footer><!-- /.post-info -->                <p>As we reach the end of the year, I want to thank everyone for their continued support and business. 2023 was a great year for training and consulting. We worked with companies ranging from 4000 to 15 members, all of which brought unique perspectives to our course material and allowed us to expand on new topics and targets. A big thanks to all those who reached out for onsite training in 2023 and those who contracted with us!</p>
-                <a class="readmore" href="https://wrongbaud.github.io/newblog/2023-year-in-review.html">read more</a>
-                </div><!-- /.entry-content -->
-            </article></li>
 
-            <li><article class="hentry">
-                <header>
-                    <h1><a href="https://wrongbaud.github.io/newblog/uart-uboot-and-usb.html" rel="bookmark"
-                           title="Permalink to Intro to Embedded RE: UART Discovery and Firmware Extraction via UBoot">Intro to Embedded RE: UART Discovery and Firmware Extraction via UBoot</a></h1>
-                </header>
+            <span class="label label-default">By</span>
+            <a href="https://wrongbaud.github.io/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
-                <div class="entry-content">
+        <span class="label label-default">Category</span>
+        <a href="https://wrongbaud.github.io/newblog/category/training.html">Training</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/blog.html">blog</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/tools.html">tools</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>As we reach the end of the year, I want to thank everyone for their continued support and business. 2023 was a great year for training and consulting. We worked with companies ranging from 4000 to 15 members, all of which brought unique perspectives to our course material and allowed us to expand on new topics and targets. A big thanks to all those who reached out for onsite training in 2023 and those who contracted with us!</p>
+                    <a class="btn btn-default btn-xs" href="https://wrongbaud.github.io/newblog/2023-year-in-review.html">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="https://wrongbaud.github.io/newblog/uart-uboot-and-usb.html">Intro to Embedded RE: UART Discovery and Firmware Extraction via UBoot</a></h2>
+                    <div class="well well-sm">
 <footer class="post-info">
-        <abbr class="published" title="2022-01-27T00:00:00-07:00">
-                Published: Thu 27 January 2022
-        </abbr>
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2022-01-27T00:00:00-07:00"> Thu 27 January 2022</time>
+    </span>
 
-        <address class="vcard author">
-                By                         <a class="url fn" href="https://wrongbaud.github.io/newblog/author/matthew-alt.html">"Matthew Alt"</a>
-        </address>
-<p>In <a href="https://wrongbaud.github.io/newblog/category/hardware.html">Hardware</a>.</p>
-<p>tags: <a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a> <a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a> <a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a> </p>
-</footer><!-- /.post-info -->                <p>This blog entry aims to familiarize readers with locating an active UART on a target system, how to approach a UBoot console, and ultimately how to leverage both of these components to extract the flash memory from our target. After reading this, readers will be familiar with the screen utility the depthcharge python3 libraries.</p>
-                <a class="readmore" href="https://wrongbaud.github.io/newblog/uart-uboot-and-usb.html">read more</a>
-                </div><!-- /.entry-content -->
-            </article></li>
 
-            <li><article class="hentry">
-                <header>
-                    <h1><a href="https://wrongbaud.github.io/newblog/intro-to-embedded-part-1.html" rel="bookmark"
-                           title="Permalink to Intro to Embedded RE Part 1: Tools and Series Overview">Intro to Embedded RE Part 1: Tools and Series Overview</a></h1>
-                </header>
+            <span class="label label-default">By</span>
+            <a href="https://wrongbaud.github.io/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
-                <div class="entry-content">
+        <span class="label label-default">Category</span>
+        <a href="https://wrongbaud.github.io/newblog/category/hardware.html">Hardware</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>This blog entry aims to familiarize readers with locating an active UART on a target system, how to approach a UBoot console, and ultimately how to leverage both of these components to extract the flash memory from our target. After reading this, readers will be familiar with the screen utility the depthcharge python3 libraries.</p>
+                    <a class="btn btn-default btn-xs" href="https://wrongbaud.github.io/newblog/uart-uboot-and-usb.html">more ...</a>
+                </div>
+            </article>
+            <hr/>
+            <article>
+                <h2><a href="https://wrongbaud.github.io/newblog/intro-to-embedded-part-1.html">Intro to Embedded RE Part 1: Tools and Series Overview</a></h2>
+                    <div class="well well-sm">
 <footer class="post-info">
-        <abbr class="published" title="2022-01-17T00:00:00-07:00">
-                Published: Mon 17 January 2022
-        </abbr>
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2022-01-17T00:00:00-07:00"> Mon 17 January 2022</time>
+    </span>
 
-        <address class="vcard author">
-                By                         <a class="url fn" href="https://wrongbaud.github.io/newblog/author/matthew-alt.html">"Matthew Alt"</a>
-        </address>
-<p>In <a href="https://wrongbaud.github.io/newblog/category/hardware.html">Hardware</a>.</p>
-<p>tags: <a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a> <a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a> <a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a> </p>
-</footer><!-- /.post-info -->                <p>This post reviews some of the tools needed when setting up a lab for reverse engineering embedded systems. There will be two sections, one for hardware tools and one for software tools. After reading this blog post, the reader should know what is needed to set up an introductory lab for reverse engineering embedded systems and firmware images.</p>
-                <a class="readmore" href="https://wrongbaud.github.io/newblog/intro-to-embedded-part-1.html">read more</a>
-                </div><!-- /.entry-content -->
-            </article></li>
-                </ol><!-- /#posts-list -->
-                </section><!-- /#content -->
-        <section id="extras" class="body">
-                <div class="blogroll">
-                        <h2>links</h2>
-                        <ul>
-                            <li><a href="https://voidstarsec.com/">VoidStar Security Website</a></li>
-                            <li><a href="https://www.voidstarsec.training/">VoidStar Security Training</a></li>
-                            <li><a href="https://www.voidstarsec.wiki/">Build a Hardware Hacking Lab</a></li>
-                            <li><a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra">Free Ghidra Course</a></li>
-                            <li><a href="https://www.wrongbaud.github.io/">Wrongbauds Blog (fun intro hacks)</a></li>
-                        </ul>
-                </div><!-- /.blogroll -->
-                <div class="social">
-                        <h2>social</h2>
-                        <ul>
-                            <li><a href="https://wrongbaud.github.io/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
 
-                            <li><a href="https://voidstarsec.com">VSS website</a></li>
-                            <li><a href="https://twitter.com/voidstarsec">twitter</a></li>
-                            <li><a href="https://www.linkedin.com/in/voidstarsec">linkedin</a></li>
-                            <li><a href="https://github.com/voidstarsec">github</a></li>
-                        </ul>
-                </div><!-- /.social -->
-        </section><!-- /#extras -->
+            <span class="label label-default">By</span>
+            <a href="https://wrongbaud.github.io/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
-        <footer id="contentinfo" class="body">
-                <address id="about" class="vcard body">
-                Proudly powered by <a href="https://getpelican.com/">Pelican</a>, which takes great advantage of <a href="https://www.python.org/">Python</a>.
-                </address><!-- /#about -->
+        <span class="label label-default">Category</span>
+        <a href="https://wrongbaud.github.io/newblog/category/hardware.html">Hardware</a>
 
-                <p>The theme is by <a href="https://www.smashingmagazine.com/2009/08/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
-        </footer><!-- /#contentinfo -->
+
+<span class="label label-default">Tags</span>
+	<a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a>
+        /
+	<a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                <div class="summary"><p>This post reviews some of the tools needed when setting up a lab for reverse engineering embedded systems. There will be two sections, one for hardware tools and one for software tools. After reading this blog post, the reader should know what is needed to set up an introductory lab for reverse engineering embedded systems and firmware images.</p>
+                    <a class="btn btn-default btn-xs" href="https://wrongbaud.github.io/newblog/intro-to-embedded-part-1.html">more ...</a>
+                </div>
+            </article>
+            <hr/>
+
+        </div>
+        <div class="col-sm-3 col-sm-pull-9" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://voidstarsec.com"><i class="fa fa-vss-website-square fa-lg"></i> VSS website</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/voidstarsec"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/voidstarsec"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+    <li class="list-group-item"><a href="https://github.com/voidstarsec"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+
+<!-- Sidebar/Categories -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
+  <ul class="list-group" id="categories">
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://wrongbaud.github.io/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Categories -->
+
+<!-- Sidebar/Tag Cloud -->
+<li class="list-group-item">
+  <a href="https://wrongbaud.github.io/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <ul class="list-group " id="tags">
+    <li class="list-group-item tag-1">
+      <a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://wrongbaud.github.io/newblog/tag/blog.html">blog</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/fault-injection.html">fault-injection</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/training.html">training</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://wrongbaud.github.io/newblog/tag/chipwhisperer.html">chipwhisperer</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Tag Cloud -->
+
+<!-- Sidebar/Links -->
+<li class="list-group-item">
+  <h4><i class="fa fa-external-link-square fa-lg"></i><span class="icon-label">Links</span></h4>
+  <ul class="list-group" id="links">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/" target="_blank">VoidStar Security Website</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.training/" target="_blank">VoidStar Security Training</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.wiki/" target="_blank">Build a Hardware Hacking Lab</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra" target="_blank">Free Ghidra Course</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.wrongbaud.github.io/" target="_blank">Wrongbauds Blog (fun intro hacks)</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Links -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2024 VoidStar Security
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://wrongbaud.github.io/newblog/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://wrongbaud.github.io/newblog/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://wrongbaud.github.io/newblog/theme/js/respond.min.js"></script>
+
+
+
 
 </body>
 </html>
