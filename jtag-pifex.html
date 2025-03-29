@@ -122,9 +122,9 @@ VoidStar Security Blog            </a>
 <h1>PiFex: An Overview</h1>
 <p>The Pi Interface Explorer or PiFex, is a simple hat for a Raspberry Pi designed for tinkerers and hardware hackers alike. By breaking out the commonly used interfaces and routing them through bi-directional level shifters, we aimed to streamline some of the initial steps when reverse engineering a new device or trying to learn how a new sensor works. While this device was initially designed for use during our <a href="https://voidstarsec.com/hhb.html">hardware hacking bootcamp</a> it has quickly become my go-to when performing initial hardware assessments of COTS devices.</p>
 <p>The PCB is well documented, and the IO pins are all labeled as shown in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" src= "https://voidstarsec.com/blog/assets/images/jtag-pifex/pifex.JPG" alt="your-image-description" style="border: 8px solid black;" class="center"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" src= "https://voidstarsec.com/blog/assets/images/jtag-pifex/pifex.JPG" alt="your-image-description" style="border: 8px solid black;" class="center"></p>
 <p>We also have added an I2C OLED screen, which you can customize using the Adafruit CircuitPython libraries:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="JTAG ID Clipped " src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag_id_clipped.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="JTAG ID Clipped " src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag_id_clipped.jpg"></p>
 <h1>PiFex: Hardware</h1>
 <p>The PiFex exposes the following interfaces to the end user:</p>
 <ul>
@@ -137,17 +137,17 @@ VoidStar Security Blog            </a>
 <p>There are also an additional eight GPIO pins. These interfaces were chosen because they are the ones that we utilize in our hardware hacking training and are also the most likely to be used by tinkerers and hardware hackers for other projects. </p>
 <h2>Logic Analyzer Connector</h2>
 <p>When reverse engineering a target device or inspecting why your custom code controlling a specific peripheral isn't working, a logic analyzer is your best friend. To help simplify the wiring for both our training and standard usage, we also added a logic analyzer connector. This was done to remediate potential wiring issues and make debugging and troubleshooting as easy as possible. An interface board was designed to connect to entry-level logic analyzers that can be seen in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_connector.JPG"></p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_1.JPG"></p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_2.JPG"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_connector.JPG"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_1.JPG"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/la_2.JPG"></p>
 <p>This helps streamline connecting a logic analyzer to the PiFex and analyzing the transmitted or monitored signals. </p>
 <h2>Level Shifter(s)</h2>
 <p>The Raspberry PI uses 3.3V logic levels, meaning it can only communicate with devices that use that same logic level. If we want to connect to a device that uses lower voltages (1.8V and 1.2V are becoming increasingly common), we need to route those through a level shifter. To streamline this and help reduce issues with wiring during our training, we've added two onboard level shifters.</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/level_shifters.JPG"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/level_shifters.JPG"></p>
 <p>We chose to use the <a href="https://www.ti.com/product/TXB0108">TXB0108 Bi-Directional level shifters</a>; these allow us to communicate with devices at a voltage below 3.3V. In the case where a different logic level is needed, the user can select whether to use an external voltage source for the input voltage using the <code>VCCA_IN</code> line on the exposed headers. The level shifter then references this voltage by toggling the selector switch at the top of the board to <code>VCCA_IN</code> as opposed to the default state, which is <code>3.3V</code>.</p>
 <h1>PiFex: Software</h1>
 <p>If you've ever had to set up a headless Raspberry Pi before, you know that it's not always a simple task, and when performing remote training, we can't assume that everyone will be able to manually configure their Pi to connect to their network. This is why we designed the PiFex image to use a USB-Ethernet gadget on startup to present an Ethernet device to the end user over USB. This results in an easy, predictable way to connect to the Pi. After plugging the Pi into their machine, all the user needs to do is set the IP address, and they are all set. A short video walking through the web interface can be seen below:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/multi.gif" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/multi.gif" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>As mentioned in the previous section, one of the initial hurdles when learning about embedded protocols is selecting what tool or interface you want to learn with. Embedded development boards like the Arduino series or STM32 series are great but require setting up a development environment and understanding the specifics of the target microcontroller. One of the benefits of using an embedded Linux board is that these interfaces are exposed via <code>/dev/</code> and can be accessed using many programming languages such as Python, Rust, C, and even bash. </p>
 <h2>Jupyter Notebooks</h2>
 <p>Throughout our training, we utilize Jupyter Notebooks to help streamline the process and provide students with template notebooks for future assessments. For example, the JTAG notebook contains instructions and tooling to perform:</p>
@@ -163,14 +163,14 @@ VoidStar Security Blog            </a>
 </li>
 </ol>
 <p>Screenshots of the included notebooks can be seen below:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag-notebook-2.png"></p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag.png"></p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/notebook-1.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag-notebook-2.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/jtag.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/notebook-1.png"></p>
 <p>While in class, we will use all of these features on our target, and students will be able to copy this notebook and use the same tools and techniques for future targets. </p>
 <p>Last but certainly not least, we've configured the PiFex image to allow access to standard tools such as SSH and FTP. Now that we've reviewed the PiFex's features and intended use case, let's reverse-engineer the JTAG TAP for an undocumented target!</p>
 <h1>PiFex Demo 1 : JTAG</h1>
 <p>So, we've talked about our new hardware tooling. How about a demonstration of it in action? Let's start with a low-cost SSD purchased on AliExpress. </p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/top_pcb_labelled.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/top_pcb_labelled.jpg"></p>
 <p>If we break down the hardware, we have the following:</p>
 <table class="table table-hover">
 <thead>
@@ -204,16 +204,16 @@ VoidStar Security Blog            </a>
 </tbody>
 </table>
 <p>After searching for datasheets, we were not able to locate much; however, next, we will investigate the mystery header at the end of the board. Let's start by looking at this debug connector at the end of the drive. First, we will attempt to identify the ground connection. To do this, we will use our multimeter in continuity mode and test against a known ground. We will use the large copper fills to connect the SSD to an adapter board in this case. </p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/known_ground.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/known_ground.jpg"></p>
 <p>After performing this test, we determined that the following pin was ground.
-<img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/known_ground_2.jpg"></p>
+<img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/known_ground_2.jpg"></p>
 <p>Now we need to determine what logic levels are in use; remember that the Pi uses a 3.3V logic level by default, so if there are other levels in use, we will need to locate a reference voltage for the level shifter. We will use the following pinout of the SSD for reference:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/connector_pins.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/connector_pins.jpg"></p>
 <p>After measuring the voltages on the connector, we saw the following voltages. </p>
 <ul>
 <li><strong>Side Note:</strong> When reversing a new target, I like to place the target platform on top of a blank sheet of paper; that way, I can quickly write down notes as I am probing/reverse engineering without having to turn away from the workspace. You can see this in the video below:</li>
 </ul>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/measurement.gif" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/measurement.gif" style="display:block; margin-left:auto; margin-right:auto"></p>
 <table class="table table-hover">
 <thead>
 <tr>
@@ -275,11 +275,11 @@ VoidStar Security Blog            </a>
 </li>
 </ol>
 <p>Based on the voltages we collected, we should monitor pins 2,3,4,6,7, and \8 with the oscilloscope and see how they differ. Take a look at the images below and see if you can spot the different one:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/all_drops.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/all_drops.png"></p>
 <p>If we examine the images highlighted in green below, we see a relatively sharp drop from high to low:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/digital_drops.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/digital_drops.png"></p>
 <p>Looking closely at the images above, you may notice that image 1 has a slightly different shape when it rises and falls than the other lines. This is likely due to a capacitor being present somewhere on this line, which makes it a good candidate for VCC. This was pin two on the debug header, so we can now update our table as shown below.</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/analog_drops.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/analog_drops.png"></p>
 <table class="table table-hover">
 <thead>
 <tr>
@@ -332,8 +332,8 @@ VoidStar Security Blog            </a>
 </tbody>
 </table>
 <p>We will connect to the SSD using the clips shown in the image below, these were also purchased on AliExpress.</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/clip-only.JPG"></p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/connected.JPG"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/clip-only.JPG"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/connected.JPG"></p>
 <p>With this assumption, we are left with six unknown pins. Next, we can perform a JTAG IDCODE scan using the <code>go-jtagenum</code> tools; this will attempt to brute force all of the possible JTAG pin combinations and will report back pin configurations that report a valid ID code or pass the bypass test. If you're unfamiliar with these scans and want to learn more about them, check out my old writeup <a href="https://wrongbaud.github.io/posts/jtag-hdd/">here</a>.</p>
 <div class="highlight"><pre><span></span><code>pi@voidstar:~/go/bin/linux_arm<span class="w"> </span>$<span class="w"> </span>./go-jtagenum<span class="w"> </span>-pins<span class="w"> </span><span class="s1">&#39;{ &quot;pin2&quot;: 2, &quot;pin3&quot;: 3, &quot;pin14&quot;: 14, &quot;pin15&quot;: 15, &quot;pin10&quot;: 10, &quot;pin9&quot;: 9}&#39;</span><span class="w"> </span>-command<span class="w"> </span>scan_idcode<span class="w"> </span>-delay-tck<span class="w"> </span><span class="m">50</span>
 defined<span class="w"> </span>pins:<span class="w"> </span>map<span class="o">[</span><span class="m">2</span>:pin2<span class="w"> </span><span class="m">3</span>:pin3<span class="w"> </span><span class="m">9</span>:pin9<span class="w"> </span><span class="m">10</span>:pin10<span class="w"> </span><span class="m">14</span>:pin14<span class="w"> </span><span class="m">15</span>:pin15<span class="o">]</span>
@@ -694,15 +694,15 @@ Info<span class="w"> </span>:<span class="w"> </span>Listening<span class="w"> <
 <h3>Loading the Firmware into Ghidra</h3>
 <p>While the current Ghidra release does not support ARCompact, a wonderful fork is being maintained <a href="https://github.com/niooss-ledger/ghidra">here</a>. We can build this and use it to analyze our firmware image. </p>
 <p>If we look at offset <code>0</code> in the firmware image, we have what appears to be an interrupt vector table of some sort:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/ivt.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/ivt.png"></p>
 <p>If we look a little further at the image, we can see that there are some branch instructions for a region that we've not extracted yet. We also see that the two areas we previously identified (<code>0x50000000</code> and <code>0x10000000</code>) are being referenced as well. These are likely internal/external SRAM regions, while the area starting around <code>0x4007000</code> appears to be used as code.</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/interesting.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/interesting.png"></p>
 <p>Let's try to extract that region, load it into our Ghidra database, and see if the results make sense. First, we'll dump the region out using OpenOCD, as shown below:</p>
 <div class="highlight"><pre><span></span><code>dump_image 0x40070000.bin 0x40070000 0x100000
 </code></pre></div>
 
 <p>We can then import it into our Ghidra database, resulting in the following:</p>
-<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/imported_new_region.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/jtag-pifex/imported_new_region.jpg"></p>
 <p><strong>Success:</strong> It looks like we have code in this region, and it disassembles properly. </p>
 <p>From here, we now have the following primitives available to us on the SSD:</p>
 <ul>
