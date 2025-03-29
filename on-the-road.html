@@ -107,16 +107,16 @@ VoidStar Security Blog            </a>
 </footer><!-- /.post-info -->                    </div>
                 </div>
                 <p>May of this year marked the first in-person training of 2023. This training took place at the <a href="https://www.champlain.edu/cybersecurity-and-digital-forensics/senator-patrick-leahy-center-for-digital-forensics-and-cybersecurity">Leahy Center for Digital Forensics and Cybersecurity.</a>. The training was given to the IoT analysis team at the Leahy center, to improve the students' skills working in the field of IoT device analysis and research. In mid-May, I packed up and drove up to beautiful Burlington, Vermont, to spend a week with students hacking hardware.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Kits!" src="https://voidstarsec.com/blog/assets/images/packing-up.gif"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Kits!" src="https://voidstarsec.com/blog/assets/images/packing-up.gif"></p>
 <p>In the large black case are the kits for each student, containing all their tools and targets.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Kits!" src="https://voidstarsec.com/blog/assets/images/kits.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Kits!" src="https://voidstarsec.com/blog/assets/images/kits.jpg"></p>
 <p>With a car full of targets and hardware tools, I showed up at the Leahy Center Monday morning, ready to spend the week hacking hardware.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Leahy Center" src="https://voidstarsec.com/blog/assets/images/leahy-center.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Leahy Center" src="https://voidstarsec.com/blog/assets/images/leahy-center.jpg"></p>
 <h1>Module 1:  Tool Review and Fundamentals</h1>
 <p>Module one is about giving students an overview of what hardware hacking <em>is</em> and where to start. Similar to how software reverse engineering works, where we break down the compiled bytecode into assembly instructions and work our way back up, we do the same with hardware. Starting with a review of how embedded systems are designed and the fundamentals of electricity. We end this segment with a five-phase approach to analyzing embedded systems:</p>
-<p><img class="center" style="border: 8px solid black;" alt="RE Process Overview Slide" src="https://voidstarsec.com/blog/assets/images/re-process.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="RE Process Overview Slide" src="https://voidstarsec.com/blog/assets/images/re-process.png"></p>
 <p>After a brief review of fundamentals, we discuss how printed circuit boards are made and designed, using one of our targets as an example. Finally, students will analyze the first target and point out anything interesting based on what we learned during the PCB analysis section.</p>
-<p><img class="center" style="border: 8px solid black;" alt="PCB Analysis Screenshot" src="https://voidstarsec.com/blog/assets/images/pcb-analysis.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="PCB Analysis Screenshot" src="https://voidstarsec.com/blog/assets/images/pcb-analysis.png"></p>
 <p>After we reviewed how PCBs are designed, we asked, "How do we know what components to focus on?". Next, we covered the various component types and how to identify them. We reviewed component types and their different packages early in the course because one of the first (and very understandable) questions often asked is:</p>
 <blockquote>
 <p>How do I know what to look for or what I'm looking at when I open up a new device?"</p>
@@ -129,8 +129,8 @@ VoidStar Security Blog            </a>
 <li>Single Board Computers</li>
 </ol>
 <p>Throughout the week, students used their single-board computers (in this case, a Raspberry Pi) to perform hardware-level attacks on their targets. The Pi has been outfitted with a web interface, including Jupyter notebooks for each protocol reviewed:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Pi Control Panel" src="https://voidstarsec.com/blog/assets/images/pi-interface.gif"></p>
-<p><img class="center" style="border: 8px solid black;" alt="Jupyter Notebook" src="https://voidstarsec.com/blog/assets/images/jupyter.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Pi Control Panel" src="https://voidstarsec.com/blog/assets/images/pi-interface.gif"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Jupyter Notebook" src="https://voidstarsec.com/blog/assets/images/jupyter.png"></p>
 <p>Using these tools, we learned more about our first target, measuring voltages on the various test pads and testing for continuity on some components of interest. After investigating one debug header, students noticed a voltage fluctuation on startup; next, we discussed UART. This is our first protocol segment; for each protocol segment, we performed the following:</p>
 <ol>
 <li>Learn how the protocol works at the signal level</li>
@@ -140,11 +140,11 @@ VoidStar Security Blog            </a>
 <li>Apply points 1-4 on the target device</li>
 </ol>
 <h1>Module 2: UART</h1>
-<p><img class="center" style="border: 8px solid black;" alt="UART Objectives Slide" src="https://voidstarsec.com/blog/assets/images/uart.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="UART Objectives Slide" src="https://voidstarsec.com/blog/assets/images/uart.png"></p>
 <p>In the UART segment, students learned to identify a UART, capture traffic using a logic analyzer, and calculate the baud rate. Next, they interfaced with the target using <code>minicom</code> and <code>screen</code>. Students analyzed the data, which gave us an indicator of what day two had in store. </p>
 <h1>Module 3: U-Boot</h1>
 <p>Following our discovery of a UART and some exciting traffic, our second day started with a deep dive into the U-Boot bootloader. First, we reviewed some common bootup sequences used by embedded systems, covering definitions such as boot ROMs, SBL (secondary bootloaders), and U-Boot. </p>
-<p><img class="center" style="border: 8px solid black;" alt="UBoot Objectives Slide" src="https://voidstarsec.com/blog/assets/images/uboot.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="UBoot Objectives Slide" src="https://voidstarsec.com/blog/assets/images/uboot.png"></p>
 <p>Understanding how the U-Boot bootloader can manipulate the underlying operating system is crucial. Therefore, we talked about the history of U-Boot, its structure, and how to approach/attack a U-Boot-based system as a reverse engineer.</p>
 <p>For an introduction to U-Boot, students were given two QEMU virtual machines and asked to answer the following questions:</p>
 <ol>
@@ -166,46 +166,46 @@ spi<span class="w"> </span>spi<span class="w"> </span>usage:
 </code></pre></div>
 
 <p>Students then learned about the <a href="https://github.com/nccgroup/depthcharge">depthcharge</a> toolkit, a valuable tool for auditing U-Boot environments. Using depthcharge, a script was developed that allowed memory to be read to a file. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Jupyter Screenshot" src="https://voidstarsec.com/blog/assets/images/uboot-jupyter.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Jupyter Screenshot" src="https://voidstarsec.com/blog/assets/images/uboot-jupyter.png"></p>
 <p>Despite depthcharge being able to extract the flash image from our target partially, we needed to learn more about the SPI protocol. In the next segment, students learned how SPI works at a low level by analyzing logic captures. </p>
 <h1>Module 4: SPI</h1>
 <p>Throughout this segment, students learned how the SPI interface works at the signal level and how these signals are used to generate packets. Students performed traffic and signal analysis throughout several labs and developed tools to interact with a SPI peripheral directly using the Raspberry Pi. We then covered practical applications of the SPI interface with regard to EEPROMs by analyzing a logic capture from an active SPI bus.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Jupyter SPI w/Wiring Diagrams" src="https://voidstarsec.com/blog/assets/images/spi-commands.gif"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Jupyter SPI w/Wiring Diagrams" src="https://voidstarsec.com/blog/assets/images/spi-commands.gif"></p>
 <p>After learning more about how the protocol works (and, more importantly, the problems arising when using it), students utilized open-source tools to extract flash chips and wrote their own tools; armed with these tools, students attempted to extract the flash from their routers. However, this extraction was more difficult than anticipated. Students were introduced to bus contention and needed to find a way to read the SPI flash in-circuit. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Pi with Clip" src="https://voidstarsec.com/blog/assets/images/pi-with-clip.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Pi with Clip" src="https://voidstarsec.com/blog/assets/images/pi-with-clip.jpg"></p>
 <h1>Module 5: Firmware Extraction and Unpacking</h1>
 <p>The goal of working on the router is for students to get access to a root console. Next, they began to search for the kernel arguments. After using <a href="https://github.com/ReFirmLabs/binwalk">binwalk</a> to analyze the image, students used the binwalk results to manually extract the image's core components using <code>dd</code>. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Firmware Overview" src="https://voidstarsec.com/blog/assets/images/firmware-2.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Firmware Overview" src="https://voidstarsec.com/blog/assets/images/firmware-2.png"></p>
 <p>We reviewed the Linux boot process, including examples of how kernel arguments can be passed to the kernel and the general boot flow for a Linux-based embedded system. Finally, students learned about device trees, their purpose, and how to compile/decompile them. I ran out of whiteboard space during this segment, but luckily, the walls made for an excellent substitute!</p>
-<p><img class="center" style="border: 8px solid black;" alt="Firmware Overview" src="https://voidstarsec.com/blog/assets/images/firmware.jpeg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Firmware Overview" src="https://voidstarsec.com/blog/assets/images/firmware.jpeg"></p>
 <p>During this segment, we talked about various example firmware formats and discussed standard tools and techniques for analyzing an unknown binary. In addition, we reviewed entropy analysis, identifying interrupt vector tables, and how to handle various compression algorithms commonly used in firmware images. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Entropy Image" src="https://voidstarsec.com/blog/assets/images/entropy.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Entropy Image" src="https://voidstarsec.com/blog/assets/images/entropy.png"></p>
 <p>Students will manually extract decompressed and modified segments of the firmware image to add a root console that will appear on boot. Once they had made their modifications, they repackaged and restructured a new firmware image to flashback to the target. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Firmware Overview" src="https://voidstarsec.com/blog/assets/images/firmware.PNG"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Firmware Overview" src="https://voidstarsec.com/blog/assets/images/firmware.PNG"></p>
 <h1>Module 6: I2C</h1>
 <p>On day four, we moved on to another target, which required us to learn more about how the Inter-Integrated Circuit (I2C) protocol works at a low level. From here, students learned how to approach an I2C bus as a reverse engineer, about tools and techniques to interrogate the bus, and learn more about the devices connected to it. Open-source tools for probing various types of I2C devices are covered and used, and students wrote their own tools using Python. </p>
-<p><img class="center" style="border: 8px solid black;" alt="I2C Objectives" src="https://voidstarsec.com/blog/assets/images/i2c_objectives.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="I2C Objectives" src="https://voidstarsec.com/blog/assets/images/i2c_objectives.png"></p>
 <p>Students extracted and modified I2C-based EEPROMs, hacking their games to get a high score!</p>
-<p><img class="center" style="border: 8px solid black;" alt="I2C Address Example" src="https://voidstarsec.com/blog/assets/images/i2c-addr.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="I2C Address Example" src="https://voidstarsec.com/blog/assets/images/i2c-addr.png"></p>
 <p>After understanding the protocols and the available tools, two different flash chips were extracted from one of their targets. After analyzing the resulting data and determining its structure using the techniques covered on day three, modified data was written back to the target. Students tested their custom tools and understanding of the data. Upon startup, the cabinet had been hacked by a rogue detective displaying the following data:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Modified Leaderboard" src="https://voidstarsec.com/blog/assets/images/stock.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Modified Leaderboard" src="https://voidstarsec.com/blog/assets/images/stock.png"></p>
 <p>Students then patched and reflashed the data. However, they quickly learned that the data was harder to patch than they initially assumed. Next, students must figure out the custom binary format and checksum scheme; otherwise, their information is corrupted and deleted! However, they took the top spot when they determined the correct format for the flash image!</p>
-<p><img class="center" style="border: 8px solid black;" alt="Modified Leaderboard" src="https://voidstarsec.com/blog/assets/images/mod.jpg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Modified Leaderboard" src="https://voidstarsec.com/blog/assets/images/mod.jpg"></p>
 <h1>Module 7: JTAG</h1>
 <p>Next, we examined a new target in our kit; after surveying the target and testing for our previously understood protocols with no luck, we assumed we were dealing with a potential JTAG interface.</p>
-<p><img class="center" style="border: 8px solid black;" alt="JTAG Interface Objectives" src="https://voidstarsec.com/blog/assets/images/jtag-objectives.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="JTAG Interface Objectives" src="https://voidstarsec.com/blog/assets/images/jtag-objectives.png"></p>
 <p>Students learned how the JTAG state machine works and how to take advantage of this state machine when reverse engineering an unknown JTAG TAP.</p>
-<p><img class="center" style="border: 8px solid black;" alt="JTAG State Machine Example" src="https://voidstarsec.com/blog/assets/images/jtag-2.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="JTAG State Machine Example" src="https://voidstarsec.com/blog/assets/images/jtag-2.png"></p>
 <p>Similar to the previous labs, we built on the fundamental components outlined in the specification and covered how to brute force unknown JTAG pin assignments using the Raspberry Pi. </p>
-<p><img class="center" style="border: 8px solid black;" alt="JTAG State Machine Example" src="https://voidstarsec.com/blog/assets/images/jtag-id.PNG"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="JTAG State Machine Example" src="https://voidstarsec.com/blog/assets/images/jtag-id.PNG"></p>
 <p>Throughout the JTAG segment, students manually navigated the scan chain and wrote custom config files for OpenOCD. Using these methods, students extracted memory, set breakpoints, and took total control over the target's execution flow. </p>
 <h1>SWD</h1>
 <p>One of the last targets in the kit is an ARM-based embedded device; students were tasked with analyzing the device using all of the techniques learned throughout the week. After performing a teardown and initial analysis, students found a new hardware-level debug interface - Single Wire Debugging (SWD). This module explained how this debug mechanism operates at the signal level and how we can leverage the <a href="https://developer.arm.com/documentation/ihi0031/a/Overview-of-the-ARM-Debug-Interface-and-its-components">ARM Debug Interface Specification</a> to learn as much as possible about an unknown target. </p>
-<p><img class="center" style="border: 8px solid black;" alt="SWD Objectives" src="https://voidstarsec.com/blog/assets/images/swd_objectives.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="SWD Objectives" src="https://voidstarsec.com/blog/assets/images/swd_objectives.png"></p>
 <p>Throughout this final module, we developed an OpenOCD config file from the ground up and OpenOCD scripts to learn more about our target. We used the information we gathered using the ADI specification to learn how to attack our target further; this included learning how to extract and modify the device's internal flash to demonstrate that we've taken complete control. We also connected to the device using OpenOCD's GDB stub, allowing us to gain full control over the execution of the device!</p>
 <h1>Bonus Targets</h1>
 <p>For a final exercise, students were given a brand new target, which used multiple protocols covered in the course, and students were tasked with learning as much about the target as possible. Students broke up into groups and used what they learned throughout the week to attack their new targets. The targets can be seen in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Pic of New Targets" src="https://voidstarsec.com/blog/assets/images/targets.jpeg"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Pic of New Targets" src="https://voidstarsec.com/blog/assets/images/targets.jpeg"></p>
 <p>These new targets all came with different goals, including:</p>
 <ol>
 <li>Decoding button presses via I2C traffic captures</li>
@@ -213,7 +213,7 @@ spi<span class="w"> </span>spi<span class="w"> </span>usage:
 <li>Examining USB traffic to control/modify a target</li>
 </ol>
 <p>Students took turns looking at the final new targets, learning how to apply what they learned throughout the week and using their new hardware hacking skills:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Tablet GIF" src="https://voidstarsec.com/blog/assets/images/tablet-touch.gif"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Tablet GIF" src="https://voidstarsec.com/blog/assets/images/tablet-touch.gif"></p>
 <h1>Conclusion</h1>
 <p>The week at the <a href="https://www.champlain.edu/centers-of-experience/the-leahy-center">Leahy Center</a> was extremely fun and productive. It was great to be able to teach students on-site again. Over the week, students learned how to assess embedded systems and how these protocols work at the signal level. They also learned to develop their tooling and troubleshoot when other tools fail. I cannot speak highly enough about the work that the Leahy Center folks do; if you're interested in doing security research, DFIR, and IOT research, check them out!</p>
 <p>I look forward to seeing the excellent research they produce in the future, and I can't recommend the department highly enough to those looking for new hires or interns!</p>

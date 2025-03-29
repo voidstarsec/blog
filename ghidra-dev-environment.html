@@ -228,43 +228,43 @@ GhidraDev<span class="w">  </span>GhidraSleighEditor
 <li>Eclipse Plugin Development Environment</li>
 </ul>
 <p>To install the plugins, open Eclipse and navigate to <code>Help</code> &gt; <code>Eclipse Marketplace</code>, the following window will appear:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Eclipse Marketplace" src="https://voidstarsec.com/blog/assets/images/marketplace.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Eclipse Marketplace" src="https://voidstarsec.com/blog/assets/images/marketplace.png"></p>
 <p>First, install the Eclipse plugin development environment by typing <code>Plugin development</code> in the search bar and installing what is displayed in the images below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="PDE Plugin" src="https://voidstarsec.com/blog/assets/images/eclipse_pde.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="PDE Plugin" src="https://voidstarsec.com/blog/assets/images/eclipse_pde.png"></p>
 <p>Next, we need to install the C/C++ development plugin. Type CDT in the search bar, and install the plugin shown below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="CDT Plugin" src="https://voidstarsec.com/blog/assets/images/cdt.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="CDT Plugin" src="https://voidstarsec.com/blog/assets/images/cdt.png"></p>
 <p>Next, we need to install the PyDeV plugin:</p>
-<p><img class="center" style="border: 8px solid black;" alt="PyDev Plugin" src="https://voidstarsec.com/blog/assets/images/pydev.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="PyDev Plugin" src="https://voidstarsec.com/blog/assets/images/pydev.png"></p>
 <p>After installing these three plugins, your installed plugins window should match what is shown below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Installed Plugins" src="https://voidstarsec.com/blog/assets/images/plugins.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Installed Plugins" src="https://voidstarsec.com/blog/assets/images/plugins.png"></p>
 <h1>Building and Installing the GhidraDev Plugin</h1>
 <p>We can now import the GhidraDev plugin into Eclipse with the plugins installed. Once the plugin is imported, we will export it and install it in Eclipse, allowing us to launch Ghidra from Eclipse and debug our various plugins and scripts. </p>
 <p>First, we import the GhidraDev project into Eclipse; this will be in your <code>ghidra/GhidraBuild/EclipsePlugins</code> folder. To import the project, navigate to the following menu:</p>
 <p><code>File</code> &gt; <code>Import</code> &gt; <code>General</code> &gt; <code>Existing Projects into Workspace</code></p>
-<p><img class="center" style="border: 8px solid black;" alt="Importing GhidraDev" src="https://voidstarsec.com/blog/assets/images/import_ghidradev_project.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Importing GhidraDev" src="https://voidstarsec.com/blog/assets/images/import_ghidradev_project.png"></p>
 <p>After importing the projects, your Eclipse window should look like this, with the <code>EclipseGhidraDevFeature</code> and <code>EclipseGhidraDevPlugin</code> projects displayed: </p>
-<p><img class="center" style="border: 8px solid black;" alt="Imported Projects" src="https://voidstarsec.com/blog/assets/images/projects_imported.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Imported Projects" src="https://voidstarsec.com/blog/assets/images/projects_imported.png"></p>
 <p>Now that the project has been imported and built, we need to export it. To do that, navigate to the following menu:</p>
 <p><code>File</code> &gt; <code>Export</code> &gt; <code>Plug-in Development</code> &gt; <code>Deployable Features</code></p>
-<p><img class="center" style="border: 8px solid black;" alt="Export Window" src="https://voidstarsec.com/blog/assets/images/deployable_features.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Export Window" src="https://voidstarsec.com/blog/assets/images/deployable_features.png"></p>
 <p>From this window, select the <code>ghidra.ghiradev</code> feature in the checkbox and specify a location for the archive to be exported; in the window shown below, I have set that to <code>/home/dev/ghidraDev.zip</code>. Please note this location because, in the next section, we will be importing this archive into Eclipse!</p>
-<p><img class="center" style="border: 8px solid black;" alt="Export" src="https://voidstarsec.com/blog/assets/images/export.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Export" src="https://voidstarsec.com/blog/assets/images/export.png"></p>
 <p>Now that the plugin has been exported, we can install it in Eclipse. Do this by opening the following window:</p>
 <p><code>Help</code> &gt; <code>Install New Software</code></p>
-<p><img class="center" style="border: 8px solid black;" alt="Install New Software" src="https://voidstarsec.com/blog/assets/images/install_new_software.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Install New Software" src="https://voidstarsec.com/blog/assets/images/install_new_software.png"></p>
 <p>Click the <code>Add</code> button, which will cause the following window to appear:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Add New Software" src="https://voidstarsec.com/blog/assets/images/add.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Add New Software" src="https://voidstarsec.com/blog/assets/images/add.png"></p>
 <p>Next, we will load the previously generated archive by clicking on the <code>Archive</code> button. Then, navigate to the location where you exported your <code>ghidraDev.zip</code> file in the previous steps and select it. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Install Plugin" src="https://voidstarsec.com/blog/assets/images/install_plugin.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Install Plugin" src="https://voidstarsec.com/blog/assets/images/install_plugin.png"></p>
 <p>Click next to install the plugin; once the installation is finished, you will be prompted to restart Eclipse, do this, and upon restart, you will see the <code>GhidraDev</code> menu option in the top menu.</p>
 <p>Now that we have installed the plugin, we can generate our first Ghidra Script project; to do this, navigate to the following menu:</p>
 <p><code>GhidraDev</code> &gt; <code>New</code> &gt; <code>Ghidra Script Project</code></p>
 <p>Select a name for your project; I'll use GhidraScriptsVSS for this example. </p>
-<p><img class="center" style="border: 8px solid black;" alt="GhidraScriptsVSS" src="https://voidstarsec.com/blog/assets/images/ghidrascriptsvss.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="GhidraScriptsVSS" src="https://voidstarsec.com/blog/assets/images/ghidrascriptsvss.png"></p>
 <p>Click next to continue project configuration and then click next on the following window:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Configure Ghidra Script Project" src="https://voidstarsec.com/blog/assets/images/configure.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Configure Ghidra Script Project" src="https://voidstarsec.com/blog/assets/images/configure.png"></p>
 <p>Next, we need to link our current Ghidra installation; if you followed the previous steps and built Ghidra in the docker container, this will be our <code>ghidra_10.2_DEV</code> directory that we extracted earlier.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Ghidra Installation" src="https://voidstarsec.com/blog/assets/images/ghidra_installation.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Ghidra Installation" src="https://voidstarsec.com/blog/assets/images/ghidra_installation.png"></p>
 <p>Next, you can enable Python support using the Jython interpreter bundled with the Ghidra installation pointed to in the previous section. </p>
 <p>The Ghidra project will show up in your Eclipse projects, and we can add our first script!</p>
 <h1>Using the GhidraDev Plugin</h1>
@@ -273,26 +273,26 @@ GhidraDev<span class="w">  </span>GhidraSleighEditor
 <li><a href="https://github.com/wrongbaud/ghidra-utils">Ghidra Utilities Repository</a></li>
 </ul>
 <p>To add a new Java file to our project, download the <a href="https://github.com/wrongbaud/ghidra-utils/blob/main/GBA/MakeFunctionsScriptGBA.java"><code>MakeFunctionsScriptGBA.java</code></a> file and copy it into the project location. In my case, this is in the <code>~/ghidra_scripts</code> directory. If you do not have that directory, you can determine the location by right-clicking on the <code>Home Scripts</code> folder in the project directory and clicking <code>Properties</code> causing the following window to appear:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Home Scripts Properties" src="https://voidstarsec.com/blog/assets/images/home_scripts_properties.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Home Scripts Properties" src="https://voidstarsec.com/blog/assets/images/home_scripts_properties.png"></p>
 <p>After downloading the <a href="https://github.com/wrongbaud/ghidra-utils"><code>ghidra-utils</code></a> repository and copying the <a href="https://github.com/wrongbaud/ghidra-utils/blob/main/GBA/MakeFunctionsScriptGBA.java">function discovery script</a> into our project directory, we can now see the script in our Eclipse workspace.</p>
 <p>Let's take this script and run it on another ROM image from a different game; this time, we will use Monster Rancher Advance as a test case. </p>
 <p>We can launch this script in Ghidra by right-clicking on the script in the project explorer and clicking</p>
 <p><code>Run As</code> &gt; <code>Ghidra</code></p>
-<p><img class="center" style="border: 8px solid black;" alt="Run as &gt; Ghidra" src="https://voidstarsec.com/blog/assets/images/run_as_ghidra.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Run as &gt; Ghidra" src="https://voidstarsec.com/blog/assets/images/run_as_ghidra.png"></p>
 <p>This will cause the previously linked  Ghidra installation to launch. Once it launches, we will select our target binary and then open up the <code>Script Manager</code> window by clicking <code>Window</code> &gt; <code>Script Manager</code> displaying the following:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Script Manager" src="https://voidstarsec.com/blog/assets/images/script_manager.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Script Manager" src="https://voidstarsec.com/blog/assets/images/script_manager.png"></p>
 <p>We can locate our script by typing it into the search bar; we can double click it to launch it on our new unanalyzed ROM. Below are the parameters I ran the script with; we will run it over the entire ROM and denote the results. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Plugin Option 1" src="https://voidstarsec.com/blog/assets/images/plugin_1.png"></p>
-<p><img class="center" style="border: 8px solid black;" alt="Plugin Option 2" src="https://voidstarsec.com/blog/assets/images/plugin_2.png"></p>
-<p><img class="center" style="border: 8px solid black;" alt="Plugin Option 3" src="https://voidstarsec.com/blog/assets/images/plugin_3.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Plugin Option 1" src="https://voidstarsec.com/blog/assets/images/plugin_1.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Plugin Option 2" src="https://voidstarsec.com/blog/assets/images/plugin_2.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Plugin Option 3" src="https://voidstarsec.com/blog/assets/images/plugin_3.png"></p>
 <p>After entering the third option, the script will run and look for functions in the ROM image. For this example, the script was able to identify 240 functions.</p>
 <p>If we wanted to modify or debug this script as it is running, we can now easily do that within Eclipse. </p>
 <p>Let's say we wanted to break after the user inputs the number of memory regions they wish to analyze. To do this, we can go to the relevant line in our script and set a breakpoint by double-clicking the line number. We also will need to relaunch Ghidra using the <code>Debug As</code> option in the project manager. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Set a Breakpoint" src="https://voidstarsec.com/blog/assets/images/breakpoint.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Set a Breakpoint" src="https://voidstarsec.com/blog/assets/images/breakpoint.png"></p>
 <p>When we launch Ghidra in debugging mode, Eclipse will appear as follows:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Debugging Mode" src="https://voidstarsec.com/blog/assets/images/breakpoints_debugging.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Debugging Mode" src="https://voidstarsec.com/blog/assets/images/breakpoints_debugging.png"></p>
 <p>Now, if we rerun the script from Ghidra, the following will occur:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Ghidra Halted" src="https://voidstarsec.com/blog/assets/images/halted.png"></p>
+<p><img class="center" style="border: 8px solid black;" class="center" style="border: 8px solid black;" alt="Ghidra Halted" src="https://voidstarsec.com/blog/assets/images/halted.png"></p>
 <p>We can see that our breakpoint hit, allowing us to single-step through our script. In addition, debugger integration helps debug our scripts and step through other scripts to help us understand how they work. </p>
 <p>Using the GhidraDev plugin, we can set breakpoints, log more information, and run our script in Ghidra. </p>
 <h1>Conclusion</h1>
