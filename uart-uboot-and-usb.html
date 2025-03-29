@@ -633,15 +633,28 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
 </code></pre></div>
 
 <p>There are a few variables of interest that I'd like to point out in the table below:</p>
-<p>|----------------------|
-| Variable | Significance |<br>
-| :-------: | :------------: |<br>
-|----------------------|
-| <code>bootcmd</code> | This command is used to define the default boot behavior | 
-|----------------------|
-| <code>board=evb_rk3128</code> | This identifies the CPU / development board in use | 
-|----------------------|
-| <code>devtype=spinand</code> | This defines the flash device type in use | </p>
+<table class="tb tr tc table table-hover">
+<thead>
+<tr>
+<th>Variable</th>
+<th>Significance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bootcmd</code></td>
+<td>This command is used to define the default boot behavior</td>
+</tr>
+<tr>
+<td><code>board=evb_rk3128</code></td>
+<td>This identifies the CPU / development board in use</td>
+</tr>
+<tr>
+<td><code>devtype=spinand</code></td>
+<td>This defines the flash device type in use</td>
+</tr>
+</tbody>
+</table>
 <p>At this point, if we cross-reference the information that we gathered during our hardware review, we see consistent results. We assumed after our hardware review that the SPI flash was the main method of storage, and this assumption is being validated in the UBoot environment variables and the available commands. </p>
 <p>Let's start by examining the <code>rksfc</code> commands; a quick <a href="https://gitlab.collabora.com/nicolas/rockchip-uboot/blob/d5f538dc02e53c7267fcd4a914104071fca889b5/doc/README.rksfc">google search</a> tells us that this is RockChip's SPI SFC (serial flash controller) interface tool. This command has the following subcommands available:</p>
 <div class="highlight"><pre><span></span><code><span class="o">=&gt;</span><span class="w"> </span><span class="n">rksfc</span>
@@ -1124,10 +1137,10 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
       <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/blog.html">blog</a>
@@ -1136,19 +1149,19 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
       <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+      <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/fault-injection.html">fault-injection</a>
     </li>
     <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+    </li>
+    <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
   </ul>
 </li>
