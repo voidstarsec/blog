@@ -9,7 +9,7 @@
 
 
 
-<link rel="canonical" href="https://wrongbaud.github.io/newblog/replicant-part-1.html">
+<link rel="canonical" href="http://localhost:8000/replicant-part-1.html">
 
         <meta name="author" content=""Matthew Alt"" />
         <meta name="keywords" content="fault-injection,chipwhisperer" />
@@ -18,7 +18,7 @@
         <meta property="og:site_name" content="VoidStar Security Blog" />
         <meta property="og:type" content="article"/>
         <meta property="og:title" content="Replicant: Reproducing a Fault Injection Attack on the Trezor One"/>
-        <meta property="og:url" content="https://wrongbaud.github.io/newblog/replicant-part-1.html"/>
+        <meta property="og:url" content="http://localhost:8000/replicant-part-1.html"/>
         <meta property="og:description" content="This post aims to provide a road map and example of how to replicate a fault injection attack and the hurdles and shortcomings that can occur when attempting to do so. Furthermore, by outlining the process of replicating one of these attacks, we hope that readers come away from this post more confident in generating their own fault injection attacks or replicating pre-existing work."/>
         <meta property="article:published_time" content="2022-08-19" />
             <meta property="article:section" content="Glitching" />
@@ -29,16 +29,16 @@
 
 
     <!-- Bootstrap -->
-        <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/bootstrap.sandstone.min.css" type="text/css"/>
-    <link href="https://wrongbaud.github.io/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="http://localhost:8000/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="http://localhost:8000/theme/css/font-awesome.min.css" rel="stylesheet">
 
-    <link href="https://wrongbaud.github.io/newblog/theme/css/pygments/native.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/style.css" type="text/css"/>
+    <link href="http://localhost:8000/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="http://localhost:8000/theme/css/style.css" type="text/css"/>
 
-        <link href="https://wrongbaud.github.io/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+        <link href="http://localhost:8000/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog ATOM Feed"/>
 
-        <link href="https://wrongbaud.github.io/newblog/feeds/glitching.atom.xml" type="application/atom+xml" rel="alternate"
+        <link href="http://localhost:8000/feeds/glitching.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog Glitching ATOM Feed"/>
 
 </head>
@@ -47,7 +47,7 @@
 <div class="navbar navbar-default navbar-fixed-top" role="navigation">
     <div class="container">
         <div class="navbar-header">
-            <a href="https://wrongbaud.github.io/newblog/" class="navbar-brand">
+            <a href="http://localhost:8000/" class="navbar-brand">
 VoidStar Security Blog            </a>
         </div>
         <div class="collapse navbar-collapse navbar-ex1-collapse">
@@ -68,14 +68,14 @@ VoidStar Security Blog            </a>
     <div class="row">
         <div class="col-sm-9 col-sm-push-3">
             <ol class="breadcrumb">
-                <li><a href="https://wrongbaud.github.io/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li><a href="http://localhost:8000" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
                 <li class="active">Replicant: Reproducing a Fault Injection Attack on the Trezor One</li>
             </ol>
     <section id="content">
         <article>
             <header class="page-header">
                 <h1>
-                    <a href="https://wrongbaud.github.io/newblog/replicant-part-1.html"
+                    <a href="http://localhost:8000/replicant-part-1.html"
                        rel="bookmark"
                        title="Permalink to Replicant: Reproducing a Fault Injection Attack on the Trezor One">
                         Replicant: Reproducing a Fault Injection Attack on the Trezor One
@@ -93,16 +93,16 @@ VoidStar Security Blog            </a>
 
 
             <span class="label label-default">By</span>
-            <a href="https://wrongbaud.github.io/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+            <a href="http://localhost:8000/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
         <span class="label label-default">Category</span>
-        <a href="https://wrongbaud.github.io/newblog/category/glitching.html">Glitching</a>
+        <a href="http://localhost:8000/category/glitching.html">Glitching</a>
 
 
 <span class="label label-default">Tags</span>
-	<a href="https://wrongbaud.github.io/newblog/tag/fault-injection.html">fault-injection</a>
+	<a href="http://localhost:8000/tag/fault-injection.html">fault-injection</a>
         /
-	<a href="https://wrongbaud.github.io/newblog/tag/chipwhisperer.html">chipwhisperer</a>
+	<a href="http://localhost:8000/tag/chipwhisperer.html">chipwhisperer</a>
     
 </footer><!-- /.post-info -->                    </div>
                 </div>
@@ -118,22 +118,22 @@ VoidStar Security Blog            </a>
 <p>With regards to the common fault injection methods, there are a few different <strong>types</strong> of faults that we can try to introduce: clock glitching and voltage glitching. </p>
 <h2>Clock Glitching</h2>
 <p>With clock glitching, our goal is to skip or modify instructions. The idea is that by injecting another clock cycle, we can cause the processor to skip over an instruction. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Clock Glitch" src="https://voidstarsec.com/blog/assets/images/glitch/clock.PNG"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Clock Glitch" src="https://voidstarsec.com/blog/assets/images/glitch/clock.PNG"></p>
 <p>As you can probably imagine, these need to be precise as we try to modify or manipulate a specific sequence of clock cycles to get our desired outcome. Clock glitching targets the external clock on a CPU or microcontroller with the end goal of injecting a clock signal at the appropriate time, causing an instruction to be skipped. </p>
 <h2>Voltage Glitching</h2>
 <p>Voltage glitching involves targeting the power source of the entire system. By briefly cutting the power to a target system, we can modify its behavior/performance. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Voltage Glitch Example" src="https://voidstarsec.com/blog/assets/images/glitch/voltage_glitch.drawio.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Voltage Glitch Example" src="https://voidstarsec.com/blog/assets/images/glitch/voltage_glitch.drawio.png"></p>
 <p>With voltage glitching, our goal is to reduce the voltage for a short enough time such that the processor does not entirely shut down but instead enters an undefined state or causes some type of <strong>undefined behavior</strong>. Unfortunately, this task does not come easy as many processors are specifically designed to avoid this scenario, sometimes requiring an attacker to get creative with component removal or injection methods. </p>
 <p>If you want to learn more about these methods, I cannot recommend the NewAE materials highly enough. Even if you don't have a chipwhisperer at home, their <a href="https://github.com/newaetech/chipwhisperer-jupyter/tree/master/courses">tutorials</a>, <a href="https://forum.newae.com/">forums</a> and <a href="https://rtfm.newae.com/">documentation</a> are perfect for anyone wanting to learn more about fault injection. </p>
 <h2>Electromagnetic Fault Injection</h2>
 <p>We can also inject faults into our targets using something like the <a href="https://github.com/newaetech/chipshouter-picoemp">PicoEMP</a> or <a href="https://www.newae.com/products/NAE-CW520#:~:text=The%20ChipSHOUTER%C2%AE%20(CW520)%20is,%2C%20educators%2C%20and%20embedded%20enthusiasts.">chipshouter</a>, these tools inject faults in a different way than the two methods mentioned above.  </p>
-<p><img class="center" style="border: 8px solid black;" alt="PicoEMP" src="https://github.com/newaetech/chipshouter-picoemp/blob/main/hardware/picoemp-red.jpeg?raw=true"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="PicoEMP" src="https://github.com/newaetech/chipshouter-picoemp/blob/main/hardware/picoemp-red.jpeg?raw=true"></p>
 <p>These tools are used to perform EMFI (electro-magnetic-fault-injection) attacks. These attacks involve generating a large electric field that can cause hardware to fail, resulting in potential bit-flips and other undefined behavior. For more information on EMFI attacks, check out <a href="https://www.youtube.com/watch?v=WOMAOGOvXnA">Colin O'Flynn's excellent talk on the same wallet we will review with this post</a>.</p>
 <p>Now that we are a little more familiar with the ideas behind fault injection let's talk about the attack replicated in this post. This post aims to replicate the work presented in the <a href="https://chip.fail">chip.fail</a> presentation. This work outlines the process of using fault injection to bypass an RDP check in the bootrom of the STM32F2 series MCU, allowing the attacker to access the device's internal memory via SWD. This is the same attack that was <a href="https://www.forbes.com/sites/daveywinder/2022/02/07/hack-the-planet-how-this-hacker-unlocked-a-2-million-crypto-wallet/">recently replicated by Joe Grand</a> to recover a large amount of currency from the wallet. Before we get into the details of the attack, let's start by examining our target device and learning more about its security features.</p>
 <hr>
 <h1>Target Overview</h1>
 <p>The target for this work is the <a href="https://shop.trezor.io/product/trezor-one-white">Trezor One</a> wallet. This is a popular low-cost wallet that is built around the STM32F2 microcontroller. Trezor's hardware and software are both open source, this is great because it gives us access to the hardware diagrams and the firmware source, which will help eliminate a lot of reverse engineering work.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Trezor One" src="https://voidstarsec.com/blog/assets/images/glitch/trez.jpg"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Trezor One" src="https://voidstarsec.com/blog/assets/images/glitch/trez.jpg"></p>
 <p>The Trezor One utilizes the STM32F2 MCU; before we move on, let's review some of the relevant CPU features.</p>
 <h2>STM32 Security Overview</h2>
 <p>Multiple security features can be enabled on an STM32 microprocessor; a brief description can be found below.</p>
@@ -151,9 +151,9 @@ VoidStar Security Blog            </a>
 <p>Our target has protection level RDP2 enabled, so we need to find a way around that; to do that, we have to take a slightly closer look at how power is managed and regulated within the STM32. </p>
 <h2>STM32 Power Management/Regulation</h2>
 <p>Within any microcontroller, there are multiple power domains; these are used for powering various chip peripherals and internal operations and comparators. We will be targeting the internal voltage regulator. A brief overview of the power domains in the STM32 can be seen below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Power Domains on STM32" src="https://voidstarsec.com/blog/assets/images/glitch/power_domain_diagram.PNG"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Power Domains on STM32" src="https://voidstarsec.com/blog/assets/images/glitch/power_domain_diagram.PNG"></p>
 <p>This diagram shows that the <code>VCAP_1</code> and <code>VCAP_2</code> lines give us a direct path to the internal regulator, affecting things like kernel logic, flash memory, and IO logic. So if we can briefly manipulate this line, we can hopefully affect how these peripherals behave!</p>
-<p><img class="center" style="border: 8px solid black;" alt="Power Domains 2" src="https://voidstarsec.com/blog/assets/images/glitch/power_domain.PNG"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Power Domains 2" src="https://voidstarsec.com/blog/assets/images/glitch/power_domain.PNG"></p>
 <p>For this work, we will be targetting the internal voltage regulator by attempting to manipulate the <code>VCAP</code> lines shown in the image above. Why are we targeting this line? Or more importantly, how can we find similar voltage rails to target other processors when we move on to additional targets for fault injection?</p>
 <p>The <code>VCAP</code> lines ensure that all internal comparators and regulators are appropriately managed. If we can manipulate this line, we can potentially alter the behavior of the CPU's core memories and digital peripherals and cause undefined/modified behavior. Hopefully, glitching this internal regulator (perhaps during a specific memory operation involving the RDP settings) will allow us to modify the device's RDP state. </p>
 <p>To recap, we want to attempt to modify the RDP state of the device from RDP2 to RDP1, and we want to do so by <strong>glitching</strong> or briefly interrupting the voltage supplied on the 
@@ -161,7 +161,7 @@ VoidStar Security Blog            </a>
 <hr>
 <h1>The Attack</h1>
 <p>This work aims to replicate the research presented in the <a href="chip.fail">chip.fail</a> research, which resulted in the discovery of a bug in the bootrom of the STM32F2 microcontroller. For those that may not be familiar, the bootrom is responsible for handling a lot of the early startup functionality of the microcontroller (similar to a BIOS on your modern computer). The bootrom is responsible for performing basic peripheral initialization, security checks, boot mode checks, and finally loading the main application into memory and executing it. A high-level outline of the boot process can be seen below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Boot Sequence" src="https://voidstarsec.com/blog/assets/images/glitch/boot_sequence.drawio.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Boot Sequence" src="https://voidstarsec.com/blog/assets/images/glitch/boot_sequence.drawio.png"></p>
 <p>With the chip.fail research; It was discovered that if an attacker could inject a fault roughly 170 microseconds after the processor began executing its bootrom, an RDP check could be bypassed. This would allow an attacker to drop the STM32 from RDP2 to RDP1, allowing SRAM access via SWD. Additionally, the recovery keys could be extracted by reading SRAM, allowing access to the wallet's contents. (<strong>Note:</strong> Trezor has mitigated this bug by removing the recovery keys from RAM in updated firmware versions).</p>
 <p>The attack:</p>
 <ol>
@@ -171,45 +171,45 @@ VoidStar Security Blog            </a>
 <li>Test RDP bypass via SWD</li>
 <li>Read SRAM from the target device</li>
 </ol>
-<p><img class="center" style="border: 8px solid black;" alt="DS1 For the Homies" src="https://voidstarsec.com/blog/assets/images/glitch/gwin.drawio.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="DS1 For the Homies" src="https://voidstarsec.com/blog/assets/images/glitch/gwin.drawio.png"></p>
 <p>If step 4 is successful and the wallet continues booting, the glitch is successful, and the internal SRAM can be read out of the target. </p>
 <p>So what does an attack like this look like at the signal level? How do we know when the processor has started executing the boot ROM? How would one proceed if analyzing a new target/power trace? Let's start by removing a few components from our target and looking at a power trace. </p>
 <hr>
 <h1>Preparing our Target</h1>
 <p>To make sure that our glitch is as effective as possible, we need to remove the external capacitors connected to the VCAP lines and the reset line. This can be done with a standard soldering iron and some patience. These capacitors (highlighted in the schematic below) are used to ensure that the voltage remains stable, which is what we <strong>don't</strong> want when doing fault injection.</p>
 <p>Below is the default schematic for the Trezor One:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Stock Schematic" src="https://voidstarsec.com/blog/assets/images/glitch/trezor_v1.1.brd.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Stock Schematic" src="https://voidstarsec.com/blog/assets/images/glitch/trezor_v1.1.brd.png"></p>
 <p>The highlighted components in red below outline capacitors that need to be removed.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Schematic with capacitors removed" src="https://voidstarsec.com/blog/assets/images/glitch/removal.jpg"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Schematic with capacitors removed" src="https://voidstarsec.com/blog/assets/images/glitch/removal.jpg"></p>
 <p>Below is an image of the wallet with the removed capacitors highlighted in red:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Trezor with Capacitors Removed" src="https://voidstarsec.com/blog/assets/images/glitch/trezor_caps_removed.jpg"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Trezor with Capacitors Removed" src="https://voidstarsec.com/blog/assets/images/glitch/trezor_caps_removed.jpg"></p>
 <h2>Capturing Power Traces</h2>
 <p>Now that we have identified the components that need to be removed and the lines we care about, we need to capture some example power trace data. To do this, we will use an oscilloscope. For our research, we used the Siglent SDS1104X-E 100Mhz Digital Oscilloscope and a standard DC measurement probe included with the scope.</p>
 <p>When performing power captures like this, it is essential to make sure that you have your oscilloscope set up correctly. We configured our scope to trigger on the reset line using a rising edge trigger. This means the scope will begin capturing when it detects the reset line rising.</p>
 <p>It is essential to take some time when dialing in your triggers for your oscilloscope. While it may be tempting to use something like continuous capture, or "Rolling" mode, this will drastically decrease your capture rate and result in less granular power traces. For the samples we will be reviewing later, our sample rate was 500MSa/s. </p>
 <p>It should also be noted that we were not using a shunt resistor when we captured our traces; an article about how to properly utilize shunt resistors for power measurement can be found <a href="https://research.kudelskisecurity.com/2019/10/16/power-analysis-to-the-people/">here</a>. </p>
 <p>Next, let's review some example power traces. Below is an example view of the voltage on the <code>VCAP</code> line <em>with</em> the external capacitors:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Capacitors on VCAP Line" src="https://voidstarsec.com/blog/assets/images/glitch/scope/cap.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Capacitors on VCAP Line" src="https://voidstarsec.com/blog/assets/images/glitch/scope/cap.png"></p>
 <p>Here is the same line with the capacitors removed:</p>
-<p><img class="center" style="border: 8px solid black;" alt="No Capacitors on VCAP Line" src="https://voidstarsec.com/blog/assets/images/glitch/scope/nocap.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="No Capacitors on VCAP Line" src="https://voidstarsec.com/blog/assets/images/glitch/scope/nocap.png"></p>
 <p>Notice that the line is now much noisier and less stable; this is what we want when attempting to inject a fault or a glitch onto a power rail. With our capacitors removed and our test pads soldered, let's perform some initial power analysis, starting with our target line (<code>VCAP</code>) as it relates to the <code>RESET</code> line. The bootrom begins execution when the system reset line hits the 3.3V threshold. Thus by monitoring the reset line, we can determine when the boot ROM begins execution; we will use this as our trigger for our glitch. </p>
 <p>The pink line represents the voltage on the  <code>VCAP</code> line, while the yellow line is the voltage on the <code>RESET</code> line:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Simple Power Trace" src="https://voidstarsec.com/blog/assets/images/glitch/scope/power_trace.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Simple Power Trace" src="https://voidstarsec.com/blog/assets/images/glitch/scope/power_trace.png"></p>
 <p>We can see various activity regions highlighted in the gif below; notice the voltage fluctuations in these regions. Based on how this MCU boots, we can make some assumptions about what these multiple fluctuations mean. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Power Phases" src="https://voidstarsec.com/blog/assets/images/glitch/power/power.gif"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Power Phases" src="https://voidstarsec.com/blog/assets/images/glitch/power/power.gif"></p>
 <p>While our trace may look different than the one highlighted in the original research, we can see that our capture is similar in terms of the structure of the power trace. For example, if we look at our trace at roughly 170 microseconds, we can see the flash activity before the main application begins execution. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Timing Annotated" src="https://voidstarsec.com/blog/assets/images/glitch/scope/timing_power.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Timing Annotated" src="https://voidstarsec.com/blog/assets/images/glitch/scope/timing_power.png"></p>
 <p>Now that we have removed the relevant capacitors, we next need to connect to the SWD port. This can be accessed through the vias on the right of the PCB, as shown in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Timing Annotated" src="https://voidstarsec.com/blog/assets/images/glitch/trezor-wiring.jpg"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Timing Annotated" src="https://voidstarsec.com/blog/assets/images/glitch/trezor-wiring.jpg"></p>
 <p>With these lines broken out to a breadboard, it's time to replicate the attack.</p>
 <hr>
 <h1>Replicating the Attack</h1>
 <p>For this work, we 3d printed a jig for the components, shown in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="3D Printed Jig for Components" src="https://voidstarsec.com/blog/assets/images/glitch/setup.jpg"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="3D Printed Jig for Components" src="https://voidstarsec.com/blog/assets/images/glitch/setup.jpg"></p>
 <p>The STL file can be found in the GitHub repo <a href="https://github.com/wrongbaud/replicant">here</a></p>
 <h2>Hardware</h2>
 <p>For our setup, we used a Raspberry Pi, <a href="https://rtfm.newae.com/Starter%20Kits/ChipWhisperer-Lite/">ChipWhisperer</a> and STLink. The STLink was connected to the SWD port of the Trezor and is what we use to detect that the RDP bypass has been performed successfully. The ChipWhisperer is used to power the wallet, trigger the reset line, and glitch the VCAP line. A simple wiring table for our setup can be seen below:</p>
-<table class="table table-hover">
+<table class="tb tr tc table table-hover">
 <thead>
 <tr>
 <th>ChipWhisperer Pin Number / Usage</th>
@@ -239,7 +239,7 @@ VoidStar Security Blog            </a>
 </tr>
 </tbody>
 </table>
-<table class="table table-hover">
+<table class="tb tr tc table table-hover">
 <thead>
 <tr>
 <th>STLink Header</th>
@@ -269,7 +269,7 @@ VoidStar Security Blog            </a>
 <p>With all the appropriate connections made, it is time to interface with the ChipWhisperer and dial in the parameters of our desired glitch. As mentioned before, the <a href="https://github.com/newaetech/chipwhisperer-jupyter/blob/master/courses/fault101/Fault%202_1%20-%20Introduction%20to%20Voltage%20Glitching.ipynb">NewAE tutorials</a> are a great place to start, and we used this notebook as a template for our attack. </p>
 <p>A few key things need to be dialed in when working with the chip whisperer, and we'll walk through some of them now. The referenced code can be found <a href="https://github.com/wrongbaud/replicant/blob/main/replicant.py">here</a>.</p>
 <p>The overall flow of the program is simple:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Glitch" src="https://voidstarsec.com/blog/assets/images/glitch/glitch_sequence.drawio.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Glitch" src="https://voidstarsec.com/blog/assets/images/glitch/glitch_sequence.drawio.png"></p>
 <p>Let's start with connecting to our CW; this can be done with the following code:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">chipwhisperer</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cw</span>
 <span class="n">scope</span> <span class="o">=</span> <span class="n">cw</span><span class="o">.</span><span class="n">scope</span><span class="p">()</span>
@@ -369,10 +369,10 @@ VoidStar Security Blog            </a>
 
 <p>With this, we were <em>certain</em> that we'd found our issue. Everything else looked great and lined up with the public literature; what else could go wrong? But unfortunately, we were still not seeing results after a few more days of testing and tweaking glitch parameters. </p>
 <p>Finally, we decided to get the scope back out and inspect our glitch. We examined the glitch with an <code>ext_offset</code> of 16000,17000, and 18000, and it <em>looked</em> reasonable to the naked eye. However, with an <code>ext_offset</code> of 0, we saw the following:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Bad Glitch" src="https://voidstarsec.com/blog/assets/images/glitch/scope/SDS00001.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Bad Glitch" src="https://voidstarsec.com/blog/assets/images/glitch/scope/SDS00001.png"></p>
 <p>In the screenshot above, the yellow line is our RST line, and purple is the VCAP line. Note the gap between the glitch and the reset line reaching its target voltage. The ChipWhisperer is triggering before the reset line reaches 3.3V. This early triggering was causing our glitch to start counting down before the reset line was fully asserted. This was causing the glitch to trigger about 20 microseconds too early.</p>
 <p>We can calculate the exact delay using the cursors on the oscilloscope, as seen in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Voltage Differential" src="https://voidstarsec.com/blog/assets/images/glitch/scope/SDS00005.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Voltage Differential" src="https://voidstarsec.com/blog/assets/images/glitch/scope/SDS00005.png"></p>
 <p>We determined we were triggering approximately 24 microseconds too early using the oscilloscope. Armed with this new information, we modified our <code>ext_offset</code> range to be between 17000 and 20000 and left that running over the weekend.</p>
 <p>When we returned to the office on Monday, the STLink LED was green, meaning it had successfully accessed the device via SWD! </p>
 <div class="highlight"><pre><span></span><code>pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>sudo<span class="w"> </span>-E<span class="w"> </span>python3<span class="w"> </span>python/replicant.py<span class="w"> </span>/dev/bus/usb/001/004
@@ -383,7 +383,7 @@ Done<span class="w"> </span>glitching
 </code></pre></div>
 
 <p>Even more interesting is that our glitch hit around 197 microseconds after the ChipWhisperer triggered. Recall that in the chip.fail work; their offset was roughly 170 microseconds. Ours had a delay of 24 microseconds, placing it in a similar range to the previous research (197-24 = 173). This offset range was repeatable, and we could consistently trigger the glitch in the 194-197 microseconds range. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Video of Glitch Hitting" src="https://voidstarsec.com/blog/assets/images/glitch/glitch.gif"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Video of Glitch Hitting" src="https://voidstarsec.com/blog/assets/images/glitch/glitch.gif"></p>
 <p>We can now use OpenOCD to read the SRAM region with the glitch.</p>
 <div class="highlight"><pre><span></span><code>pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>./run_openocd.sh<span class="w"> </span>
 Open<span class="w"> </span>On-Chip<span class="w"> </span>Debugger<span class="w"> </span><span class="m">0</span>.10.0+dev-01514-ga8edbd020-dirty<span class="w"> </span><span class="o">(</span><span class="m">2022</span>-03-01-19:24<span class="o">)</span>
@@ -459,13 +459,13 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
 <span class="p">}</span>
 </code></pre></div>
 
-<p><img class="center" style="border: 8px solid black;" alt="Structure Present in SRAM" src="https://voidstarsec.com/blog/assets/images/glitch/sram_highlight.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Structure Present in SRAM" src="https://voidstarsec.com/blog/assets/images/glitch/sram_highlight.png"></p>
 <p>The image above shows the structure highlighted in an SRAM dump. We have successfully replicated the glitch and re-enabled the SWD peripheral. </p>
 <hr>
 <h1>Conclusion</h1>
 <p>This work and post aimed to demonstrate the difficulties and technical hurdles that can occur when attempting to replicate a fault injection attack. We demonstrated the process of using fault injection to bypass an RDP check in the bootrom allowing for an attacker to gain privileged access. This post demonstrates that small details matter when replicating a FI attack, and these details can change based on your hardware setup. All of the code and resources that were generated for this work can be found <a href="https://github.com/wrongbaud/replicant">here</a> </p>
 <p>You might be asking yourself, is there a way we could do this without connecting to the VCAP lines and removing those additional capacitors? Keep an eye out for part two of this post, where we build on the knowledge gained from this post and demonstrate this same attack but with a PicoEMP:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Pico EMP" src="https://voidstarsec.com/blog/assets/images/glitch/picoemp.jpg"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Pico EMP" src="https://voidstarsec.com/blog/assets/images/glitch/picoemp.jpg"></p>
 <p>If you are interested in this type of hardware-level reverse engineering, check out <a href="https://voidstarsec.com/training">our training course</a> or <a href="https://voidstarsec.com/index.html#contact">reach out</a> to us for any consulting needs. If you want to get notified when a new blog post, course, or tool is released, consider signing up for the <a href="http://eepurl.com/hSl31f">mailing list</a>. I only send emails when there are actual posts or course updates. Lastly, you can follow me on <a href="https://twitter.com/wrongbaud">twitter</a> for various updates on side projects and classes. </p>
 <p>This work was done alongside my friends Cody Gallagher and Aaron Phelps (<a href="https://www.linkedin.com/in/phelps-aaron/">LI</a>/<a href="https://twitter.com/phelps_yelps">twitter</a>), between the three of us we had a lot of fun replicating this attack. We also have to give a massive shout out to <a href="https://twitter.com/stacksmashing">@stacksmashing</a> and <a href="https://twitter.com/colinoflynn">@colinoflynn</a> who were very helpful and answered many of our early questions. </p>
 <hr>
@@ -527,19 +527,19 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
   <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
   <ul class="list-group" id="categories">
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+      <a href="http://localhost:8000/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
     </li>
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
+      <a href="http://localhost:8000/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
     </li>
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+      <a href="http://localhost:8000/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
     </li>
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+      <a href="http://localhost:8000/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
     </li>
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+      <a href="http://localhost:8000/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
     </li>
   </ul>
 </li>
@@ -547,37 +547,37 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
 
 <!-- Sidebar/Tag Cloud -->
 <li class="list-group-item">
-  <a href="https://wrongbaud.github.io/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <a href="http://localhost:8000/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
-    <li class="list-group-item tag-1">
-      <a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
-    </li>
-    <li class="list-group-item tag-1">
-      <a href="https://wrongbaud.github.io/newblog/tag/blog.html">blog</a>
+    <li class="list-group-item tag-0">
+      <a href="http://localhost:8000/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a>
+      <a href="http://localhost:8000/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a>
+      <a href="http://localhost:8000/tag/blog.html">blog</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/pifex.html">pifex</a>
+      <a href="http://localhost:8000/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/jtag.html">jtag</a>
+      <a href="http://localhost:8000/tag/chipwhisperer.html">chipwhisperer</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/fault-injection.html">fault-injection</a>
+      <a href="http://localhost:8000/tag/fault-injection.html">fault-injection</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/tools.html">tools</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/training.html">training</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/chipwhisperer.html">chipwhisperer</a>
+      <a href="http://localhost:8000/tag/tools.html">tools</a>
     </li>
   </ul>
 </li>
@@ -617,7 +617,7 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
    <div class="container">
       <hr>
       <div class="row">
-         <div class="col-xs-10">&copy; 2024 VoidStar Security
+         <div class="col-xs-10">&copy; 2025 VoidStar Security
             &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
             <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
             <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
@@ -625,13 +625,13 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
       </div>
    </div>
 </footer>
-<script src="https://wrongbaud.github.io/newblog/theme/js/jquery.min.js"></script>
+<script src="http://localhost:8000/theme/js/jquery.min.js"></script>
 
 <!-- Include all compiled plugins (below), or include individual files as needed -->
-<script src="https://wrongbaud.github.io/newblog/theme/js/bootstrap.min.js"></script>
+<script src="http://localhost:8000/theme/js/bootstrap.min.js"></script>
 
 <!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
-<script src="https://wrongbaud.github.io/newblog/theme/js/respond.min.js"></script>
+<script src="http://localhost:8000/theme/js/respond.min.js"></script>
 
 
 

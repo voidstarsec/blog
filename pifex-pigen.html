@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Brushing Up on Hardware Hacking Part 1 - PiFex Configuration - VoidStar Security Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="http://localhost:8000/pifex-pigen.html">
+
+        <meta name="author" content=""Matthew Alt"" />
+        <meta name="keywords" content="pifex,jtag,hardware" />
+        <meta name="description" content="Overview Whether performing a training exercise with a large group or consulting clients with embedded security needs, there is one question that I constantly receive: How do you pick which devices to use when learning hardware reverse engineering? This is a very reasonable question; with so many random embedded devices …" />
+
+        <meta property="og:site_name" content="VoidStar Security Blog" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Brushing Up on Hardware Hacking Part 1 - PiFex Configuration"/>
+        <meta property="og:url" content="http://localhost:8000/pifex-pigen.html"/>
+        <meta property="og:description" content="Overview Whether performing a training exercise with a large group or consulting clients with embedded security needs, there is one question that I constantly receive: How do you pick which devices to use when learning hardware reverse engineering? This is a very reasonable question; with so many random embedded devices …"/>
+        <meta property="article:published_time" content="2025-03-05" />
+            <meta property="article:section" content="Pifex" />
+            <meta property="article:tag" content="pifex" />
+            <meta property="article:tag" content="jtag" />
+            <meta property="article:tag" content="hardware" />
+            <meta property="article:author" content=""Matthew Alt"" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="http://localhost:8000/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="http://localhost:8000/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="http://localhost:8000/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="http://localhost:8000/theme/css/style.css" type="text/css"/>
+
+        <link href="http://localhost:8000/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog ATOM Feed"/>
+
+        <link href="http://localhost:8000/feeds/pifex.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog Pifex ATOM Feed"/>
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="http://localhost:8000/" class="navbar-brand">
+VoidStar Security Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-sm-push-3">
+            <ol class="breadcrumb">
+                <li><a href="http://localhost:8000" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li class="active">Brushing Up on Hardware Hacking Part 1 - PiFex Configuration</li>
+            </ol>
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="http://localhost:8000/pifex-pigen.html"
+                       rel="bookmark"
+                       title="Permalink to Brushing Up on Hardware Hacking Part 1 - PiFex Configuration">
+                        Brushing Up on Hardware Hacking Part 1 - PiFex Configuration
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2025-03-05T00:00:00-07:00"> Wed 05 March 2025</time>
+    </span>
+
+
+            <span class="label label-default">By</span>
+            <a href="http://localhost:8000/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+
+        <span class="label label-default">Category</span>
+        <a href="http://localhost:8000/category/pifex.html">Pifex</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="http://localhost:8000/tag/pifex.html">pifex</a>
+        /
+	<a href="http://localhost:8000/tag/jtag.html">jtag</a>
+        /
+	<a href="http://localhost:8000/tag/hardware.html">hardware</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <h1>Overview</h1>
+<p>Whether performing a training exercise with a large group or consulting clients with embedded security needs, there is one question that I constantly receive:</p>
+<blockquote>
+<p>How do you pick which devices to use when learning hardware reverse engineering?</p>
+</blockquote>
+<p>This is a very reasonable question; with so many random embedded devices on the market, picking something easy to learn can be difficult. With this three part "brush-up" series, we want to give our readers examples of devices they can use to learn more about reverse engineering embedded devices. For each of these posts, we will provide links to the software used and (non-affiliate) links to the devices we are tearing down. </p>
+<p>The first device in our series will be <a href="https://www.aliexpress.us/item/3256806639061540.html">this</a> electric toothbrush. </p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/brush.png"></p>
+<p>Our goal is to extract the firmware from the device and see if we can also get hardware-level debugging working on the target. </p>
+<h1>Pi-Gen + PiFex</h1>
+<p>For this series, we will use a Raspberry Pi as our hardware hacking multi-tool. While we will use the <a href="https://voidstarsec.training">PiFex</a> board, it will not be required for those following along at home. However, one thing that will need to be used is an SD card image with the appropriate software tools and utilities installed. For this, we'll be using the open-source tools in our <a href="https://github.com/voidstarsec/pifex-sw">PiFex software repo</a> as well as the tool <a href="https://github.com/RPi-Distro/pi-gen">PiGen</a>. </p>
+<p>PiGen can generate Raspberry Pi images; we will use this to create an SD card image based on the latest Raspbian OS version containing all required software for hardware-level reverse engineering. </p>
+<p>Building an image with PiGen goes through multiple stages, each responsible for configuring different portions of the resulting image. Our modifications will be performed in stages one, two, and three. </p>
+<p>In stage one, we modify the <code>config.txt</code> file to enable the various hardware peripherals that we will be using. This includes UART, SPI, I2C, and the DWC2 gadget driver for presenting an Ethernet device over USB. </p>
+<div class="highlight"><pre><span></span><code><span class="err">#</span><span class="w"> </span><span class="n">Modifications</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">config</span><span class="p">.</span><span class="n">txt</span>
+<span class="o">[</span><span class="n">all</span><span class="o">]</span>
+<span class="n">dtparam</span><span class="o">=</span><span class="n">i2c_arm</span><span class="o">=</span><span class="k">on</span>
+<span class="n">enable_uart</span><span class="o">=</span><span class="mi">1</span>
+<span class="err">#</span><span class="w"> </span><span class="n">PiFex</span><span class="w"> </span><span class="n">Enable</span><span class="w"> </span><span class="n">I2C</span><span class="w"> </span><span class="n">Screen</span>
+<span class="n">dtoverlay</span><span class="o">=</span><span class="n">i2c6</span>
+<span class="err">#</span><span class="w"> </span><span class="k">Set</span><span class="w"> </span><span class="n">up</span><span class="w"> </span><span class="n">USB</span><span class="w"> </span><span class="n">Ethernet</span><span class="w"> </span><span class="n">driver</span>
+<span class="n">dtoverlay</span><span class="o">=</span><span class="n">dwc2</span>
+</code></pre></div>
+
+<p>We will modify the kernel command line in stages one and two to enable the <code>i2c-dev</code> kernel module.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Modifications to cmdline.txt</span>
+<span class="n">console</span><span class="o">=</span><span class="n">serial0</span><span class="p">,</span><span class="mi">115200</span><span class="w"> </span><span class="n">console</span><span class="o">=</span><span class="n">tty1</span><span class="w"> </span><span class="n">root</span><span class="o">=</span><span class="n">ROOTDEV</span><span class="w"> </span><span class="n">rootfstype</span><span class="o">=</span><span class="n">ext4</span><span class="w"> </span><span class="n">fsck</span><span class="o">.</span><span class="n">repair</span><span class="o">=</span><span class="n">yes</span><span class="w"> </span><span class="n">modules</span><span class="o">-</span><span class="nb">load</span><span class="o">=</span><span class="n">dwc2</span><span class="p">,</span><span class="n">i2c</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">rootwait</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># Modifications to 07-resize-init.diff</span>
+<span class="o">---</span><span class="w"> </span><span class="n">stage2</span><span class="o">.</span><span class="n">orig</span><span class="o">/</span><span class="n">rootfs</span><span class="o">/</span><span class="n">boot</span><span class="o">/</span><span class="n">firmware</span><span class="o">/</span><span class="n">cmdline</span><span class="o">.</span><span class="n">txt</span>
+<span class="o">+++</span><span class="w"> </span><span class="n">stage2</span><span class="o">/</span><span class="n">rootfs</span><span class="o">/</span><span class="n">boot</span><span class="o">/</span><span class="n">firmware</span><span class="o">/</span><span class="n">cmdline</span><span class="o">.</span><span class="n">txt</span>
+<span class="err">@@</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="mi">1</span><span class="w"> </span><span class="err">@@</span>
+<span class="o">-</span><span class="n">console</span><span class="o">=</span><span class="n">serial0</span><span class="p">,</span><span class="mi">115200</span><span class="w"> </span><span class="n">console</span><span class="o">=</span><span class="n">tty1</span><span class="w"> </span><span class="n">root</span><span class="o">=</span><span class="n">ROOTDEV</span><span class="w"> </span><span class="n">rootfstype</span><span class="o">=</span><span class="n">ext4</span><span class="w"> </span><span class="n">fsck</span><span class="o">.</span><span class="n">repair</span><span class="o">=</span><span class="n">yes</span><span class="w"> </span><span class="n">modules</span><span class="o">-</span><span class="nb">load</span><span class="o">=</span><span class="n">dwc2</span><span class="p">,</span><span class="n">i2c</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">rootwait</span>
+<span class="o">+</span><span class="n">console</span><span class="o">=</span><span class="n">serial0</span><span class="p">,</span><span class="mi">115200</span><span class="w"> </span><span class="n">console</span><span class="o">=</span><span class="n">tty1</span><span class="w"> </span><span class="n">root</span><span class="o">=</span><span class="n">ROOTDEV</span><span class="w"> </span><span class="n">rootfstype</span><span class="o">=</span><span class="n">ext4</span><span class="w"> </span><span class="n">fsck</span><span class="o">.</span><span class="n">repair</span><span class="o">=</span><span class="n">yes</span><span class="w"> </span><span class="n">modules</span><span class="o">-</span><span class="nb">load</span><span class="o">=</span><span class="n">dwc2</span><span class="p">,</span><span class="n">i2c</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">rootwait</span><span class="w"> </span><span class="n">quiet</span><span class="w"> </span><span class="n">init</span><span class="o">=/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">raspberrypi</span><span class="o">-</span><span class="n">sys</span><span class="o">-</span><span class="n">mods</span><span class="o">/</span><span class="n">firstboot</span>
+</code></pre></div>
+
+<p>During stage three, we will do the following:</p>
+<ol>
+<li>Install PiFex software dependencies<ol>
+<li>Set up a <code>pifex-env</code> virtual environment containing the tools needed to access the OLED and other peripherals</li>
+<li>Install various dependencies and tools for common hardware hacking utilities</li>
+</ol>
+</li>
+<li>Enable systemd services to automatically launch our desired programs on boot; these include:<ol>
+<li><code>OLED.service</code>: Used to drive the OLED screen, displaying the IP address of the Raspberry Pi</li>
+<li><code>jupyter.service</code>: Launches the Jupyter notebooks included in the PiFex repository</li>
+<li><code>openocd.service</code>: Launches the OpenOCD web interface</li>
+<li><code>gadgets.service</code>: Configures and enables the serial and Ethernet gadgets</li>
+<li><code>serial-getty@ttyGS0.service</code>: Spawns a login shell on the virtual serial device</li>
+</ol>
+</li>
+</ol>
+<p>You can enable our modifications as shown below:</p>
+<div class="highlight"><pre><span></span><code><span class="err">#</span><span class="w"> </span><span class="nx">Clone</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">PiGen</span><span class="w"> </span><span class="nx">Repository</span>
+<span class="nx">git</span><span class="w"> </span><span class="nx">clone</span><span class="w"> </span><span class="nx">https</span><span class="p">:</span><span class="c1">//github.com/RPi-Distro/pi-gen.git</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">Clone</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">PiFex</span><span class="w"> </span><span class="nx">software</span><span class="w"> </span><span class="nx">repository</span>
+<span class="nx">git</span><span class="w"> </span><span class="nx">clone</span><span class="w"> </span><span class="nx">https</span><span class="p">:</span><span class="c1">//github.com/voidstarsec/pifex-sw</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">Copy</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">necessary</span><span class="w"> </span><span class="nx">PiFex</span><span class="w"> </span><span class="nx">files</span><span class="w"> </span><span class="nx">into</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">PiGen</span><span class="w"> </span><span class="nx">repository</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">First</span><span class="p">,</span><span class="w"> </span><span class="nx">copy</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">file</span>
+<span class="nx">cp</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">sw</span><span class="o">/</span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">pifex</span><span class="o">-</span><span class="nx">config</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">Copy</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">stage</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nx">files</span>
+<span class="nx">cp</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">sw</span><span class="o">/</span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage1</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">boot</span><span class="o">-</span><span class="nx">files</span><span class="o">/</span><span class="nx">files</span><span class="o">/</span><span class="nx">config</span><span class="p">.</span><span class="nx">txt</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage1</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">boot</span><span class="o">-</span><span class="nx">files</span><span class="o">/</span><span class="nx">files</span>
+<span class="nx">cp</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">sw</span><span class="o">/</span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage1</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">boot</span><span class="o">-</span><span class="nx">files</span><span class="o">/</span><span class="nx">files</span><span class="o">/</span><span class="nx">cmdline</span><span class="p">.</span><span class="nx">txt</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage1</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">boot</span><span class="o">-</span><span class="nx">files</span><span class="o">/</span><span class="nx">files</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">Copy</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">stage</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nx">files</span>
+<span class="nx">cp</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">sw</span><span class="o">/</span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage2</span><span class="o">/</span><span class="mi">01</span><span class="o">-</span><span class="nx">sys</span><span class="o">-</span><span class="nx">tweaks</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">patches</span><span class="o">/</span><span class="mi">07</span><span class="o">-</span><span class="nx">resize</span><span class="o">-</span><span class="nx">init</span><span class="p">.</span><span class="nx">diff</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage2</span><span class="o">/</span><span class="mi">01</span><span class="o">-</span><span class="nx">sys</span><span class="o">-</span><span class="nx">tweaks</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">patches</span><span class="o">/</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">Copy</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">stage</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="nx">files</span>
+<span class="nx">cp</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">sw</span><span class="o">/</span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage3</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">packages</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage3</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">install</span><span class="o">-</span><span class="nx">packages</span><span class="o">/</span>
+<span class="nx">cp</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">sw</span><span class="o">/</span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage3</span><span class="o">/</span><span class="mi">01</span><span class="o">-</span><span class="nx">run</span><span class="p">.</span><span class="nx">sh</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage3</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">install</span><span class="o">-</span><span class="nx">packages</span><span class="o">/</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">Copy</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">sw</span><span class="w"> </span><span class="nx">directory</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">stage3</span>
+<span class="nx">mkdir</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage3</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">install</span><span class="o">-</span><span class="nx">packages</span><span class="o">/</span><span class="nx">files</span><span class="o">/</span><span class="nx">pifex</span><span class="o">/</span>
+<span class="nx">cp</span><span class="w"> </span><span class="o">-</span><span class="nx">r</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">sw</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span><span class="o">/</span><span class="nx">stage3</span><span class="o">/</span><span class="mi">00</span><span class="o">-</span><span class="nx">install</span><span class="o">-</span><span class="nx">packages</span><span class="o">/</span><span class="nx">files</span><span class="o">/</span><span class="nx">pifex</span><span class="o">/</span>
+<span class="nx">cd</span><span class="w"> </span><span class="nx">pi</span><span class="o">-</span><span class="nx">gen</span>
+<span class="p">.</span><span class="o">/</span><span class="nx">build</span><span class="o">-</span><span class="nx">docker</span><span class="p">.</span><span class="nx">sh</span><span class="w"> </span><span class="o">-</span><span class="nx">c</span><span class="w"> </span><span class="nx">pifex</span><span class="o">-</span><span class="nx">config</span>
+</code></pre></div>
+
+<p>The resulting image in the <code>deploy</code> directory will have all the necessary tools installed and some additional features to help streamline access to the Pi. One of the most helpful features is adding a custom USB gadget for serial and Ethernet connections to the Raspberry Pi. This way, users can access the Pi via the USB to serial device <strong>or</strong> the USB to Ethernet device that will be presented. </p>
+<p>On first boot, the image will resize the root file system to match the remaining size of the SD card, and after that, you should see the following devices appear when the Pi is connected:</p>
+<div class="highlight"><pre><span></span><code><span class="p">[</span><span class="mf">337764.359794</span><span class="p">]</span><span class="w"> </span><span class="n">usb</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="w"> </span><span class="n">new</span><span class="w"> </span><span class="n">high</span><span class="o">-</span><span class="n">speed</span><span class="w"> </span><span class="n">USB</span><span class="w"> </span><span class="n">device</span><span class="w"> </span><span class="n">number</span><span class="w"> </span><span class="mh">34</span><span class="w"> </span><span class="n">using</span><span class="w"> </span><span class="n">xhci_hcd</span>
+<span class="p">[</span><span class="mf">337768.528839</span><span class="p">]</span><span class="w"> </span><span class="n">usb</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="w"> </span><span class="n">device</span><span class="w"> </span><span class="n">descriptor</span><span class="w"> </span><span class="n">read</span><span class="o">/</span><span class="mh">64</span><span class="p">,</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="o">-</span><span class="mh">71</span>
+<span class="p">[</span><span class="mf">337768.725882</span><span class="p">]</span><span class="w"> </span><span class="n">usb</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="w"> </span><span class="n">New</span><span class="w"> </span><span class="n">USB</span><span class="w"> </span><span class="n">device</span><span class="w"> </span><span class="n">found</span><span class="p">,</span><span class="w"> </span><span class="n">idVendor</span><span class="o">=</span><span class="mh">0421</span><span class="p">,</span><span class="w"> </span><span class="n">idProduct</span><span class="o">=</span><span class="mh">1410</span><span class="p">,</span><span class="w"> </span><span class="n">bcdDevice</span><span class="o">=</span><span class="w"> </span><span class="mf">1.00</span>
+<span class="p">[</span><span class="mf">337768.725900</span><span class="p">]</span><span class="w"> </span><span class="n">usb</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="w"> </span><span class="n">New</span><span class="w"> </span><span class="n">USB</span><span class="w"> </span><span class="n">device</span><span class="w"> </span><span class="nl">strings:</span><span class="w"> </span><span class="n">Mfr</span><span class="o">=</span><span class="mh">1</span><span class="p">,</span><span class="w"> </span><span class="n">Product</span><span class="o">=</span><span class="mh">2</span><span class="p">,</span><span class="w"> </span><span class="n">SerialNumber</span><span class="o">=</span><span class="mh">3</span>
+<span class="p">[</span><span class="mf">337768.725905</span><span class="p">]</span><span class="w"> </span><span class="n">usb</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="w"> </span><span class="nl">Product:</span><span class="w"> </span><span class="n">nothing</span>
+<span class="p">[</span><span class="mf">337768.725909</span><span class="p">]</span><span class="w"> </span><span class="n">usb</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="w"> </span><span class="nl">Manufacturer:</span><span class="w"> </span><span class="n">nobody</span>
+<span class="p">[</span><span class="mf">337768.725913</span><span class="p">]</span><span class="w"> </span><span class="n">usb</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="w"> </span><span class="nl">SerialNumber:</span><span class="w"> </span><span class="mf">1000000097e25</span><span class="n">cab</span>
+<span class="p">[</span><span class="mf">337768.733979</span><span class="p">]</span><span class="w"> </span><span class="n">cdc_ether</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="mf">1.0</span><span class="w"> </span><span class="nl">usb0:</span><span class="w"> </span><span class="n">register</span><span class="w"> </span><span class="p">&#39;</span><span class="n">cdc_ether</span><span class="p">&#39;</span><span class="w"> </span><span class="n">at</span><span class="w"> </span><span class="n">usb</span><span class="o">-</span><span class="mh">0000</span><span class="o">:</span><span class="mh">00</span><span class="o">:</span><span class="mf">14.0</span><span class="o">-</span><span class="mf">10.1.3</span><span class="p">,</span><span class="w"> </span><span class="n">CDC</span><span class="w"> </span><span class="n">Ethernet</span><span class="w"> </span><span class="n">Device</span><span class="p">,</span><span class="w"> </span><span class="mh">02</span><span class="o">:</span><span class="mh">00</span><span class="o">:</span><span class="mh">97</span><span class="o">:</span><span class="nl">e2:</span><span class="mh">5</span><span class="nl">c:</span><span class="n">ab</span>
+<span class="p">[</span><span class="mf">337768.735419</span><span class="p">]</span><span class="w"> </span><span class="n">cdc_acm</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="mf">1.2</span><span class="o">:</span><span class="w"> </span><span class="nl">ttyACM0:</span><span class="w"> </span><span class="n">USB</span><span class="w"> </span><span class="n">ACM</span><span class="w"> </span><span class="n">device</span>
+<span class="p">[</span><span class="mf">337768.765475</span><span class="p">]</span><span class="w"> </span><span class="n">cdc_ether</span><span class="w"> </span><span class="mh">1</span><span class="o">-</span><span class="mf">10.1.3</span><span class="o">:</span><span class="mf">1.0</span><span class="w"> </span><span class="nl">enx020097e25cab:</span><span class="w"> </span><span class="n">renamed</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">usb0</span>
+</code></pre></div>
+
+<p>From here, you can access the Pi via either the USB-to-Serial or USB-to-Ethernet gadget. The Ethernet gadget has been configured to use a static IP of 192.168.8.1. You can modify the script on the file system at <code>/home/pi/pifex/gadgets</code>. </p>
+<p>One of the services that gets set up is a basic network service that will display the IP address of the various connected interfaces on the screen of the PiFex; an example of this can be seen below:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/pifex.jpeg"></p>
+<p>The following services can be accessed over the network via the USB to Ethernet gadget or other network connections:</p>
+<h1>PiFex Services</h1>
+<h2>Networking</h2>
+<p>As mentioned in the previous section, the Pi will present a composite serial device and Ethernet device over USB. The serial device can be accessed with tools such as <code>minicom</code>, <code>putty</code> or <code>screen</code>. The Ethernet device can be treated as a standard network interface. </p>
+<div class="highlight"><pre><span></span><code># lsusb output
+Bus 001 Device 034: ID 0421:1410 Nokia Mobile Phones nothing
+</code></pre></div>
+
+<p>The serial device can be accessed via screen as shown below: </p>
+<div class="highlight"><pre><span></span><code>sudo screen /dev/ttyACM0 115200
+</code></pre></div>
+
+<p>The OLED screen displays the IP addresses of any network interfaces currently configured. The default IP address for the USB to Ethernet gadget is 192.168.8.1. The web interface can be accessed by setting the presented interface to a static IP address in the 192.168.8.X range. This allows you to access all the PiFex features and software tools via USB. </p>
+<h2>OpenOCD WebUI - Port 5000</h2>
+<p>I am currently developing a web-based interface for using OpenOCD. A beta version of this is included in the PiFex software repository.</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui-ex.png"></p>
+<p>The search bar at the top can be used to search for config files used by OpenOCD and includes an autocomplete feature:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-cfg.png"></p>
+<p>Once the desired configuration files are selected, OpenOCD can be launched and interfaced with via telnet and gdb.</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui.png.png"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/openocd-config-files.png.png"></p>
+<p>With OpenOCD launched, the GDB terminal and telnet interface can be accessed via the web browser:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/gdb-terminal.png.png"></p>
+<p>There is also a memory-view feature that allows users to dump segments of memory via the UI:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/telnet-memdump.png"></p>
+<p><strong>Note:</strong> This is a WIP interface, so feel free to provide feedback or submit PRs for desired features!</p>
+<h2>Jupyter Notebooks - Port 8888</h2>
+<p>The <a href="https://github.com/voidstarsec/pifex-sw">PiFex software repository</a> includes Jupyter notebooks that demonstrate how to interact with the OLED interface and JTAG peripherals.</p>
+<p>If you are prompted to set up a password/token, the token can be accessed by running the following commands on the Pi:</p>
+<div class="highlight"><pre><span></span><code><span class="p">(</span><span class="n">pifex</span><span class="o">-</span><span class="n">env</span><span class="p">)</span><span class="w"> </span><span class="n">pi</span><span class="p">@</span><span class="n">pifex</span><span class="o">:~/</span><span class="n">pifex</span><span class="o">/</span><span class="n">pifex</span><span class="o">-</span><span class="n">sw</span><span class="o">/</span><span class="n">pifex</span><span class="o">-</span><span class="n">ui</span><span class="w"> </span><span class="n">$</span><span class="w"> </span><span class="n">systemctl</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="n">jupyter</span><span class="p">.</span><span class="n">service</span>
+<span class="err">●</span><span class="w"> </span><span class="n">jupyter</span><span class="p">.</span><span class="n">service</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">Jupyter</span><span class="w"> </span><span class="n">Notebook</span><span class="w"> </span><span class="n">Startup</span>
+<span class="w">     </span><span class="nl">Loaded</span><span class="p">:</span><span class="w"> </span><span class="n">loaded</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">systemd</span><span class="o">/</span><span class="n">system</span><span class="o">/</span><span class="n">jupyter</span><span class="p">.</span><span class="n">service</span><span class="p">;</span><span class="w"> </span><span class="n">enabled</span><span class="p">;</span><span class="w"> </span><span class="n">preset</span><span class="o">:</span><span class="w"> </span><span class="n">enabled</span><span class="p">)</span>
+<span class="w">     </span><span class="nl">Active</span><span class="p">:</span><span class="w"> </span><span class="n">active</span><span class="w"> </span><span class="p">(</span><span class="n">running</span><span class="p">)</span><span class="w"> </span><span class="n">since</span><span class="w"> </span><span class="n">Fri</span><span class="w"> </span><span class="mi">2025</span><span class="mo">-02</span><span class="mi">-28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">01</span><span class="o">:</span><span class="mi">58</span><span class="w"> </span><span class="n">GMT</span><span class="p">;</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="n">days</span><span class="w"> </span><span class="n">ago</span>
+<span class="w">   </span><span class="n">Main</span><span class="w"> </span><span class="n">PID</span><span class="o">:</span><span class="w"> </span><span class="mi">487</span><span class="w"> </span><span class="p">(</span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">s</span><span class="p">)</span>
+<span class="w">      </span><span class="nl">Tasks</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">(</span><span class="n">limit</span><span class="o">:</span><span class="w"> </span><span class="mi">1572</span><span class="p">)</span>
+<span class="w">        </span><span class="nl">CPU</span><span class="p">:</span><span class="w"> </span><span class="mf">3.892</span><span class="n">s</span>
+<span class="w">     </span><span class="nl">CGroup</span><span class="p">:</span><span class="w"> </span><span class="o">/</span><span class="n">system</span><span class="p">.</span><span class="n">slice</span><span class="o">/</span><span class="n">jupyter</span><span class="p">.</span><span class="n">service</span>
+<span class="w">             </span><span class="err">├─</span><span class="mi">487</span><span class="w"> </span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">bash</span><span class="w"> </span><span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="n">pi</span><span class="o">/</span><span class="n">pifex</span><span class="o">/</span><span class="n">pifex</span><span class="o">-</span><span class="n">sw</span><span class="o">/</span><span class="n">services</span><span class="o">/</span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span>
+<span class="w">             </span><span class="err">└─</span><span class="mi">538</span><span class="w"> </span><span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="n">pi</span><span class="o">/</span><span class="n">pifex</span><span class="o">-</span><span class="n">env</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">python3</span><span class="w"> </span><span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="n">pi</span><span class="o">/</span><span class="n">pifex</span><span class="o">-</span><span class="n">env</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">jupyter</span><span class="o">-</span><span class="n">lab</span><span class="w"> </span><span class="o">--</span><span class="n">ip</span><span class="o">=</span><span class="mf">0.0.0.0</span>
+
+<span class="n">Feb</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mo">06</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="n">C</span><span class="w"> </span><span class="mi">2025</span><span class="mo">-02</span><span class="mi">-28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mf">06.089</span><span class="w"> </span><span class="n">ServerApp</span><span class="p">]</span>
+<span class="n">Feb</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mo">06</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w">     </span>
+<span class="n">Feb</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mo">06</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w">     </span><span class="n">To</span><span class="w"> </span><span class="n">access</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">server</span><span class="p">,</span><span class="w"> </span><span class="n">open</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">browser</span><span class="o">:</span>
+<span class="n">Feb</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mo">06</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w">         </span><span class="n">file</span><span class="o">:</span><span class="c1">///home/pi/.local/share/jupyter/runtime/jpserver-538-open.html</span>
+<span class="n">Feb</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mo">06</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w">     </span><span class="n">Or</span><span class="w"> </span><span class="k">copy</span><span class="w"> </span><span class="n">and</span><span class="w"> </span><span class="n">paste</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">these</span><span class="w"> </span><span class="n">URLs</span><span class="o">:</span>
+<span class="n">Feb</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mo">06</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w">         </span><span class="n">http</span><span class="o">:</span><span class="c1">//pifex:8888/lab?token=b50371a08991935ae326cc328572ae165ea0994b823fa27a</span>
+<span class="n">Feb</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mo">06</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w">         </span><span class="n">http</span><span class="o">:</span><span class="c1">//127.0.0.1:8888/lab?token=b50371a08991935ae326cc328572ae165ea0994b823fa27a</span>
+<span class="n">Feb</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mo">06</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="n">I</span><span class="w"> </span><span class="mi">2025</span><span class="mo">-02</span><span class="mi">-28</span><span class="w"> </span><span class="mo">03</span><span class="o">:</span><span class="mo">02</span><span class="o">:</span><span class="mf">06.139</span><span class="w"> </span><span class="n">ServerApp</span><span class="p">]</span><span class="w"> </span><span class="n">Skipped</span><span class="w"> </span><span class="n">non</span><span class="o">-</span><span class="n">installed</span><span class="w"> </span><span class="n">server</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="n">bash</span><span class="o">-</span><span class="n">language</span><span class="o">-</span><span class="n">server</span><span class="p">,</span><span class="w"> </span><span class="n">dockerfile</span><span class="o">-</span><span class="n">language</span><span class="o">-</span><span class="n">server</span><span class="o">-</span><span class="n">nodejs</span><span class="p">,</span><span class="w"> </span><span class="n">javascript</span><span class="o">-</span><span class="n">typescript</span><span class="o">-</span><span class="n">langserver</span><span class="p">,</span><span class="w"> </span><span class="n">jedi</span><span class="o">-</span><span class="n">language</span><span class="o">-</span><span class="n">server</span><span class="p">,</span><span class="w"> </span><span class="n">julia</span><span class="o">-</span><span class="n">language</span><span class="o">-</span><span class="n">serv</span><span class="o">&gt;</span>
+<span class="n">Mar</span><span class="w"> </span><span class="mo">02</span><span class="w"> </span><span class="mi">21</span><span class="o">:</span><span class="mo">01</span><span class="o">:</span><span class="mi">57</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="n">I</span><span class="w"> </span><span class="mi">2025</span><span class="mo">-03-02</span><span class="w"> </span><span class="mi">21</span><span class="o">:</span><span class="mo">01</span><span class="o">:</span><span class="mf">57.227</span><span class="w"> </span><span class="n">ServerApp</span><span class="p">]</span><span class="w"> </span><span class="mi">302</span><span class="w"> </span><span class="n">GET</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="mf">@10.0.0.65</span><span class="p">)</span><span class="w"> </span><span class="mf">2.30</span><span class="n">ms</span>
+<span class="n">Mar</span><span class="w"> </span><span class="mo">02</span><span class="w"> </span><span class="mi">21</span><span class="o">:</span><span class="mo">01</span><span class="o">:</span><span class="mi">57</span><span class="w"> </span><span class="n">pifex</span><span class="w"> </span><span class="n">start_jupyter</span><span class="p">.</span><span class="n">sh</span><span class="p">[</span><span class="mi">538</span><span class="p">]</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="n">I</span><span class="w"> </span><span class="mi">2025</span><span class="mo">-03-02</span><span class="w"> </span><span class="mi">21</span><span class="o">:</span><span class="mo">01</span><span class="o">:</span><span class="mf">57.236</span><span class="w"> </span><span class="n">LabApp</span><span class="p">]</span><span class="w"> </span><span class="mi">302</span><span class="w"> </span><span class="n">GET</span><span class="w"> </span><span class="o">/</span><span class="n">lab</span><span class="o">?</span><span class="w"> </span><span class="p">(</span><span class="mf">@10.0.0.65</span><span class="p">)</span><span class="w"> </span><span class="mf">2.89</span><span class="n">ms</span>
+</code></pre></div>
+
+<p>Included in these notebooks are examples of how to interact with the OLED display:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/luma-oled.png.png"></p>
+<p>We have also included basic JTAG notebooks, which were used in one of our <a href="https://voidstarsec.com/blog/jtag-pifex">previous blog posts</a></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/jtag-jupyter.png.png"></p>
+<p>Users can also access a terminal window through Jupyter-Lab as well; this can be done via "<code>File</code> "-&gt; "<code>New</code> "-&gt; "<code>Terminal</code> "</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/jupyter-term.png"></p>
+<p>The goal with the PiFex board and open-sourcing these software utilities is to help newcomers learn more about reverse engineering. These tools are very similar to what we use in our <a href="https://voidstarsec.com/training">training programs</a> and our <a href="https://voidstarsecurity.thinkific.com/">self-paced courses</a>.</p>
+<h1>Conclusion</h1>
+<p>With our Pi configured, we can look at our first target! Stay tuned for part two (releasing 3/14!) for more information. With this post, we have:</p>
+<ul>
+<li>Demonstrated how to configure a Raspberry Pi for basic hardware hacking</li>
+<li>Released multiple scripts and configuration files for usage with the <a href="https://voidstarsec.training/">PiFex</a> including<ul>
+<li>PoC OpenOCD Web Interface</li>
+<li>Example Jupyter notebooks for interfacing with JTAG and the OLED Screen</li>
+</ul>
+</li>
+</ul>
+<p>It should be noted that you do not need a PiFex board to utilize these tools, these will work perfectly find (aside from the screen of course) without the PiFex board. </p>
+<p>In our next post, we'll start tearing down our first target and see if we can learn anything more about how the system works. </p>
+<p>If you're interested in <a href="https://voidstarsec.com/hhb.html">hardware security training</a> at your organization, please don't hesitate to <a href="https://voidstarsec.com/#contact">contact us</a>. We also have a self-paced training available <a href="https://voidstarsecurity.thinkific.com/">here</a></p>
+<p>If you want to stay up to date on the official releases, new courses, and blog posts, sign up for our mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
+<p>Lastly - we still have some tickets available for our in-person training in 2025 at RingZero! Check that out <a href="https://ringzer0.training/bootstrap25-voidstar-hardware-hacking-for-reverse-engineers/">here</a></p>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3 col-sm-pull-9" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://voidstarsec.com"><i class="fa fa-vss-website-square fa-lg"></i> VSS website</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/voidstarsec"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/voidstarsec"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+    <li class="list-group-item"><a href="https://github.com/voidstarsec"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+
+<!-- Sidebar/Categories -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
+  <ul class="list-group" id="categories">
+    <li class="list-group-item">
+      <a href="http://localhost:8000/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+    </li>
+    <li class="list-group-item">
+      <a href="http://localhost:8000/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
+    </li>
+    <li class="list-group-item">
+      <a href="http://localhost:8000/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+    </li>
+    <li class="list-group-item">
+      <a href="http://localhost:8000/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+    </li>
+    <li class="list-group-item">
+      <a href="http://localhost:8000/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Categories -->
+
+<!-- Sidebar/Tag Cloud -->
+<li class="list-group-item">
+  <a href="http://localhost:8000/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <ul class="list-group " id="tags">
+    <li class="list-group-item tag-0">
+      <a href="http://localhost:8000/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/blog.html">blog</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="http://localhost:8000/tag/training.html">training</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="http://localhost:8000/tag/chipwhisperer.html">chipwhisperer</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="http://localhost:8000/tag/fault-injection.html">fault-injection</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="http://localhost:8000/tag/tools.html">tools</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Tag Cloud -->
+
+<!-- Sidebar/Links -->
+<li class="list-group-item">
+  <h4><i class="fa fa-external-link-square fa-lg"></i><span class="icon-label">Links</span></h4>
+  <ul class="list-group" id="links">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/" target="_blank">VoidStar Security Website</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.training/" target="_blank">VoidStar Security Training</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.wiki/" target="_blank">Build a Hardware Hacking Lab</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra" target="_blank">Free Ghidra Course</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.wrongbaud.github.io/" target="_blank">Wrongbauds Blog (fun intro hacks)</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Links -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2025 VoidStar Security
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="http://localhost:8000/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="http://localhost:8000/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="http://localhost:8000/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

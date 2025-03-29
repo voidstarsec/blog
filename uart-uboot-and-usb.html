@@ -9,7 +9,7 @@
 
 
 
-<link rel="canonical" href="https://wrongbaud.github.io/newblog/uart-uboot-and-usb.html">
+<link rel="canonical" href="http://localhost:8000/uart-uboot-and-usb.html">
 
         <meta name="author" content=""Matthew Alt"" />
         <meta name="keywords" content="hardware,uart,uboot" />
@@ -18,7 +18,7 @@
         <meta property="og:site_name" content="VoidStar Security Blog" />
         <meta property="og:type" content="article"/>
         <meta property="og:title" content="Intro to Embedded RE: UART Discovery and Firmware Extraction via UBoot"/>
-        <meta property="og:url" content="https://wrongbaud.github.io/newblog/uart-uboot-and-usb.html"/>
+        <meta property="og:url" content="http://localhost:8000/uart-uboot-and-usb.html"/>
         <meta property="og:description" content="This blog entry aims to familiarize readers with locating an active UART on a target system, how to approach a UBoot console, and ultimately how to leverage both of these components to extract the flash memory from our target. After reading this, readers will be familiar with the screen utility the depthcharge python3 libraries."/>
         <meta property="article:published_time" content="2022-01-27" />
             <meta property="article:section" content="Hardware" />
@@ -30,16 +30,16 @@
 
 
     <!-- Bootstrap -->
-        <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/bootstrap.sandstone.min.css" type="text/css"/>
-    <link href="https://wrongbaud.github.io/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="http://localhost:8000/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="http://localhost:8000/theme/css/font-awesome.min.css" rel="stylesheet">
 
-    <link href="https://wrongbaud.github.io/newblog/theme/css/pygments/native.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://wrongbaud.github.io/newblog/theme/css/style.css" type="text/css"/>
+    <link href="http://localhost:8000/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="http://localhost:8000/theme/css/style.css" type="text/css"/>
 
-        <link href="https://wrongbaud.github.io/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+        <link href="http://localhost:8000/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog ATOM Feed"/>
 
-        <link href="https://wrongbaud.github.io/newblog/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate"
+        <link href="http://localhost:8000/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate"
               title="VoidStar Security Blog Hardware ATOM Feed"/>
 
 </head>
@@ -48,7 +48,7 @@
 <div class="navbar navbar-default navbar-fixed-top" role="navigation">
     <div class="container">
         <div class="navbar-header">
-            <a href="https://wrongbaud.github.io/newblog/" class="navbar-brand">
+            <a href="http://localhost:8000/" class="navbar-brand">
 VoidStar Security Blog            </a>
         </div>
         <div class="collapse navbar-collapse navbar-ex1-collapse">
@@ -69,14 +69,14 @@ VoidStar Security Blog            </a>
     <div class="row">
         <div class="col-sm-9 col-sm-push-3">
             <ol class="breadcrumb">
-                <li><a href="https://wrongbaud.github.io/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li><a href="http://localhost:8000" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
                 <li class="active">Intro to Embedded RE: UART Discovery and Firmware Extraction via UBoot</li>
             </ol>
     <section id="content">
         <article>
             <header class="page-header">
                 <h1>
-                    <a href="https://wrongbaud.github.io/newblog/uart-uboot-and-usb.html"
+                    <a href="http://localhost:8000/uart-uboot-and-usb.html"
                        rel="bookmark"
                        title="Permalink to Intro to Embedded RE: UART Discovery and Firmware Extraction via UBoot">
                         Intro to Embedded RE: UART Discovery and Firmware Extraction via UBoot
@@ -94,18 +94,18 @@ VoidStar Security Blog            </a>
 
 
             <span class="label label-default">By</span>
-            <a href="https://wrongbaud.github.io/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+            <a href="http://localhost:8000/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
 
         <span class="label label-default">Category</span>
-        <a href="https://wrongbaud.github.io/newblog/category/hardware.html">Hardware</a>
+        <a href="http://localhost:8000/category/hardware.html">Hardware</a>
 
 
 <span class="label label-default">Tags</span>
-	<a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
+	<a href="http://localhost:8000/tag/hardware.html">hardware</a>
         /
-	<a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a>
+	<a href="http://localhost:8000/tag/uart.html">uart</a>
         /
-	<a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a>
+	<a href="http://localhost:8000/tag/uboot.html">uboot</a>
     
 </footer><!-- /.post-info -->                    </div>
                 </div>
@@ -117,7 +117,7 @@ VoidStar Security Blog            </a>
 </ul>
 <h1>Overview</h1>
 <p>Welcome to the third post in our Intro to Embedded RE series. This post will be focused on UART, UBoot, and USB using the Arcade 1UP Marvel countertop cabinet as a target. The Arcade 1Up series of cabinets are an affordable way to set up an arcade in your home. Since the launch of these cabinets, there have been plenty of <a href="https://arcademodup.com/product/amumodkit/">mods</a> that demonstrate how to replace the internal components of the cabinet to run generic MAME software. This post will look at the stock hardware and determine how to extract the firmware. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Cabinet Pic" src="https://voidstarsec.com/blog/assets/images/msh.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Cabinet Pic" src="https://voidstarsec.com/blog/assets/images/msh.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <h1>Goals</h1>
 <p>With this post, we will review the following:</p>
 <ul>
@@ -135,11 +135,11 @@ VoidStar Security Blog            </a>
 <p>With the current knowledge, there does not seem to be much more we can explore externally. So, next, we will open the cabinet up and see what is inside!</p>
 <h2>Cabinet Teardown</h2>
 <p>The cabinet is pretty empty, except for a metal housing attached to the screen.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Cabinet Internals" src="https://voidstarsec.com/blog/assets/images/cabinet-internals.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Cabinet Internals" src="https://voidstarsec.com/blog/assets/images/cabinet-internals.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Beneath the metal enclosure, we find the main PCB for our cabinet; after gently removing an additional metal shield, we see the following.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Motherboard" src="https://voidstarsec.com/blog/assets/images/motherboard.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Motherboard" src="https://voidstarsec.com/blog/assets/images/motherboard.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>When looking at a PCB such as this for the first time, we first want to take note of any part numbers and see if we can find any datasheets. The first component that stands out to me has been highlighted in blue.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Rockchip CPU" src="https://voidstarsec.com/blog/assets/images/cpu.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Rockchip CPU" src="https://voidstarsec.com/blog/assets/images/cpu.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>This part reads <code>Rockchip RK3128</code> if we search this part number online, we find a large amount of information - see the information below that was pulled from <a href="http://rockchip.wikidot.com/rk3128">the Rockchip wiki</a></p>
 <ul>
 <li>CPU<ul>
@@ -179,10 +179,10 @@ VoidStar Security Blog            </a>
 </ul>
 <p>From this description alone, we have learned much about our target processor. We now know the architecture and available peripherals and interfaces; these are useful to us as they may outline attack vectors in the future. It is important to remember that there is no such thing as too much information in this phase of the reverse engineering process. We want to learn as much about our target before attempting to interface with it.</p>
 <p>Directly next to the CPU, we have another component highlighted in orange below.</p>
-<p><img class="center" style="border: 8px solid black;" alt="SRAM" src="https://voidstarsec.com/blog/assets/images/sram.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="SRAM" src="https://voidstarsec.com/blog/assets/images/sram.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>This component is marked <code>SEC931 K4B2G1646F-BYMA</code>, we are lucky and searching this part number results in <a href="https://www.samsung.com/semiconductor/dram/ddr3/K4B2G1646F-BYMA/">this webpage from Samsung</a>. The information on this page tells us that this is a 2GB DDR3 SDRAM chip. <a href="https://semiconductor.samsung.com/resources/data-sheet/DS_K4B2G1646F_BY_M_Rev1_0-1.pdf">A datasheet</a> can also be acquired from this page; it is always worth collecting datasheets when they are available when doing this kind of work. This chip is responsible for expanding the available memory to the CPU and providing a volatile memory source (RAM).</p>
 <p>Thus far, we have identified what is likely the main CPU and the external RAM. However, we are still missing a type of non-volatile storage. So, next, let's examine the component highlighted in pink below.</p>
-<p><img class="center" style="border: 8px solid black;" alt="EEPROM" src="https://voidstarsec.com/blog/assets/images/winbond.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="EEPROM" src="https://voidstarsec.com/blog/assets/images/winbond.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>This component is labeled <code>Winbond 25N01GVZEIG</code> searching this part number leads us to <a href="https://www.winbond.com/resource-files/W25N01GV%20Rev%20Q%20051721.pdf">this datasheet</a>. This part is a 1G-bit serial SLC NAND flash memory chip. According to the datasheet, this chip utilizes the Serial Peripheral Interface and is compatible with voltage ranges between 2.6V and 3.3V. This chip likely houses the majority of the data in use by the cabinet and will be our main target for firmware extraction. </p>
 <p>The last component is near the  GPIO lines and is marked <code>MIX2018A</code>. This component is unlike the others that we have seen in that I could not find nearly as much information. However, based on a few <a href="https://shophu2.ashdiabuisf.ru/content?c=mix2018a%20ic%20chip%20datasheet&amp;id=1">sites</a>, it would appear that this IC is an audio amplifier. The few mentions of this part that I was able to locate online all refer to it as such, so we will assume that is its function for the time being.</p>
 <p>To recap the components that we've identified thus far, we have:</p>
@@ -196,39 +196,39 @@ VoidStar Security Blog            </a>
 <h2>Connector Analysis</h2>
 <p>Now that we've documented the discrete components on the motherboard, we will attempt to identify the external connectors on the motherboard. First, we have the barrel connector; this connector is
 outlined in blue in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Barrel Connector" src="https://voidstarsec.com/blog/assets/images/power.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Barrel Connector" src="https://voidstarsec.com/blog/assets/images/power.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>This connector is used to supply power to the cabinet. </p>
 <p>Directly to the right of the barrel connector, we have a micro-USB port. This should immediately raise eyebrows for two reasons:</p>
 <ol>
 <li>This is <em>not</em> a user-facing port</li>
 <li>This is not a USB host port; this is a micro port, indicative of a USB device or possibly an OTG (on the go) controller</li>
 </ol>
-<p><img class="center" style="border: 8px solid black;" alt="USB Device" src="https://voidstarsec.com/blog/assets/images/usb-device.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="USB Device" src="https://voidstarsec.com/blog/assets/images/usb-device.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Continuing to the right, we have two rows of header pins. These were connected via the grey ribbon cable shown in the earlier images. This connector goes to a separate control board and is used to handle the joysticks/buttons.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Panel Connector" src="https://voidstarsec.com/blog/assets/images/panel.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Panel Connector" src="https://voidstarsec.com/blog/assets/images/panel.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>After our control panel connector, there is another four-pin connector. With this connector, it's not quite as obvious where it leads. For example, this connector could lead to the USB connector or the headphone jack. We can try to determine this with the multimeter using a <a href="https://www.youtube.com/watch?v=5G622WDZaHg">continuity test</a>. A continuity test will check if current can flow between the two probes and is usually indicated with one of the following symbols on your multimeter:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Continuity Two" src="https://arduinotogo.com/wp-content/uploads/2016/07/ch2-continuity-symbol-01.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Continuity Two" src="https://arduinotogo.com/wp-content/uploads/2016/07/ch2-continuity-symbol-01.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>We can use this model to test if two components are connected. I inserted a 3/4 headphone cable into the headphone jack and held the probe to one of the metal rings to test this. Using the other probe, I touched each point of the four-pin connector, and on one of the lines, the multimeter let out a loud beep, letting us know a connection exists between these two points. Each of the three pins coincided with a ring on the audio connector; this is our audio jack!</p>
-<p><img class="center" style="border: 8px solid black;" alt="Audio Connector" src="https://voidstarsec.com/blog/assets/images/audio.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Audio Connector" src="https://voidstarsec.com/blog/assets/images/audio.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Next, we have the connector for the display:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Display Connector" src="https://voidstarsec.com/blog/assets/images/display.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Display Connector" src="https://voidstarsec.com/blog/assets/images/display.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Near the display, we have two two-pin connectors, the one in the lower right-hand corner is used t power the backlight for the marquee, and the other goes to an on/off switch that resides on the outside of the metal housing.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Marquee Backlight Connector" src="https://voidstarsec.com/blog/assets/images/marquee.png" style="display:block; margin-left:auto; margin-right:auto"></p>
-<p><img class="center" style="border: 8px solid black;" alt="On Off Switch" src="https://voidstarsec.com/blog/assets/images/on-switch.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Marquee Backlight Connector" src="https://voidstarsec.com/blog/assets/images/marquee.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="On Off Switch" src="https://voidstarsec.com/blog/assets/images/on-switch.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>The following connector looks similar to the audio connector; it is a four-pin connector whose cables route to the control panel. There is only one other interface that we've not yet accounted for, and that is the USB connector on the side of the cabinet. If we set our multimeters to continuity mode and test the pins of this connector against the USB connector on the side of the cabinet, we find that they are indeed connected. This is our external USB connector.</p>
-<p><img class="center" style="border: 8px solid black;" alt="USB Connector" src="https://voidstarsec.com/blog/assets/images/usb.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="USB Connector" src="https://voidstarsec.com/blog/assets/images/usb.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>We have identified all of the connections that we had to disconnect to better look at the board. Therefore, there are only a few things left for us to inspect. When examining a PCB, one thing to look for is any unused test pads or vias; I have highlighted the unused headers/pads in the image below.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Unused Headers" src="https://voidstarsec.com/blog/assets/images/headers.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Unused Headers" src="https://voidstarsec.com/blog/assets/images/headers.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>In the above image, we can see that we have three different sets of unpopulated headers or pads. On the top of the PCB, we have three vias; a via is used to make a connection between multiple layers of a PCB. When examining an embedded system, vias such as this are often a good starting point as they may represent a debug header used during development.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Possible UART 1" src="https://voidstarsec.com/blog/assets/images/uart1.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Possible UART 1" src="https://voidstarsec.com/blog/assets/images/uart1.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>The other unpopulated is made up of 16 pads and is indicated by a white rectangle and a small circle. This grouping of pads likely was meant for another integrated circuit that was not needed on this board.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Unused Headers" src="https://voidstarsec.com/blog/assets/images/unpopulated-ic.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Unused Headers" src="https://voidstarsec.com/blog/assets/images/unpopulated-ic.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Finally, the last set of pads looks very similar to the connectors used for USB and Audio. When looking at unused pads, four-pin connections like this are often candidates for a debug console via UART; we will examine these headers and discuss UART in the next section.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Possible UART 2" src="https://voidstarsec.com/blog/assets/images/uart2.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Possible UART 2" src="https://voidstarsec.com/blog/assets/images/uart2.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <hr>
 <h2>Examining Debug Headers</h2>
 <p>When looking at unknown headers like those pointed out in the section above, I usually start by measuring the voltage. We can do this using <a href="https://www.youtube.com/watch?v=TdUK6RPdIrA">our multimeters</a>. To calculate the voltage on these pads, we will set the multimeter to DC measurement mode and probe the locations of interest while holding our black probe on a ground point. The pins measure as follows:</p>
-<table class="table table-hover">
+<table class="tb tr tc table table-hover">
 <thead>
 <tr>
 <th style="text-align: center;">Pin</th>
@@ -255,8 +255,8 @@ outlined in blue in the image below:</p>
 </tbody>
 </table>
 <p>There is no voltage on these lines; while this is disappointing, it is not unexpected. If this were an active UART or another digital signal being transmitted, we would have expected to see some activity in the form of voltage fluctuations. Let's move on to the other three-pin header.</p>
-<p><img class="center" style="border: 8px solid black;" alt="UART Connector" src="https://voidstarsec.com/blog/assets/images/uart-colors.png" style="display:block; margin-left:auto; margin-right:auto"></p>
-<table class="table table-hover">
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="UART Connector" src="https://voidstarsec.com/blog/assets/images/uart-colors.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<table class="tb tr tc table table-hover">
 <thead>
 <tr>
 <th style="text-align: center;">Pin</th>
@@ -283,19 +283,19 @@ outlined in blue in the image below:</p>
 </tbody>
 </table>
 <p>When measuring this connector, our second pin fluctuates wildly on startup and then settles at 3.3V; see the gif below for an example of what these fluctuations look like:</p>
-<p><img class="center" style="border: 8px solid black;" alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/serial.gif" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="UART Startup Voltages" src="https://voidstarsec.com/blog/assets/images/serial.gif" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p><strong>RE Note:</strong> You might not always see voltage fluctuations of this magnitude when searching for a serial port. The fluctuations are directly correlated to how active the signal is, meaning that if there is little traffic, you will see little to no fluctuation. If you suspect that you have a UART header or some kind of digital interface, it's always a good idea to check with a logic analyzer.</p>
 <p>We see what <em>might</em> look like signal activity (based on the voltage fluctuations). Next, we will examine this traffic with our logic analyzer. Logic analyzers help us convert these voltage fluctuations into a human-readable sequence of ones and zeros. To do this, we will connect our logic analyzer to our two points of interest using female-female jumper wires as shown below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Logic Analyzer" src="https://voidstarsec.com/blog/assets/images/logic-analyzer.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Logic Analyzer" src="https://voidstarsec.com/blog/assets/images/logic-analyzer.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>With the analyzer connected, we will launch Pulseview and select our analyzer from the drop-down menu; this device is displayed as a "Saleae Logic" device in pulseview. The max capture rate for this analyzer is 24MHz which we will be using for our analysis. We also need to specify the sample count, which I have set to 500G Samples. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Pulseview Settings" src="https://voidstarsec.com/blog/assets/images/pulseview-settings.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Pulseview Settings" src="https://voidstarsec.com/blog/assets/images/pulseview-settings.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>We will launch a capture by clicking Run, then power up the cabinet with these settings. </p>
-<p><img class="center" style="border: 8px solid black;" alt="Captured Traffic" src="https://voidstarsec.com/blog/assets/images/pulseview-uart.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Captured Traffic" src="https://voidstarsec.com/blog/assets/images/pulseview-uart.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Success! We have captured some traffic; before we go further in pulseview, let's talk more about how UART works at a signal level. We have confirmed that there is some kind of traffic being transmitted over these lines; next, we need to learn a little more about UART traffic and how to analyze it.</p>
 <h1>UART</h1>
 <p>UART stands for Universal Asynchronous Receiver Transmitter. UART is a two-wire asynchronous serial protocol that allows two devices to communicate. The two lines required for each party are the Transmit (Tx) and receive (Rx) lines. A UART can be used for many things on an embedded system, including communicating with other processors, sensor communications, and debug access. UART is an asynchronous protocol meaning that there is no clock signal required. Instead, both communicating parties are preconfigured to communicate at a certain speed, referred to as the baud rate. The baud rate is measured in bits per second.</p>
 <p>A UART packet/transmission consists of the following fields:</p>
-<table class="table table-hover">
+<table class="tb tr tc table table-hover">
 <thead>
 <tr>
 <th style="text-align: center;">Bit Position</th>
@@ -329,39 +329,39 @@ outlined in blue in the image below:</p>
 <p>Even with the packet definitions above, it is difficult for us to determine the contents of our logic capture. Luckily for us, Pulseview has a UART decoder that we can take advantage of.</p>
 <h2>Decoding UART Traffic</h2>
 <p>Using pulseview, we can attempt to decode this traffic and see if it indeed is an active UART. To set up a decoder, click the green and yellow symbols below. This will open the decoder selection window, type uart in the search bar, and select the UART decoder.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Decoder Button" src="https://voidstarsec.com/blog/assets/images/decoder-button.png" style="display:block; margin-left:auto; margin-right:auto"></p>
-<p><img class="center" style="border: 8px solid black;" alt="Decoder Selection" src="https://voidstarsec.com/blog/assets/images/decoder-selector.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Decoder Button" src="https://voidstarsec.com/blog/assets/images/decoder-button.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Decoder Selection" src="https://voidstarsec.com/blog/assets/images/decoder-selector.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Next, we need to configure the UART decoder. We need to select the appropriate channels and set any protocol-specific parameters this decoder needs. See the configurable parameters below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Decoder Configuration" src="https://voidstarsec.com/blog/assets/images/decoder-configuration.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Decoder Configuration" src="https://voidstarsec.com/blog/assets/images/decoder-configuration.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>First, we select our Rx line as our channel containing traffic; in our case, that will be <code>D1</code>. For all of the other fields, we will leave them at their default values, 8-bit data width, no parity, etc. </p>
 <p>There is one thing that we need to investigate and fill in ourselves: the baud rate. Remember that the two parties must agree on the baud rate ahead of time; there is no negotiation/startup sequence. We will need to determine this baud rate ourselves; otherwise, the decoder will not know how to parse these signals correctly. To determine the baud rate, we can do the following.</p>
 <ol>
 <li>Zoom in on what appears to be one of the smallest pulses (presumably, this represents one bit being sent over the wire)</li>
 <li>Select the pulse width using the data markers in Pulseview, click the button shown below to enable them:</li>
 </ol>
-<p><img class="center" style="border: 8px solid black;" alt="Pulseview Marker" src="https://voidstarsec.com/blog/assets/images/pulseview-marker.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Pulseview Marker" src="https://voidstarsec.com/blog/assets/images/pulseview-marker.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <ol>
 <li>With the small pulse range selected, Pulseview will automatically calculate the frequency and give us a measurement in hertz, as shown in the screenshot below.</li>
 </ol>
-<p><img class="center" style="border: 8px solid black;" alt="Pulseview Measurement" src="https://voidstarsec.com/blog/assets/images/pulseview-measurement.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Pulseview Measurement" src="https://voidstarsec.com/blog/assets/images/pulseview-measurement.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Hertz is measured in cycles per second; recall that our baud rate is a measurement of bits per second. So, therefore, if we have highlighted one bit being sent over the wire and the frequency of that pulse, we also have the baud rate.</p>
 <p>Our calculated frequency according to Pulseview is 115.384 kHz, which translates to a baud rate of 115385 bits/s. Those familiar with debug consoles might notice that this is very close to a <a href="https://lucidar.me/en/serialib/most-used-baud-rates-table/">commonly used baud rate</a> of 115200. So let's plug that value into our decoder and see what happens.</p>
 <p>If we look at the screenshot below, we can see that we have what appears to be a valid debug log.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Decoded UART Traffic" src="https://voidstarsec.com/blog/assets/images/decoded2.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Decoded UART Traffic" src="https://voidstarsec.com/blog/assets/images/decoded2.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>We have an active UART and know its baud rate, but now we need to find a way to interface with it. To do this, we will use the Raspberry Pi. The updated cabinet the pinout is as follows:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Updated Pinout" src="https://voidstarsec.com/blog/assets/images/uart-colors-annotated.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Updated Pinout" src="https://voidstarsec.com/blog/assets/images/uart-colors-annotated.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <h2>Configuring the Raspberry Pi</h2>
 <p>The Raspberry Pi has multiple UARTS available; the UART that we will use has been highlighted in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Pi UART" src="https://voidstarsec.com/blog/assets/images/pi-gpio-uart.svg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Pi UART" src="https://voidstarsec.com/blog/assets/images/pi-gpio-uart.svg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>We will need to ensure that the appropriate device tree blob is enabled to enable this UART. The purpose of a device tree blob is to provide a way for the kernel to understand the available hardware peripherals. The kernel will read this binary information at startup and enumerate the specified peripherals. When reverse engineering an embedded Linux system, extracting this information can be beneficial because it can be decompiled and outline where various peripherals are in memory. </p>
 <p>All relevant device tree blobs on the raspberry pi can be located in <code>/boot/overlays/</code>. In this folder, you will find device tree binary objects for multiple hardware configurations, some for specific hats (custom PCBs designed for the Pi) that can be attached to the Pi and others for enabling the assorted IO peripherals. We can enable the appropriate DTB for the UART peripheral using the <code>raspi-config</code> tool.</p>
 <h2>Using Raspi Config</h2>
 <p><code>raspi-config</code> is a user-space tool that allows us to configure various aspects of the Raspberry Pi, one of which is enabling the various external interfaces. We're going to use <code>raspi-config</code> to enable the UART interface; start by launching the tool as follows:</p>
 <p><code>sudo raspi-config</code>
 This will cause the following screen to appear:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Pi UART" src="https://voidstarsec.com/blog/assets/images/raspi-config.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Pi UART" src="https://voidstarsec.com/blog/assets/images/raspi-config.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Next, we will select <code>Interface Options</code>, and then <code>Serial Port</code> as shown in the image below:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Pi UART Configuration" src="https://voidstarsec.com/blog/assets/images/raspi-config.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Pi UART Configuration" src="https://voidstarsec.com/blog/assets/images/raspi-config.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>After selecting this option, we will be presented with two questions:</p>
 <ol>
 <li>Would you like a login shell to be accessible over serial?</li>
@@ -370,7 +370,7 @@ This will cause the following screen to appear:</p>
 <li>Yes</li>
 </ol>
 <p>We have now enabled the UART on the Raspberry Pi. Next, we need to connect it to our cabinet. We will connect Tx of the cabinet to Rx of the Pi, and Rx of the cabinet to Tx of the Pi:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Pi UART Configuration" src="https://voidstarsec.com/blog/assets/images/pi-cab_bb.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Pi UART Configuration" src="https://voidstarsec.com/blog/assets/images/pi-cab_bb.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <h2>UART Tools</h2>
 <p>Using the UART interface on the Raspberry Pi, we can attempt to connect to this serial port on the target. In order to interact with this serial port, we will use the <code>screen</code> utility. Screen requires that we pass it a device and baud rate when interfacing with a UART; since we know the baud rate from our previous segment, we will run screen as follows:</p>
 <p><code>sudo screen -L -Logfile cabinet-bootup.log /dev/ttyS0 115200</code></p>
@@ -380,9 +380,9 @@ This will cause the following screen to appear:</p>
 <li><code>115200</code> - Baud rate</li>
 </ul>
 <p>We can now power on the cabinet after configuring our UART and launching screen. When we power on the cabinet, we see the following:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Terminal Screenshot" src="https://voidstarsec.com/blog/assets/images/pi-terminal.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Terminal Screenshot" src="https://voidstarsec.com/blog/assets/images/pi-terminal.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>And eventually, we find ourselves at a console:</p>
-<p><img class="center" style="border: 8px solid black;" alt="Terminal Screenshot" src="https://voidstarsec.com/blog/assets/images/shell.png" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Terminal Screenshot" src="https://voidstarsec.com/blog/assets/images/shell.png" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>We have a root console now; we can explore the filesystem, see what is running on the target and learn more about how it was constructed. Our next step will be to image the partitions if possible; let's start by looking at what partitions are mounted:</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span><span class="n">root</span><span class="err">@</span><span class="n">rk3128</span><span class="p">:</span><span class="o">/</span><span class="p">]</span><span class="c1"># mount</span>
 <span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">root</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="n">squashfs</span><span class="w"> </span><span class="p">(</span><span class="n">ro</span><span class="p">,</span><span class="n">relatime</span><span class="p">)</span>
@@ -900,7 +900,7 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
 </code></pre></div>
 
 <p>Now we reboot, hoping that our reflashed image still works.</p>
-<p><img class="center" style="border: 8px solid black;" alt="Rebooted Cabinet" src="https://voidstarsec.com/blog/assets/images/rebooted.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Rebooted Cabinet" src="https://voidstarsec.com/blog/assets/images/rebooted.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>Success! We can now read/write the SPI flash from UBoot using our USB drive; this will be useful for testing patches and firmware modifications!</p>
 <p>Now that we can read/write the flash of this cabinet with UBoot, it would be great if we could wipe individual partitions and segments of flash automatically without needing to manually enter ranges each time. To do this, we will use the Depthcharge utility to automate our UBoot interactions!</p>
 <h1>Scripting UBoot with Depthcharge</h1>
@@ -1062,7 +1062,7 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
 </code></pre></div>
 
 <p>Surely there couldn't be a PE32 Windows executable on this system, right? Well, if we copy this file onto a windows machine and attempt to execute it:</p>
-<p><img class="center" style="border: 8px solid black;" alt="MOO Running" src="https://voidstarsec.com/blog/assets/images/windows.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="MOO Running" src="https://voidstarsec.com/blog/assets/images/windows.jpg" style="display:block; margin-left:auto; margin-right:auto"></p>
 <p>It runs! Apparently, this was a build artifact that the author didn't realize was on the system; he reached out to me about it on Twitter, and we had a great conversation about reverse engineering/emulation.</p>
 <p>With the methods outlined in this post, we can now read and write the SPI flash to and from a USB drive using UBoot. We have extracted the root filesystem and identified the core emulation components. Our next steps will be to reverse engineer some of the binaries on this target to determine how difficult it will be to run custom firmware.</p>
 <h1>Conclusion / Next Steps</h1>
@@ -1099,19 +1099,19 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
   <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
   <ul class="list-group" id="categories">
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+      <a href="http://localhost:8000/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
     </li>
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
+      <a href="http://localhost:8000/category/glitching.html"><i class="fa fa-folder-open fa-lg"></i>Glitching</a>
     </li>
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+      <a href="http://localhost:8000/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
     </li>
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+      <a href="http://localhost:8000/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
     </li>
     <li class="list-group-item">
-      <a href="https://wrongbaud.github.io/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+      <a href="http://localhost:8000/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
     </li>
   </ul>
 </li>
@@ -1119,37 +1119,37 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
 
 <!-- Sidebar/Tag Cloud -->
 <li class="list-group-item">
-  <a href="https://wrongbaud.github.io/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <a href="http://localhost:8000/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
-    <li class="list-group-item tag-1">
-      <a href="https://wrongbaud.github.io/newblog/tag/hardware.html">hardware</a>
-    </li>
-    <li class="list-group-item tag-1">
-      <a href="https://wrongbaud.github.io/newblog/tag/blog.html">blog</a>
+    <li class="list-group-item tag-0">
+      <a href="http://localhost:8000/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://wrongbaud.github.io/newblog/tag/uart.html">uart</a>
+      <a href="http://localhost:8000/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://wrongbaud.github.io/newblog/tag/uboot.html">uboot</a>
+      <a href="http://localhost:8000/tag/blog.html">blog</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="http://localhost:8000/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/pifex.html">pifex</a>
+      <a href="http://localhost:8000/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/jtag.html">jtag</a>
+      <a href="http://localhost:8000/tag/chipwhisperer.html">chipwhisperer</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/fault-injection.html">fault-injection</a>
+      <a href="http://localhost:8000/tag/fault-injection.html">fault-injection</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/tools.html">tools</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/training.html">training</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://wrongbaud.github.io/newblog/tag/chipwhisperer.html">chipwhisperer</a>
+      <a href="http://localhost:8000/tag/tools.html">tools</a>
     </li>
   </ul>
 </li>
@@ -1189,7 +1189,7 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
    <div class="container">
       <hr>
       <div class="row">
-         <div class="col-xs-10">&copy; 2024 VoidStar Security
+         <div class="col-xs-10">&copy; 2025 VoidStar Security
             &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
             <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
             <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
@@ -1197,13 +1197,13 @@ Hit key to stop autoboot(&#39;CTRL+C&#39;):  0
       </div>
    </div>
 </footer>
-<script src="https://wrongbaud.github.io/newblog/theme/js/jquery.min.js"></script>
+<script src="http://localhost:8000/theme/js/jquery.min.js"></script>
 
 <!-- Include all compiled plugins (below), or include individual files as needed -->
-<script src="https://wrongbaud.github.io/newblog/theme/js/bootstrap.min.js"></script>
+<script src="http://localhost:8000/theme/js/bootstrap.min.js"></script>
 
 <!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
-<script src="https://wrongbaud.github.io/newblog/theme/js/respond.min.js"></script>
+<script src="http://localhost:8000/theme/js/respond.min.js"></script>
 
 
 
