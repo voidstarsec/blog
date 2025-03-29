@@ -1995,15 +1995,14 @@ Hit key to stop autoboot(&amp;#39;CTRL+C&amp;#39;):  0
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;There are a few variables of interest that I'd like to point out in the table below:&lt;/p&gt;
-&lt;p&gt;{:class="table table-bordered"}
-|----------+-----------|
+&lt;p&gt;|----------------------|
 | Variable | Significance |&lt;br&gt;
 | :-------: | :------------: |&lt;br&gt;
-|----------+-----------|
+|----------------------|
 | &lt;code&gt;bootcmd&lt;/code&gt; | This command is used to define the default boot behavior | 
-|----------+-----------|
+|----------------------|
 | &lt;code&gt;board=evb_rk3128&lt;/code&gt; | This identifies the CPU / development board in use | 
-|----------+-----------|
+|----------------------|
 | &lt;code&gt;devtype=spinand&lt;/code&gt; | This defines the flash device type in use | &lt;/p&gt;
 &lt;p&gt;At this point, if we cross-reference the information that we gathered during our hardware review, we see consistent results. We assumed after our hardware review that the SPI flash was the main method of storage, and this assumption is being validated in the UBoot environment variables and the available commands. &lt;/p&gt;
 &lt;p&gt;Let's start by examining the &lt;code&gt;rksfc&lt;/code&gt; commands; a quick &lt;a href="https://gitlab.collabora.com/nicolas/rockchip-uboot/blob/d5f538dc02e53c7267fcd4a914104071fca889b5/doc/README.rksfc"&gt;google search&lt;/a&gt; tells us that this is RockChip's SPI SFC (serial flash controller) interface tool. This command has the following subcommands available:&lt;/p&gt;
