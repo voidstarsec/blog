@@ -472,7 +472,7 @@ FOUND!  ntrst:pin5 (RPi GPIO 3) tck:pin6 (RPi GPIO 10) tms:pin1 (RPi GPIO 9) tdo
 <h2>JTAG Debugging via OpenOCD.</h2>
 <p>Since we know the pinout of the JTAG interface on our target, we can now move onto using OpenOCD to communicate with it. I am choosing OpenOCD for this task because it has excellent debugging support for ARM MCUs, particularly the Cortex series which uses CoreSight. The first thing we'll need to do is choose a hardware adapter, we will use the FT2232H breakout module.</p>
 <h3>JTAG via FT2232H</h3>
-<p>With the pinout understood, we can now attempt to talk to the DAP using OpenOCD. For this we will use an FT2232H adapter, for this post I am using a <a href="https://www.seeedstudio.com/FT2232H-USB-2-0-Hi-Speed-breakout-board-p-737.html">standard FT2232H breakout board</a>. These boards can be used to interract with multiple hardware level interfaces and have excellent software support. You may recall I've used them for things such as <a href="https://wrongbaud.github.io/posts/stm-xbox-jtag/">SWD</a> as well as <a href="https://wrongbaud.github.io/posts/Holiday-Teardown/">dumping SPI flash</a>. Using this board, along with a 3.3V to 1.8V logic level converyer we can  wire it up to the target as follows:</p>
+<p>With the pinout understood, we can now attempt to talk to the DAP using OpenOCD. For this we will use an FT2232H adapter, for this post I am using a <a href="https://www.seeedstudio.com/FT2232H-USB-2-0-Hi-Speed-breakout-board-p-737.html">standard FT2232H breakout board</a>. These boards can be used to interract with multiple hardware level interfaces and have excellent software support. You may recall I've used them for things such as <a href="https://voidstarsec.com/newblog/xbox-swd">SWD</a> as well as <a href="https://wrongbaud.github.io/posts/Holiday-Teardown/">dumping SPI flash</a>. Using this board, along with a 3.3V to 1.8V logic level converyer we can  wire it up to the target as follows:</p>
 <table class="tb tr tc table table-hover">
 <thead>
 <tr>
@@ -725,13 +725,13 @@ D-Cache: disabled, I-Cache: disabled
   <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
-    </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
@@ -743,16 +743,16 @@ D-Cache: disabled, I-Cache: disabled
       <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
-    </li>
-    <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
-    </li>
-    <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
     </li>
   </ul>
 </li>
