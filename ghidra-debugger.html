@@ -123,12 +123,6 @@ VoidStar Security Blog            </a>
 <p>For this post, we're going to be taking a look at the Game Boy Advance game Spiderman: Mysterio's Menace. I've been very much inspired by all of the awesome work that <a href="https://youtu.be/VVbRe7wr3G4">stacksmashing and Liveoverflow have been doing regarding these topics</a>. This was a game that I spent a lot of time playing and it's always fun revisiting childhood favorites from an RE perspective. The ultimate goal is to demonstrate how to properly load this ROM using a custom loader, and connect to an emulator's GDB stub using Ghidra's debugging features.</p>
 <p><strong>RE Note/Tangent:</strong> When taking on a new reversing project, it's important to try to compartmentalize goals and targets. For example, if we said we just want to <em>reverse</em> this game, that opens up endless possibilities. We could reverse engineer the collision detection, how enemy AI works, or how level maps are generated. For this post, we will pick a specific target and take a look at the password mechanism in use by this game.</p>
 <p>I am doing all of this work on an Ubuntu 20.04 machine, with the latest updates. </p>
-<p><strong>Blog Updates (as of 2022):</strong></p>
-<ul>
-<li>Future blog posts and entries can be found <a href="https://voidstarsec.com/blog">here</a>. </li>
-<li>If you are interested in learning more about reverse engineering <a href="https://voidstarsec.com/training.html">check out my 5 day hardware hacking course</a>, public and private offerings are available upon request</li>
-<li>Never want to miss an update or blog post? Check out my <a href="http://eepurl.com/hSl31f">mailing list</a> for a quarterly newsletter about reverse engineering embedded devices</li>
-</ul>
 <h2>Building Ghidra</h2>
 <p>First things first, this debugger branch has not yet been included in an official release so we're going to have to build it ourselves. Luckily for us <a href="https://github.com/dukebarman/ghidra-builder">dukebarman</a> has put together a docker container for us to do this, all we need to do is modify the <code>build_ghidra.sh</code> script to checkout the debugger branch, see the following line below:</p>
 <div class="highlight"><pre><span></span><code>git clone https://github.com/NationalSecurityAgency/ghidra -b debugger
@@ -190,7 +184,7 @@ sudo ../docker-tpl/run ./build_ghidra.sh
 <p><strong>Note:</strong> I just want to take a second to outline just how incredible the <a href="https://github.com/NationalSecurityAgency/ghidra/blob/15c1f43fa51f210836cb451aff587b227dffe0a7/DevGuide.md">help docs</a> are for Ghidra. From the P-Code manuals to the instructions on building and exporting these plugins - the project is very well documented. </p>
 <h2>Building the ROM Loader</h2>
 <p>To properly analyze this ROM in Ghidra, we are going to need to define all of the <a href="https://problemkaputt.de/gbatek.htm#gbamemorymap">memory regions and peripherals</a> for the Game Boy Advance. Luckily for us, <a href="https://github.com/SiD3W4y/GhidraGBA">SiD3W4y</a> on GitHub has already written one.</p>
-<p>If you are a regular reader of this blog, a <a href="https://wrongbaud.github.io/posts/writing-a-ghidra-loader/">ghidra loader</a> may be a familiar subject to you. If not, the purpose of a Ghidra loader is to set up all of the necessary memory regions, identify any debug information or symbols that may be present in the file, and provide as much information as possible about the target file. The loader that was mentioned before outlines all of the basic peripherals of the GBA and is an excellent example loader to work with, let's start by cloning it into the <code>ghidra-builder/workdir</code> directory. We're doing this because we're going to use the same docker container we built Ghidra with to build this loader.</p>
+<p>If you are a regular reader of this blog, a <a href="https://voidstarsec.com/newblog/ghidra-loader">ghidra loader</a> may be a familiar subject to you. If not, the purpose of a Ghidra loader is to set up all of the necessary memory regions, identify any debug information or symbols that may be present in the file, and provide as much information as possible about the target file. The loader that was mentioned before outlines all of the basic peripherals of the GBA and is an excellent example loader to work with, let's start by cloning it into the <code>ghidra-builder/workdir</code> directory. We're doing this because we're going to use the same docker container we built Ghidra with to build this loader.</p>
 <div class="highlight"><pre><span></span><code><span class="n">cd</span><span class="w"> </span><span class="n">ghidra</span><span class="o">-</span><span class="n">builder</span><span class="o">/</span><span class="n">workdir</span>
 <span class="n">git</span><span class="w"> </span><span class="n">clone</span><span class="w"> </span><span class="n">https</span><span class="o">:</span><span class="c1">//github.com/SiD3W4y/GhidraGBA</span>
 <span class="n">sudo</span><span class="w"> </span><span class="p">..</span><span class="o">/</span><span class="n">docker</span><span class="o">-</span><span class="n">tpl</span><span class="o">/</span><span class="n">run</span><span class="w"> </span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">bash</span>
@@ -548,7 +542,7 @@ Can&#39;t determine the current process&#39;s PID: you must name one.
 </table>
 <p>Exactly as we expected - so now we have an idea as to how these passwords get stored, what they look like in memory and we can debug/set breakpoints from within Ghidra. I think that this makes for a good stopping point - for the next post, we will research some of these other password functions using Ghidra and the remote GDB debugging functionality that we set up today.</p>
 <h2>Conclusion</h2>
-<p>With this post, we've taken a look at what tools are available to help with building Ghidra. We also reviewed some of announced debugging capabilities and using those were able to remotely debug a Game Boy Advance game. A lot of what we did today you could have also done using gdb-multiarch without having Ghidra in the mix - but I wanted to learn how some of this worked and share my findings along the way. As usual, if you have any questions or comments - please feel free to reach out to me on <a href="https://twitter.com/wrongbaud">Twitter</a>. If you'd like to learn more about Ghidra, or <a href="https://www.voidstarsec.com/courses">hardware hacking</a> in general check out some of my <a href="https://www.voidstarsec.com/free-courses-materials">free course materials</a>.</p>
+<p>With this post, we've taken a look at what tools are available to help with building Ghidra. We also reviewed some of announced debugging capabilities and using those were able to remotely debug a Game Boy Advance game. A lot of what we did today you could have also done using gdb-multiarch without having Ghidra in the mix - but I wanted to learn how some of this worked and share my findings along the way. As usual, if you have any questions or comments - please feel free to reach out to me on <a href="https://twitter.com/wrongbaud">Twitter</a>. If you'd like to learn more about Ghidra, or <a href="https://www.voidstarsec.com">hardware hacking</a> in general check out some of my <a href="https://voidstarsec.com/#public">free course materials</a>.</p>
 <h3>Extra Information / Notes</h3>
 <table class="tb tr tc table table-hover">
 <thead>
@@ -666,16 +660,16 @@ Can&#39;t determine the current process&#39;s PID: you must name one.
   <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
-    </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>

@@ -108,7 +108,7 @@ VoidStar Security Blog            </a>
                 </div>
                 <h1>Hardware Debugging for Reverse Engineers Part 2: JTAG, SSDs and Firmware Extraction</h1>
 <h2>Overview</h2>
-<p>To follow up on my <a href="https://wrongbaud.github.io/posts/stm-xbox-jtag/">last post</a> about SWD and hardware debugging, I wanted to do a deep dive into JTAG from a reverse-engineering perspective. The previous post received a lot of great feedback and it seems that people are interested in this topic, so I wanted to continue the series and expand upon another hardware debugging mechanism. For those who are unfamiliar, JTAG is a hardware level debugging mechanism that many embedded CPUs utilize, with this post I hope to explain how to approach JTAG from a reverse engineers perspective and provide some practical examples along the way.</p>
+<p>To follow up on my <a href="https://voidstarsec.com/newblog/xbox-swd/">last post</a> about SWD and hardware debugging, I wanted to do a deep dive into JTAG from a reverse-engineering perspective. The previous post received a lot of great feedback and it seems that people are interested in this topic, so I wanted to continue the series and expand upon another hardware debugging mechanism. For those who are unfamiliar, JTAG is a hardware level debugging mechanism that many embedded CPUs utilize, with this post I hope to explain how to approach JTAG from a reverse engineers perspective and provide some practical examples along the way.</p>
 <h2>Goals</h2>
 <p>With this post, I hope to do the following:</p>
 <ol>
@@ -665,6 +665,8 @@ D-Cache: disabled, I-Cache: disabled
 <p>Excellent, we have some xrefs and the init code looks fairly sane. It also looks like there is some sort of debug menu that is presented over the UART, these are likely pins 8/9 on our pinout! Safe to say that this is a valid RAM dump, and with this, I will finish up this post.</p>
 <h2>Conclusion</h2>
 <p>This was quite a long post - realistically it probably should have been broken up into 2-3 parts. With this post, we learned how JTAG functions at a low level, as well as how to approach JTAG as a reverse engineer. We were also able to get JTAG access to an undocumented target, extract memory, and single-step through the running firmware. There are lots of things left to do here, like determine if the flash chips themselves can be dumped via JTAG, RE the firmware to look for interesting ways to recover data from the drive (<a href="http://www2.futureware.at/~philipp/ssd/TheMissingManual.pdf">I recently discovered that lots of cool work has been done here already!</a>). As always, if you have any questions or comments, please feel free to reach out on <a href="https://twitter.com/wrongbaud">twitter</a>.</p>
+<p>If you're interested in <a href="https://voidstarsec.com/hhb.html">hardware security training</a> at your organization, please don't hesitate to <a href="https://voidstarsec.com/#contact">contact us</a>. We also have a self-paced training available <a href="https://voidstarsecurity.thinkific.com/">here</a></p>
+<p>If you want to stay informed about official releases, new courses, and blog posts, sign up for our mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
 <h2>Refs</h2>
 <p>I wanted to mention some awesome work that I found after going through all of this, both of these have already done a lot of what we did in this post today, albeit on slightly different drives. I'm sure that someone on twitter will let me know this so I wanted to link to some excellent previous work that was pointed out to me by some members of the OpenOCD community!</p>
 <ul>
@@ -726,16 +728,16 @@ D-Cache: disabled, I-Cache: disabled
   <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
-    </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
