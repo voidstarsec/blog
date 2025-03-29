@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Tricore Basics: Using the Hightec Tricore Toolchain in Linux - VoidStar Security Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://voidstarsec.com/newblog/tricore-linux.html">
+
+        <meta name="author" content=""Matthew Alt"" />
+        <meta name="keywords" content="ghidra,tutorial,tools" />
+        <meta name="description" content="The Tricore CPU architecture is commonly found in automotive embedded systems, often running an RTOS or even just bare metal firmware. This post will go over setting up an entry level toolchain for the Tricore architecture under Linux, and how we can use this toolchain when reverse engineering automotive platforms. We will also go over and provide a very simple bare metal loader." />
+
+        <meta property="og:site_name" content="VoidStar Security Blog" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Tricore Basics: Using the Hightec Tricore Toolchain in Linux"/>
+        <meta property="og:url" content="https://voidstarsec.com/newblog/tricore-linux.html"/>
+        <meta property="og:description" content="The Tricore CPU architecture is commonly found in automotive embedded systems, often running an RTOS or even just bare metal firmware. This post will go over setting up an entry level toolchain for the Tricore architecture under Linux, and how we can use this toolchain when reverse engineering automotive platforms. We will also go over and provide a very simple bare metal loader."/>
+        <meta property="article:published_time" content="2019-08-19" />
+            <meta property="article:section" content="Ghidra" />
+            <meta property="article:tag" content="ghidra" />
+            <meta property="article:tag" content="tutorial" />
+            <meta property="article:tag" content="tools" />
+            <meta property="article:author" content=""Matthew Alt"" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="https://voidstarsec.com/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://voidstarsec.com/newblog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/style.css" type="text/css"/>
+
+        <link href="https://voidstarsec.com/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog ATOM Feed"/>
+
+        <link href="https://voidstarsec.com/newblog/feeds/ghidra.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog Ghidra ATOM Feed"/>
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="https://voidstarsec.com/newblog/" class="navbar-brand">
+VoidStar Security Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-sm-push-3">
+            <ol class="breadcrumb">
+                <li><a href="https://voidstarsec.com/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li class="active">Tricore Basics: Using the Hightec Tricore Toolchain in Linux</li>
+            </ol>
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://voidstarsec.com/newblog/tricore-linux.html"
+                       rel="bookmark"
+                       title="Permalink to Tricore Basics: Using the Hightec Tricore Toolchain in Linux">
+                        Tricore Basics: Using the Hightec Tricore Toolchain in Linux
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2019-08-19T00:00:00-06:00"> Mon 19 August 2019</time>
+    </span>
+
+
+            <span class="label label-default">By</span>
+            <a href="https://voidstarsec.com/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+
+        <span class="label label-default">Category</span>
+        <a href="https://voidstarsec.com/newblog/category/ghidra.html">Ghidra</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+        /
+	<a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+        /
+	<a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <h1>Tricore Basics: Using the Hightec Tricore Toolchain in Linux</h1>
+<h2>Overview</h2>
+<p>The Tricore CPU architecture is commonly found in automotive embedded systems, often running an RTOS or even just bare metal firmware. This post will go over setting up an entry level toolchain for the Tricore architecture under Linux, and how we can use this toolchain when reverse engineering automotive platforms. We will also go over and provide a very simple bare metal loader.</p>
+<p>In the past when reverse engineering and occasionally developing payloads I've written all of my Tricore code in ASM and never really explored the idea of using any available compilers. This series will explore these options and hopefully help some people out along the way...or at least entertain!</p>
+<h1>Goals</h1>
+<ol>
+<li>Setup HighTec Embedded toolchain under Linux (Ubuntu 18.04) using WINE.</li>
+<li>Build a "Hello World" binary to toggle GPIO Lines perform very basic initialization routines</li>
+<li>Disassemble/Decompile the binary using GHIDRA</li>
+</ol>
+<h2>A <em>very</em> brief Infineon Tricore Intro</h2>
+<p>The Infineon Tricore architecture is a commonly used architecture in automotive embedded systems. It typically contains a RISC core, micro-controller and often a DSP package. There are 32 general purpose registers, Address: <code>A0-A15</code>,Data: <code>D0-D15</code>. and System: <code>PCXI.PSW,PC</code>, the System registers are considered special function registers. For this post, we will not dive into architecture specifics as we are just setting up tools and toolchains, for those of you interested in some <em>very</em> dry reading, please see <a href="https://www.google.com/url?sa=t&amp;rct=j&amp;q=&amp;esrc=s&amp;source=web&amp;cd=9&amp;cad=rja&amp;uact=8&amp;ved=2ahUKEwiWyajMpZDkAhURtlkKHZCBCc4QFjAIegQICBAC&amp;url=https%3A%2F%2Fwww.infineon.com%2Fdgdl%2FTC1_3_ArchOverview_1.pdf%3FfileId%3Ddb3a304312bae05f0112be86204c0111&amp;usg=AOvVaw31AVABjRglbAz7n-awJ8vU">this PDF!</a></p>
+<h2>Setting up the Tricore toolchain under WINE</h2>
+<p>Unzip the toolchain</p>
+<div class="highlight"><pre><span></span><code><span class="n">unzip</span><span class="w"> </span><span class="n">free_tricore_entry_tool_chain</span><span class="o">.</span><span class="n">zip</span>
+</code></pre></div>
+
+<p>Run <code>Setup.exe</code> with WINE:</p>
+<div class="highlight"><pre><span></span><code>wine Setup.exe
+</code></pre></div>
+
+<p>Next click through the install as seen below</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Tricore Install" src="https://wrongbaud.github.io/assets/img/TRICORE_1.png"></p>
+<p>Once the installation has finished, you will find the files we care about in the resulting directory:</p>
+<div class="highlight"><pre><span></span><code><span class="o">~/.</span><span class="n">wine</span><span class="o">/</span><span class="n">drive_c</span><span class="o">/</span><span class="n">HIGHTEC</span><span class="o">/</span><span class="n">toolchains</span><span class="o">/</span><span class="n">tricore</span><span class="o">/</span><span class="n">v4</span><span class="o">.</span><span class="mf">9.1</span><span class="o">.</span><span class="mi">0</span><span class="o">-</span><span class="n">infineon</span><span class="o">-</span><span class="mf">2.0</span><span class="o">/</span><span class="n">bin</span>
+</code></pre></div>
+
+<p>You can add this to your path with the following:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="n">PATH</span><span class="o">=$</span><span class="n">PATH</span><span class="p">:</span><span class="o">~/.</span><span class="n">wine</span><span class="o">/</span><span class="n">drive_c</span><span class="o">/</span><span class="n">HIGHTEC</span><span class="o">/</span><span class="n">toolchains</span><span class="o">/</span><span class="n">tricore</span><span class="o">/</span><span class="n">v4</span><span class="o">.</span><span class="mf">9.1</span><span class="o">.</span><span class="mi">0</span><span class="o">-</span><span class="n">infineon</span><span class="o">-</span><span class="mf">2.0</span><span class="o">/</span><span class="n">bin</span>
+</code></pre></div>
+
+<p>Now try invoking the gcc compiler with <code>wine</code> as seen below:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~</span><span class="err">$</span><span class="w"> </span><span class="n">wine</span><span class="w"> </span><span class="n">tricore</span><span class="o">-</span><span class="n">gcc</span><span class="p">.</span><span class="n">exe</span>
+<span class="n">tricore</span><span class="o">-</span><span class="n">gcc</span><span class="p">.</span><span class="nl">exe</span><span class="p">:</span><span class="w"> </span><span class="n">fatal</span><span class="w"> </span><span class="nl">error</span><span class="p">:</span><span class="w"> </span><span class="k">no</span><span class="w"> </span><span class="k">input</span><span class="w"> </span><span class="n">files</span>
+<span class="n">compilation</span><span class="w"> </span><span class="n">terminated</span><span class="p">.</span>
+</code></pre></div>
+
+<p>Great! So now lets right some simple code to toggle a GPIO line!</p>
+<h2>Build a "Hello World" binary to toggle a GPIO line</h2>
+<p>Lets start with a simple main.c that will (according to our datasheet) initialize and toggle a GPIO line!</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/*</span>
+<span class="cm"> * main.c</span>
+<span class="cm"> *  Created on: Mar 6, 2019</span>
+<span class="cm"> *      Author: wrongbaud</span>
+<span class="cm"> */</span>
+
+<span class="err">#</span><span class="nx">include</span><span class="w"> </span><span class="p">&lt;</span><span class="nx">tc1767</span><span class="p">.</span><span class="nx">h</span><span class="p">&gt;</span>
+<span class="err">#</span><span class="nx">include</span><span class="w"> </span><span class="p">&lt;</span><span class="nx">tc1767</span><span class="o">/</span><span class="nx">scu</span><span class="o">/</span><span class="kd">addr</span><span class="p">.</span><span class="nx">h</span><span class="p">&gt;</span>
+<span class="err">#</span><span class="nx">include</span><span class="w"> </span><span class="p">&lt;</span><span class="nx">tc1767</span><span class="o">/</span><span class="nx">scu</span><span class="o">/</span><span class="nx">types</span><span class="p">.</span><span class="nx">h</span><span class="p">&gt;</span>
+<span class="err">#</span><span class="nx">include</span><span class="w"> </span><span class="p">&lt;</span><span class="nx">tc1767</span><span class="o">/</span><span class="nx">port5</span><span class="o">-</span><span class="nx">struct</span><span class="p">.</span><span class="nx">h</span><span class="p">&gt;</span>
+
+<span class="nx">typedef</span><span class="w"> </span><span class="nx">struct</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="nx">unsigned</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="nx">_con0</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">unsigned</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="nx">_con1</span><span class="p">;</span>
+<span class="p">}</span><span class="nx">WdtCon_t</span><span class="p">;</span>
+
+<span class="nx">void</span><span class="w"> </span><span class="nx">disable_gpios</span><span class="p">()</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="nx">unsigned</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">GPIO_CTRL_REG</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xF0000F1C</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">unsigned</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">GPIO_OUTPUT_REG</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xF0000F04</span><span class="p">;</span>
+<span class="w">    </span><span class="o">*</span><span class="nx">GPIO_CTRL_REG</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x80208020</span><span class="p">;</span>
+<span class="w">    </span><span class="o">*</span><span class="nx">GPIO_OUTPUT_REG</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x00000000</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="nx">void</span><span class="w"> </span><span class="nx">toggle_pin_15</span><span class="p">()</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="nx">unsigned</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">GPIO_CTRL_REG</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xF0000F1C</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">unsigned</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">GPIO_OUTPUT_REG</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xF0000F04</span><span class="p">;</span>
+<span class="w">    </span><span class="o">*</span><span class="nx">GPIO_CTRL_REG</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x80208020</span><span class="p">;</span>
+<span class="w">    </span><span class="o">*</span><span class="nx">GPIO_OUTPUT_REG</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x80008000</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nx">void</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="c1">// Configure WDT and ENDINT as described in user manual</span>
+<span class="w">    </span><span class="nx">unsigned</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="nx">wcon0</span><span class="p">,</span><span class="nx">wcon1</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">volatile</span><span class="w"> </span><span class="nx">WdtCon_t</span><span class="w"> </span><span class="o">*</span><span class="nx">wdtaddr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xF00005F0</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">wcon0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">wdtaddr</span><span class="o">-&gt;</span><span class="nx">_con0</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">wcon1</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">wdtaddr</span><span class="o">-&gt;</span><span class="nx">_con1</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// Unlock WDT and disable ENDINT protection so we can reconfigure clocks</span>
+<span class="w">    </span><span class="nx">wcon0</span><span class="w"> </span><span class="o">&amp;=</span><span class="w"> </span><span class="mh">0xffffff03</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">wcon0</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="mh">0xf0</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">wcon0</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="p">(</span><span class="nx">wcon1</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xc</span><span class="p">);</span>
+<span class="w">    </span><span class="nx">wcon0</span><span class="w"> </span><span class="o">^=</span><span class="w"> </span><span class="mh">0x2</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">wdtaddr</span><span class="o">-&gt;</span><span class="nx">_con0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">wcon0</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">wcon0</span><span class="w"> </span><span class="o">&amp;=</span><span class="w"> </span><span class="mh">0xfffffff0</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">wcon0</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="mh">0x2</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">wdtaddr</span><span class="o">-&gt;</span><span class="nx">_con0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">wcon0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">(</span><span class="nx">void</span><span class="p">)</span><span class="w"> </span><span class="nx">wdtaddr</span><span class="o">-&gt;</span><span class="nx">_con0</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// Reconfigure clock speed as reccomended in user manual</span>
+<span class="w">    </span><span class="nx">SCU_PLLCON0_t</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">SCU_PLLCON0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="nx">SCU_PLLCON0_t</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="nx">SCU_PLLCON0_ADDR</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">SCU_PLLCON0</span><span class="o">-&gt;</span><span class="nx">bits</span><span class="p">.</span><span class="nx">VCOBYP</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">SCU_PLLCON1_t</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">SCU_PLLCON1</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="nx">SCU_PLLCON1_t</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="nx">SCU_PLLCON1_ADDR</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">SCU_PLLCON1</span><span class="o">-&gt;</span><span class="nx">bits</span><span class="p">.</span><span class="nx">K1DIV</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">toggle_pin_15</span><span class="p">();</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mh">0x1337</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Next, we'll try to compile this code as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wine</span><span class="w"> </span><span class="o">~/.</span><span class="n">wine</span><span class="o">/</span><span class="n">drive_c</span><span class="o">/</span><span class="n">HIGHTEC</span><span class="o">/</span><span class="n">toolchains</span><span class="o">/</span><span class="n">tricore</span><span class="o">/</span><span class="n">v4</span><span class="o">.</span><span class="mf">9.1</span><span class="o">.</span><span class="mi">0</span><span class="o">-</span><span class="n">infineon</span><span class="o">-</span><span class="mf">2.0</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">tricore</span><span class="o">-</span><span class="n">gcc</span><span class="o">.</span><span class="n">exe</span><span class="w"> </span><span class="n">main</span><span class="o">.</span><span class="n">c</span>
+</code></pre></div>
+
+<p>Oh no! The first big misstep in our journey has appeared!</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">tricore</span><span class="err">$</span><span class="w"> </span><span class="n">wine</span><span class="w"> </span><span class="n">tricore</span><span class="o">-</span><span class="n">gcc</span><span class="p">.</span><span class="n">exe</span><span class="w"> </span><span class="n">hello</span><span class="p">.</span><span class="n">c</span>
+<span class="n">license</span><span class="w"> </span><span class="k">check</span><span class="err">:</span><span class="w"> </span><span class="n">Can</span><span class="err">&#39;</span><span class="n">t</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="n">license</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="p">(</span><span class="o">-</span><span class="mi">102</span><span class="p">)</span>
+<span class="k">No</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="k">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w"> </span><span class="p">(</span><span class="nl">errno</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span>
+<span class="n">license</span><span class="w"> </span><span class="k">check</span><span class="err">:</span><span class="w"> </span><span class="k">No</span><span class="w"> </span><span class="n">valid</span><span class="w"> </span><span class="n">license</span><span class="err">!</span>
+<span class="n">hello</span><span class="p">.</span><span class="nl">c</span><span class="p">:</span><span class="mi">1</span><span class="err">:</span><span class="mi">0</span><span class="err">:</span><span class="w"> </span><span class="nl">error</span><span class="p">:</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">licenser</span>
+
+<span class="w"> </span><span class="o">^</span>
+<span class="n">hello</span><span class="p">.</span><span class="nl">c</span><span class="p">:</span><span class="mi">1</span><span class="err">:</span><span class="mi">0</span><span class="err">:</span><span class="w"> </span><span class="nl">error</span><span class="p">:</span><span class="w"> </span><span class="n">license</span><span class="w"> </span><span class="k">check</span><span class="w"> </span><span class="n">failed</span>
+</code></pre></div>
+
+<p>Remember the License file we needed earlier? It looks like wine / tricore-gcc.exe can't find it. After a fair amount of time digging through docs, and troubleshooting wine, I loaded the tricore-gcc.exe in IDA and found out that there was a crucial argument not displayed when you run <code>tricore-gcc.exe --help</code> ...</p>
+<p>The argument <code>-mlicense-key=dir</code> can be used to specify a directory containing the license file, so lets copy that into our working directory and run the following...</p>
+<div class="highlight"><pre><span></span><code><span class="n">wine</span><span class="w"> </span><span class="o">~/.</span><span class="n">wine</span><span class="o">/</span><span class="n">drive_c</span><span class="o">/</span><span class="n">HIGHTEC</span><span class="o">/</span><span class="n">toolchains</span><span class="o">/</span><span class="n">tricore</span><span class="o">/</span><span class="n">v4</span><span class="o">.</span><span class="mf">9.1</span><span class="o">.</span><span class="mi">0</span><span class="o">-</span><span class="n">infineon</span><span class="o">-</span><span class="mf">2.0</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">tricore</span><span class="o">-</span><span class="n">gcc</span><span class="o">.</span><span class="n">exe</span><span class="w"> </span><span class="n">hello</span><span class="o">.</span><span class="n">c</span><span class="w"> </span><span class="o">-</span><span class="n">mlicense</span><span class="o">-</span><span class="n">dir</span><span class="o">=$</span><span class="p">(</span><span class="n">pwd</span><span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+
+<p>And we have a resulting <code>a.out</code> in our directory!</p>
+<p>Most of my experience with the Tricore Architecture is in the realm of reverse engineering. Up until recently, only IDA Pro could be used to disassembly Tricore binary files, however recently github user <a href="https://github.com/mumbel">mumbel</a> recently submitted a Tricore processor module to Ghidra! We will spend the second part of this post building the latest version of Ghidra and checking out this new processor module. </p>
+<h3>Building / Installing GHIDRA</h3>
+<p>In case you've not installed it yet, pull down the latest version of GHIDRA from: <a href="https://github.com/NationalSecurityAgency/ghidra">github</a></p>
+<p>Since we are targeting a Tricore processor, you will need to build the latest version of GHIDRA yourself,but <a href="https://github.com/dukebarman">dukebarman</a> has made a very useful docker container for doing so!</p>
+<p>You can use the following docker container to build the latest version of GHIDRA: https://github.com/dukebarman/ghidra-builder</p>
+<p>I have fork <a href="https://github.com/wrongbaud/ghidra-builder">here</a> as well, which addresses and error I ran into when trying to build GHIDRA the first time</p>
+<p>To build GHIDRA using dukebarman's docker container do the following (this is also in the README):</p>
+<ol>
+<li>Clone the repository: <code>git clone https://github.com/dukebarman/ghidra-builder</code></li>
+<li>Enter the directory <code>cd ghidra-builder</code></li>
+<li>Build the Docker container: <code>sudo docker-tpl/build</code></li>
+<li>Build ghidra: <code>cd workdir; sudo ../docker-tpl/run ./build_ghidra.sh</code></li>
+</ol>
+<p>Once this script finishes, there will be a zip file in the <code>out</code> folder, unzip that to get your freshly built GHIDRA!</p>
+<h3>Loading the resulting binary in GHIDRA</h3>
+<p>Launch your recently built ghidra as follows (change the paths to match your system):</p>
+<p><code>./blog/ghidra-builder/workdir/out/ghidra_9.1_DEV/ghidraRun</code></p>
+<p>You will see this window asking you to create a project, here I'm making one called <code>blog</code></p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="GHIDRA_1.png" src="https://wrongbaud.github.io/assets/img/GHIDRA_1.png"></p>
+<p>Next we select the project location, choose anywhere you'd like</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="GHIDRA_2.png" src="https://wrongbaud.github.io/assets/img/GHIDRA_2.png"></p>
+<p>Finally click on the green dragon button at the top left window to open Ghidra</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="GHIDRA_4.png" src="https://wrongbaud.github.io/assets/img/GHIDRA_4.png"></p>
+<p>After that you'll see a window that looks something like this</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="GHIDRA_3.png" src="https://wrongbaud.github.io/assets/img/GHIDRA_3.png"></p>
+<p>Now go to File --&gt; Import File </p>
+<p>Select the binary that we just generated</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="SELECT_TRICORE.png" src="https://wrongbaud.github.io/assets/img/SELECT_TRICORE.png"></p>
+<p>After selecting the binary a new options window will appear, under the <code>Language</code> option click on the three dots to open the language options</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="TRICORE_OPTIONS.png" src="https://wrongbaud.github.io/assets/img/TRICORE_OPTIONS.png"></p>
+<p>Select the <code>TC176X</code> option since we are targeting a TC1767 CPU, click OK. When asked to analyze, click Yes and click Analyze on the following window. You can also close the <code>Import Results Summary</code> window as well.</p>
+<p>Once the binary has been loaded, you'll probably that some of the functions generated by the compiler are not initially recognized and disassembled.</p>
+<p>Press <code>G</code> and enter the address <code>0x800000AC</code> you should see something similar to below:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="NO_FUNC.png" src="https://wrongbaud.github.io/assets/img/NO_FUNC.png"></p>
+<p>For whatever reason, the autoanalysis stopped disassembling here, pressing '''d''' at address <code>0x800000B0</code> will disassemble code there. The first time we do this, we disassemble the following instruction:  <code>jl  __init_csa</code> for those of you who are unfamiliar with the Tricore Architecture, this function initializes what is called the "Context Save Area" which is critical for performing call instructions as this is the region of memory that stores the context for functions when they are called. After this function we see a few more <code>jl</code> calls that were inserted by our toolchain, eventually we see a jump to <code>main</code>!</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="FUNC.png" src="https://wrongbaud.github.io/assets/img/FUNC.png"></p>
+<p>Clicking on <code>main</code> takes us to the following window displaying the code we wrote earlier!</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="GHIDRA_CODE.png" src="https://wrongbaud.github.io/assets/img/GHIDRA_CODE.png"></p>
+<p>Looks pretty similar to what we wrote before! </p>
+<h2>Conclusion</h2>
+<p>With this post, we've set up a toolchain for Tricore CPUs under Linux, using this toolchain we wrote a very simple C program to toggle GPIO lines. We also built the latest version of Ghidra using a docker container. Lastly we disassembled and decompiled a target binary using Ghidra!</p>
+<h3>Helpful Links</h3>
+<ul>
+<li>Tricore Example Code / Loaders (will be useful for later posts)</li>
+<li><a href="http://www.infineon-autoeco.com/BBS/Detail/6835">http://www.infineon-autoeco.com/BBS/Detail/6835</a></li>
+<li><a href="http://bbs.21ic.com/archiver/tid-148660.html">http://bbs.21ic.com/archiver/tid-148660.html</a></li>
+<li><a href="https://github.com/w01230/inf_tc1791_bootloader">https://github.com/w01230/inf_tc1791_bootloader</a></li>
+</ul>
+<p><strong>Blog Updates (as of 2022):</strong></p>
+<ul>
+<li>
+<p>Future blog posts and entries can be found <a href="https://voidstarsec.com/blog">here</a>. </p>
+</li>
+<li>
+<p>If you are interested in learning more about reverse engineering <a href="https://voidstarsec.com/training.html">check out my 5 day hardware hacking course</a>, public and private offerings are available upon request</p>
+</li>
+<li>
+<p>Never want to miss an update or blog post? Check out my <a href="http://eepurl.com/hSl31f">mailing list</a> for a quarterly newsletter about reverse engineering embedded devices</p>
+</li>
+</ul>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3 col-sm-pull-9" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://voidstarsec.com"><i class="fa fa-vss-website-square fa-lg"></i> VSS website</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/voidstarsec"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/voidstarsec"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+    <li class="list-group-item"><a href="https://github.com/voidstarsec"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+
+<!-- Sidebar/Categories -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
+  <ul class="list-group" id="categories">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/misc.html"><i class="fa fa-folder-open fa-lg"></i>misc</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Categories -->
+
+<!-- Sidebar/Tag Cloud -->
+<li class="list-group-item">
+  <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <ul class="list-group " id="tags">
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/blog.html">blog</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Tag Cloud -->
+
+<!-- Sidebar/Links -->
+<li class="list-group-item">
+  <h4><i class="fa fa-external-link-square fa-lg"></i><span class="icon-label">Links</span></h4>
+  <ul class="list-group" id="links">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/" target="_blank">VoidStar Security Website</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.training/" target="_blank">VoidStar Security Training</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.wiki/" target="_blank">Build a Hardware Hacking Lab</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra" target="_blank">Free Ghidra Course</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.wrongbaud.github.io/" target="_blank">Wrongbauds Blog (fun intro hacks)</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Links -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2025 VoidStar Security
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://voidstarsec.com/newblog/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://voidstarsec.com/newblog/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://voidstarsec.com/newblog/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

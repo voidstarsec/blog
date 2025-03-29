@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Using Buildroot for Reverse Engineering - VoidStar Security Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://voidstarsec.com/newblog/buildroot-tutorial.html">
+
+        <meta name="author" content=""Matthew Alt"" />
+        <meta name="keywords" content="buildroot,tutorial" />
+        <meta name="description" content="When reverse engineering an embedded system that is Linux based, one often wishes that they had an examplar system that could be virtualized, if only to gain familiarity with the nuances of the specific kernel version or to learn more about the running applications without needing the native hardware. Make no mistake, this is a bit of a pipe dream when working with bespoke embedded systems, but if you&#39;re working with a more generalized system (or if you just want to quickly spin up a Linux system to test against using QEMU) buildroot is a tool that can be used to generate images that will run in QEMU! The purpose of this post will be to describe how to build specific kernel images for QEMU using buildroot." />
+
+        <meta property="og:site_name" content="VoidStar Security Blog" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Using Buildroot for Reverse Engineering"/>
+        <meta property="og:url" content="https://voidstarsec.com/newblog/buildroot-tutorial.html"/>
+        <meta property="og:description" content="When reverse engineering an embedded system that is Linux based, one often wishes that they had an examplar system that could be virtualized, if only to gain familiarity with the nuances of the specific kernel version or to learn more about the running applications without needing the native hardware. Make no mistake, this is a bit of a pipe dream when working with bespoke embedded systems, but if you&#39;re working with a more generalized system (or if you just want to quickly spin up a Linux system to test against using QEMU) buildroot is a tool that can be used to generate images that will run in QEMU! The purpose of this post will be to describe how to build specific kernel images for QEMU using buildroot."/>
+        <meta property="article:published_time" content="2019-09-28" />
+            <meta property="article:section" content="Hardware" />
+            <meta property="article:tag" content="buildroot" />
+            <meta property="article:tag" content="tutorial" />
+            <meta property="article:author" content=""Matthew Alt"" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="https://voidstarsec.com/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://voidstarsec.com/newblog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/style.css" type="text/css"/>
+
+        <link href="https://voidstarsec.com/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog ATOM Feed"/>
+
+        <link href="https://voidstarsec.com/newblog/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog Hardware ATOM Feed"/>
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="https://voidstarsec.com/newblog/" class="navbar-brand">
+VoidStar Security Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-sm-push-3">
+            <ol class="breadcrumb">
+                <li><a href="https://voidstarsec.com/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li class="active">Using Buildroot for Reverse Engineering</li>
+            </ol>
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://voidstarsec.com/newblog/buildroot-tutorial.html"
+                       rel="bookmark"
+                       title="Permalink to Using Buildroot for Reverse Engineering">
+                        Using Buildroot for Reverse Engineering
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2019-09-28T00:00:00-06:00"> Sat 28 September 2019</time>
+    </span>
+
+
+            <span class="label label-default">By</span>
+            <a href="https://voidstarsec.com/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+
+        <span class="label label-default">Category</span>
+        <a href="https://voidstarsec.com/newblog/category/hardware.html">Hardware</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://voidstarsec.com/newblog/tag/buildroot.html">buildroot</a>
+        /
+	<a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <h1>Using Buildroot for Reverse Engineering</h1>
+<h2>Overview</h2>
+<p>When reverse engineering an embedded system that is Linux based, one often wishes that they had an examplar system that could be virtualized, if only to gain familiarity with the nuances of the specific kernel version or to learn more about the running applications without needing the native hardware. Make no mistake, this is a bit of a pipe dream when working with bespoke embedded systems, but if you're working with a more generalized system (or if you just want to quickly spin up a Linux system to test against using QEMU) buildroot is a tool that can be used to generate images that will run in QEMU! The purpose of this post will be to describe how to build specific kernel images for QEMU using buildroot.</p>
+<h2>So what is Buildroot?</h2>
+<p>Buildroot is a collection of tools that can be used to build all of the necessary components to get Linux running on various embedded platforms.  Using buildroot we can generate the following (and almost certainly more since I am no expert)</p>
+<ul>
+<li>Kernel Images</li>
+<li>Root Filesystem images, including busybox, etc</li>
+<li>Ramdisk images</li>
+</ul>
+<p>The idea behind buildroot is that given a supported hardware target (or QEMU) one can build a specific version of the Linux kernel as well as a root file-system image. Both of these can be customized to the user's liking but for the purposes of this post we're just going that will run in QEMU as an example.</p>
+<h2>Installing</h2>
+<p>First install the following dependencies (my host machine is Ubuntu 18.04):</p>
+<div class="highlight"><pre><span></span><code>sudo apt-get install qemu-system-arm sed make binutils build-essential gcc g++ gzip bzip2 perl tar cpio python unzip rsync bc wget libncurses-dev
+</code></pre></div>
+
+<p>Download the buildroot source code from <a href="https://buildroot.org/downloads/buildroot-2019.02.4.tar.gz">here</a></p>
+<p>Unpack it</p>
+<div class="highlight"><pre><span></span><code>tar xvf buildroot-2019.02.4.tar
+</code></pre></div>
+
+<h2>Building your first image</h2>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">buildroot</span><span class="err">$</span><span class="w"> </span><span class="n">cd</span><span class="w"> </span><span class="n">buildroot</span><span class="o">-</span><span class="mf">2019.02.4</span>
+</code></pre></div>
+
+<p>We're going to target the ARM Versatile PB board for qemu so use the following defconfig:</p>
+<div class="highlight"><pre><span></span><code>make qemu_arm_versatile_defconfig
+</code></pre></div>
+
+<p>Next, you can run menuconfig, and from this menu you can configure everything about your target system. </p>
+<p>We'll change the banner of our system just to make sure that the changes take effect.</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Buildroot Menconfig" src="https://wrongbaud.github.io/assets/img/BUILDROOT_MENUCONFIG.png"></p>
+<p>Save your changes and exit, next make the images with the following command:</p>
+<p><code>make -j$(nproc)</code></p>
+<p>Assuming this completes without issues, you will find your resulting kernel and root filesystem in <code>output\images</code></p>
+<p>Next we can run and test our resulting image in qemu, use the command line options below from your buildroot directory!</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">buildroot</span><span class="o">/</span><span class="n">buildroot</span><span class="o">-</span><span class="mf">2019.02.4</span><span class="err">$</span><span class="w"> </span><span class="n">qemu</span><span class="o">-</span><span class="k">system</span><span class="o">-</span><span class="n">arm</span><span class="w"> </span><span class="o">-</span><span class="n">M</span><span class="w"> </span><span class="n">versatilepb</span><span class="w"> </span><span class="o">-</span><span class="n">m</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">-</span><span class="n">kernel</span><span class="w"> </span><span class="k">output</span><span class="o">/</span><span class="n">images</span><span class="o">/</span><span class="n">zImage</span><span class="w"> </span><span class="o">-</span><span class="n">dtb</span><span class="w"> </span><span class="k">output</span><span class="o">/</span><span class="n">images</span><span class="o">/</span><span class="n">versatile</span><span class="o">-</span><span class="n">pb</span><span class="p">.</span><span class="n">dtb</span><span class="w"> </span><span class="o">-</span><span class="n">hda</span><span class="w"> </span><span class="k">output</span><span class="o">/</span><span class="n">images</span><span class="o">/</span><span class="n">rootfs</span><span class="p">.</span><span class="n">ext2</span><span class="w"> </span><span class="o">-</span><span class="n">append</span><span class="w"> </span><span class="ss">&quot;root=/dev/s</span>
+<span class="ss">da console=/dev/ttyAMA0,115200&quot;</span><span class="w"> </span><span class="o">-</span><span class="n">nographic</span>
+<span class="nl">WARNING</span><span class="p">:</span><span class="w"> </span><span class="nc">Image</span><span class="w"> </span><span class="nf">format</span><span class="w"> </span><span class="n">was</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">specified</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="s1">&#39;output/images/rootfs.ext2&#39;</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">probing</span><span class="w"> </span><span class="n">guessed</span><span class="w"> </span><span class="n">raw</span><span class="p">.</span>
+<span class="w">         </span><span class="n">Automatically</span><span class="w"> </span><span class="n">detecting</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="nf">format</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">dangerous</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">raw</span><span class="w"> </span><span class="n">images</span><span class="p">,</span><span class="w"> </span><span class="k">write</span><span class="w"> </span><span class="n">operations</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">block</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">will</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">restricted</span><span class="p">.</span>
+<span class="w">         </span><span class="n">Specify</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="s1">&#39;raw&#39;</span><span class="w"> </span><span class="nf">format</span><span class="w"> </span><span class="n">explicitly</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">remove</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">restrictions</span><span class="p">.</span>
+<span class="nl">pulseaudio</span><span class="p">:</span><span class="w"> </span><span class="n">set_sink_input_volume</span><span class="p">()</span><span class="w"> </span><span class="n">failed</span>
+<span class="nl">pulseaudio</span><span class="p">:</span><span class="w"> </span><span class="nl">Reason</span><span class="p">:</span><span class="w"> </span><span class="n">Invalid</span><span class="w"> </span><span class="n">argument</span>
+<span class="nl">pulseaudio</span><span class="p">:</span><span class="w"> </span><span class="n">set_sink_input_mute</span><span class="p">()</span><span class="w"> </span><span class="n">failed</span>
+<span class="nl">pulseaudio</span><span class="p">:</span><span class="w"> </span><span class="nl">Reason</span><span class="p">:</span><span class="w"> </span><span class="n">Invalid</span><span class="w"> </span><span class="n">argument</span>
+<span class="nl">vpb_sic_write</span><span class="p">:</span><span class="w"> </span><span class="n">Bad</span><span class="w"> </span><span class="n">register</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="mh">0x2c</span>
+
+<span class="n">Welcome</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">Buildroot</span>
+<span class="n">buildroot</span><span class="w"> </span><span class="nl">login</span><span class="p">:</span><span class="w"> </span><span class="n">root</span>
+<span class="err">#</span>
+</code></pre></div>
+
+<p>For those of you new to QEMU, here is a rundown of the arguments we used:</p>
+<table class="tb tr tc table table-hover">
+<thead>
+<tr>
+<th>Arg</th>
+<th>Purpose</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-M</code></td>
+<td>Machine</td>
+<td>This defines the qemu machine that we are targeting</td>
+</tr>
+<tr>
+<td><code>-kernel</code></td>
+<td>Kernel Image</td>
+<td>This is our target Linux kernel, QEMU has it's own bootstrap loader that can be used to load a kernel and run it which is very convenient for us!</td>
+</tr>
+<tr>
+<td><code>-dtb</code></td>
+<td>Device Tree Blob</td>
+<td>When the kernel boots, it needs to have some understanding of the underlying hardware, this is what the device tree is for, this is a flat binary file defining various memory mapped peripherals and other system specific features for the target processor!</td>
+</tr>
+<tr>
+<td><code>-hda</code></td>
+<td>Hard Drive</td>
+<td>This is the drive image that buildroot created that we will use for our root filesystem</td>
+</tr>
+<tr>
+<td>```-append</td>
+<td>Append to kernel command line</td>
+<td>These are the additional kernel command line arguments that we will provide to allow are system to boot. In this example we provide it with the path to the rootfs and the console we want it to use on bootup</td>
+</tr>
+<tr>
+<td><code>-nographic</code></td>
+<td>No Graphical Interface</td>
+<td>This keeps an SDL window from being opened and instead redirects serial output to the terminal we launch from</td>
+</tr>
+</tbody>
+</table>
+<h2>Side Note: Building specialized images</h2>
+<p>Remember when we ran <code>make menuconfig</code> earlier? This can be used to determine what kernel version to build. If we try to build a <code>3.14.1</code> kernel what happens? Start by changing the following items in menuconfig</p>
+<ol>
+<li><code>Toolchain</code> -&gt; <code>Custom Kernel headers series</code> -&gt; <code>3.14.1</code></li>
+<li><code>Kernel</code> -&gt; <code>Kernel Version</code> -&gt; <code>3.14.1</code></li>
+</ol>
+<p>After saving your config, run <code>make -j$(nproc)</code></p>
+<p>After a while you will notice multiple error messages involving building the kernel and the host toolchain!</p>
+<p>There are multiple issues here with how we've tried to configure it, mainly that being that we are trying to build an old kernel with a new version of GCC. In the next blog post we will look into how to mitigate some of this and set up a reproducible environment for building older images using Docker!</p>
+<h2>Conclusion</h2>
+<p>Using buildroot we were quickly able to spin up a 4.19 Linux image that could be run in Qemu. This could be useful when performing vulnerability research, reverse engineering or when trying to reproduce other people's work that targets a specific Linux kernel version!</p>
+<p><strong>Blog Updates (as of 2022):</strong></p>
+<ul>
+<li>
+<p>Future blog posts and entries can be found <a href="https://voidstarsec.com/blog">here</a>. </p>
+</li>
+<li>
+<p>If you are interested in learning more about reverse engineering <a href="https://voidstarsec.com/training.html">check out my 5 day hardware hacking course</a>, public and private offerings are available upon request</p>
+</li>
+<li>
+<p>Never want to miss an update or blog post? Check out my <a href="http://eepurl.com/hSl31f">mailing list</a> for a quarterly newsletter about reverse engineering embedded devices</p>
+</li>
+</ul>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3 col-sm-pull-9" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://voidstarsec.com"><i class="fa fa-vss-website-square fa-lg"></i> VSS website</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/voidstarsec"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/voidstarsec"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+    <li class="list-group-item"><a href="https://github.com/voidstarsec"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+
+<!-- Sidebar/Categories -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
+  <ul class="list-group" id="categories">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/misc.html"><i class="fa fa-folder-open fa-lg"></i>misc</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Categories -->
+
+<!-- Sidebar/Tag Cloud -->
+<li class="list-group-item">
+  <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <ul class="list-group " id="tags">
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/blog.html">blog</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Tag Cloud -->
+
+<!-- Sidebar/Links -->
+<li class="list-group-item">
+  <h4><i class="fa fa-external-link-square fa-lg"></i><span class="icon-label">Links</span></h4>
+  <ul class="list-group" id="links">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/" target="_blank">VoidStar Security Website</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.training/" target="_blank">VoidStar Security Training</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.wiki/" target="_blank">Build a Hardware Hacking Lab</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra" target="_blank">Free Ghidra Course</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.wrongbaud.github.io/" target="_blank">Wrongbauds Blog (fun intro hacks)</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Links -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2025 VoidStar Security
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://voidstarsec.com/newblog/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://voidstarsec.com/newblog/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://voidstarsec.com/newblog/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

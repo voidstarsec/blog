@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Writing a GHIDRA Loader: STM32 Edition - VoidStar Security Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://voidstarsec.com/newblog/ghidra-loader.html">
+
+        <meta name="author" content=""Matthew Alt"" />
+        <meta name="keywords" content="training,ghidra" />
+        <meta name="description" content="In my last post, we managed to dump the firmware off of an Xbox One controller by using the Single Wire Debug interface. Now that we have the firmware image as well as the target CPU determined, we can load it into Ghidra and attempt to learn more about how it works. For this post, we are focusing on learning more about how the firmware image works by writing a proper Ghidra loader and reviewing the USB stack." />
+
+        <meta property="og:site_name" content="VoidStar Security Blog" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Writing a GHIDRA Loader: STM32 Edition"/>
+        <meta property="og:url" content="https://voidstarsec.com/newblog/ghidra-loader.html"/>
+        <meta property="og:description" content="In my last post, we managed to dump the firmware off of an Xbox One controller by using the Single Wire Debug interface. Now that we have the firmware image as well as the target CPU determined, we can load it into Ghidra and attempt to learn more about how it works. For this post, we are focusing on learning more about how the firmware image works by writing a proper Ghidra loader and reviewing the USB stack."/>
+        <meta property="article:published_time" content="2020-02-22" />
+            <meta property="article:section" content="Ghidra" />
+            <meta property="article:tag" content="training" />
+            <meta property="article:tag" content="ghidra" />
+            <meta property="article:author" content=""Matthew Alt"" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="https://voidstarsec.com/newblog/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://voidstarsec.com/newblog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://voidstarsec.com/newblog/theme/css/style.css" type="text/css"/>
+
+        <link href="https://voidstarsec.com/newblog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog ATOM Feed"/>
+
+        <link href="https://voidstarsec.com/newblog/feeds/ghidra.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog Ghidra ATOM Feed"/>
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="https://voidstarsec.com/newblog/" class="navbar-brand">
+VoidStar Security Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-sm-push-3">
+            <ol class="breadcrumb">
+                <li><a href="https://voidstarsec.com/newblog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li class="active">Writing a GHIDRA Loader: STM32 Edition</li>
+            </ol>
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://voidstarsec.com/newblog/ghidra-loader.html"
+                       rel="bookmark"
+                       title="Permalink to Writing a GHIDRA Loader: STM32 Edition">
+                        Writing a GHIDRA Loader: STM32 Edition
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2020-02-22T00:00:00-07:00"> Sat 22 February 2020</time>
+    </span>
+
+
+            <span class="label label-default">By</span>
+            <a href="https://voidstarsec.com/newblog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+
+        <span class="label label-default">Category</span>
+        <a href="https://voidstarsec.com/newblog/category/ghidra.html">Ghidra</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+        /
+	<a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <h1>Writing a GHIDRA Loader: STM32 Edition</h1>
+<h2>Overview</h2>
+<p>In my <a href="https://wrongbaud.github.io/posts/stm-xbox-jtag/">last post</a>, we managed to dump the firmware off of an Xbox One controller by using the Single Wire Debug interface. Now that we have the firmware image as well as the target CPU determined, we can load it into Ghidra and attempt to learn more about how it works. For this post, we are focusing on learning more about how the firmware image works by writing a proper Ghidra loader and reviewing the USB stack. </p>
+<h4>Required Reading / Materials</h4>
+<p>If you've not read my <a href="https://wrongbaud.github.io/posts/stm-xbox-jtag/">last post</a> on SWD and OpenOCD, you want to start there; you also need the <a href="https://www.st.com/content/ccc/resource/technical/document/reference_manual/51/f7/f3/06/cd/b6/46/ec/CD00225773.pdf/files/CD00225773.pdf/jcr:content/translations/en.CD00225773.pdf">datasheet</a> for the target CPU family.</p>
+<h2>What is Ghidra?</h2>
+<p><a href="https://ghidra-sre.org/">Ghidra</a> is a SRE (software reverse engineering) suite of tools developed by NSA. If you are familiar with IDA-Pro, r2, or Binary Ninja, you are already likely familiar with Ghidra. We can use any of the tools mentioned above to reverse engineer this firmware image. Still, I am choosing Ghidra as it is open source (not unlike r2) and has a <a href="https://thecyberwire.com/stories/Mike-Bell-Extending-Ghidra-from-Script-to-Plugins-and-Beyond.html">relatively robust and well-documented API for scripting and analyzing binaries</a>. Ghidra is also growing with contributions from the community (most notably for me was the addition of the Infineon Tricore architecture to the list of supported CPUs) I have covered utilizing ghidra in <a href="https://wrongbaud.github.io/posts/hightec-tricore-linux-ghidra/">previous posts</a> as well and it is quickly becoming my reverse engineering tool of choice.</p>
+<h2>Loading the Controller Firmware in Ghidra</h2>
+<p>First off, if you don't have Ghidra, you can always grab the latest version from <a href="https://ghidra-sre.org/">here</a> or <a href="https://github.com/dukebarman/ghidra-builder">build it yourself</a>, for this post I am using <code>9.1.2_PUBLIC</code> release from the official site. We'll start by opening the CodeBrowser window by clicking on the green dragon button.</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Ghidra Broswer" src="https://wrongbaud.github.io/assets/img/ghidra-loader/ghdra-project-window.png"></p>
+<p>After selecting this, you'll see the following window open up; this is the CodeBrowser</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Code Browser" src="https://wrongbaud.github.io/assets/img/ghidra-loader/codebrowser.png"></p>
+<p>Next, we import the dumped firmware image by pressing <code>I</code> or going to <code>File</code> -&gt; <code>Import File</code> which causes the following window to appear:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Import" src="https://wrongbaud.github.io/assets/img/ghidra-loader/import.png"></p>
+<p>For language,  select Cortex (Little Endian), which is what is in the <a href="https://www.st.com/content/ccc/resource/technical/document/reference_manual/51/f7/f3/06/cd/b6/46/ec/CD00225773.pdf/files/CD00225773.pdf/jcr:content/translations/en.CD00225773.pdf">datasheet</a> for this chip. Under options, we set the load address to <code>0x8000000</code>, which is the appropriate load address for these CPUs according to the datasheet.</p>
+<p>Since this is a rather small firmware image, Ghidra's auto-analysis handles a <em>lot</em> for us. For example, the USB descriptor strings are assigned XREFs from the start. For those that are unfamiliar, n <code>XREF</code> (cross-reference) is generated when the disassembler detects an address being used by an instruction.</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="XREFs" src="https://wrongbaud.github.io/assets/img/ghidra-loader/xrefs.png"></p>
+<p>While this is useful, there are still regions of memory that we haven't yet defined in Ghidra. These are noted by the red values.</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="XREFs" src="https://wrongbaud.github.io/assets/img/ghidra-loader/undefined-regions.png"></p>
+<p>So what are these exactly? These are regions in memory that Ghidra can detect are being used, but are not defined in our Ghidra database. Remember that we are not reverse engineering a standard executable, which would typically reside in virtual memory whose expected ranges are defined in the header (ELF, PE.). This firmware image interacts with various hardware peripherals as memory-mapped IO. In order to make reversing this firmware image a little easier, we can define the memory ranges in Ghidra. This can be done manually, via a script, or through a loader. Since I often run into STM32 variants through my reverse engineering projects, I think it is worth the time to write a simple loader for the STM32F2 series and learn more about extending Ghidra.</p>
+<h4>What is a Ghidra Loader?</h4>
+<p>A Ghidra loader is an extension that makes the loading of a binary file more streamlined. For example, if the binary file has a header defining various memory regions and features,  the loader can read those features and add the necessary sections to your Ghidra database to assist with the reverse engineering process. For our target, the loader sets up the appropriate memory-mapped peripherals and labeling registers of interest to streamline the process of reverse-engineering the USB stack on this controller.</p>
+<h2>Writing a Loader</h2>
+<p>Ghidra has an extension for Eclipse that makes debugging Loaders and scripts reasonably simple, start by downloading and installing the latest version of Eclipse from <a href="https://www.eclipse.org/downloads/">here</a>. Once you have Eclipse installed and set up, the Ghidra development extension can be installed by following the instructions located at <code>ghidra_9.1.2_PUBLIC/Extensions/Eclipse/GhidraDev/GhidraDev_README.html</code>. With this installed, open Eclipse and go to <code>GhidraDev</code> -&gt; <code>New</code> -&gt; <code>Ghidra Module Project</code> provide a project name and select <code>Loader</code>.</p>
+<p>With our loader, we want to perform the following:</p>
+<ol>
+<li>Create and label memory ranges for memory-mapped peripherals</li>
+<li>Find and label entry point and IVT</li>
+<li>Label Locations of Interest</li>
+</ol>
+<h4>Ghidra Loader Components</h4>
+<p>When starting with the baseline project, we are given the following function definitions:</p>
+<ul>
+<li><code>getName</code></li>
+</ul>
+<p>This one is fairly self-explanatory, we need not get into it.</p>
+<ul>
+<li><code>findSupportedLoadSpecs</code></li>
+</ul>
+<p>This function is used to determine if your loader can load the binary or not. In this function, you would check the header for your target if it has a known format. For our case with this flat firmware image, there isn't much we can do here. We do have to set the Language/Compiler pair here, however, which is done with the following line:</p>
+<div class="highlight"><pre><span></span><code><span class="n">loadSpecs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">new</span><span class="w"> </span><span class="n">LoadSpec</span><span class="p">(</span><span class="n">this</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">new</span><span class="w"> </span><span class="n">LanguageCompilerSpecPair</span><span class="p">(</span><span class="s2">&quot;ARM:LE:32:Cortex&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;default&quot;</span><span class="p">),</span><span class="w"> </span><span class="bp">true</span><span class="p">));</span>
+</code></pre></div>
+
+<p>Here we are telling Ghidra to use the ARM Cortex LE analyzer.</p>
+<ul>
+<li><code>load</code></li>
+</ul>
+<p>Here we load the actual bytes into the program. In this function we perform the bulk of our <em>loading</em>, we set up our memory map, create any labels, and map the binary data from the <code>ByteProvider</code> object into memory via its <code>InputStream</code></p>
+<ul>
+<li><code>getDefaultOptions</code></li>
+</ul>
+<p>This function allows you to add custom options to your loader if needed. In our case, we do not need to add any additional options.</p>
+<ul>
+<li><code>validateOptions</code></li>
+</ul>
+<p>Here you can check the custom options to ensure that they make sense, again we aren't using this for our loader.</p>
+<h4>Step 1: Create the Memory Map</h4>
+<p>The first thing we want to do with this loader is to generate an appropriate memory map. To do this, we consult the diagram on page 51 of the datasheet. Given that there are so many, we can create a class for each region, as seen below:</p>
+<div class="highlight"><pre><span></span><code><span class="w">        </span><span class="k">private</span><span class="w"> </span><span class="nx">static</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nx">STM32MemRegion</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nx">String</span><span class="w"> </span><span class="nx">name</span><span class="p">;</span>
+<span class="w">                </span><span class="nx">int</span><span class="w"> </span><span class="kd">addr</span><span class="p">;</span>
+<span class="w">                </span><span class="nx">int</span><span class="w"> </span><span class="nx">size</span><span class="p">;</span>
+<span class="w">                </span><span class="nx">boolean</span><span class="w"> </span><span class="nx">read</span><span class="p">;</span>
+<span class="w">                </span><span class="nx">boolean</span><span class="w"> </span><span class="nx">write</span><span class="p">;</span>
+<span class="w">                </span><span class="nx">boolean</span><span class="w"> </span><span class="nx">execute</span><span class="p">;</span>
+<span class="w">                </span><span class="k">private</span><span class="w"> </span><span class="nx">STM32MemRegion</span><span class="p">(</span><span class="nx">String</span><span class="w"> </span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="kd">addr</span><span class="p">,</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="nx">size</span><span class="p">,</span><span class="w"> </span><span class="nx">boolean</span><span class="w"> </span><span class="nx">read</span><span class="p">,</span><span class="w"> </span><span class="nx">boolean</span><span class="w"> </span><span class="nx">write</span><span class="p">,</span><span class="w"> </span><span class="nx">boolean</span><span class="w"> </span><span class="nx">execute</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="nx">this</span><span class="p">.</span><span class="nx">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">name</span><span class="p">;</span>
+<span class="w">                        </span><span class="nx">this</span><span class="p">.</span><span class="kd">addr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kd">addr</span><span class="p">;</span>
+<span class="w">                        </span><span class="nx">this</span><span class="p">.</span><span class="nx">size</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">size</span><span class="p">;</span>
+<span class="w">                        </span><span class="nx">this</span><span class="p">.</span><span class="nx">read</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">read</span><span class="p">;</span>
+<span class="w">                        </span><span class="nx">this</span><span class="p">.</span><span class="nx">write</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">write</span><span class="p">;</span>
+<span class="w">                        </span><span class="nx">this</span><span class="p">.</span><span class="nx">execute</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">execute</span><span class="p">;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+</code></pre></div>
+
+<p>This way, a region can be defined as shown below:</p>
+<div class="highlight"><pre><span></span><code>new STM32MemRegion(&quot;TIM2&quot;,0x40000000,0x3FF,true,true,false)
+</code></pre></div>
+
+<p>With this defined, we can create an array memory regions, and then use the following Ghidra API call to create the necessary memory regions in our database:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">createUninitializedBlock</span><span class="p">(</span><span class="nx">memregion</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="kn">api</span><span class="p">.</span><span class="nx">toAddr</span><span class="p">(</span><span class="nx">memregion</span><span class="p">.</span><span class="kd">addr</span><span class="p">),</span><span class="w"> </span><span class="nx">memregion</span><span class="p">.</span><span class="nx">size</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">);</span>
+</code></pre></div>
+
+<p>The full loop to create these regions is below:</p>
+<div class="highlight"><pre><span></span><code><span class="w">        </span><span class="nx">FlatProgramAPI</span><span class="w"> </span><span class="kn">api</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">new</span><span class="w"> </span><span class="nx">FlatProgramAPI</span><span class="p">(</span><span class="nx">program</span><span class="p">,</span><span class="nx">monitor</span><span class="p">);</span>
+<span class="w">                </span><span class="nx">InputStream</span><span class="w"> </span><span class="nx">inStream</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">provider</span><span class="p">.</span><span class="nx">getInputStream</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">                </span><span class="nx">Memory</span><span class="w"> </span><span class="nx">mem</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">program</span><span class="p">.</span><span class="nx">getMemory</span><span class="p">();</span>
+<span class="w">                </span><span class="c1">// TODO: Load the bytes from &#39;provider&#39; into the &#39;program&#39;.</span>
+<span class="w">                </span><span class="c1">// This is where we actually &quot;Load&quot; the program into ghidra</span>
+
+<span class="w">                </span><span class="c1">// First we loop through our memory map that we created:</span>
+<span class="w">                </span><span class="k">for</span><span class="p">(</span><span class="nx">STM32MemRegion</span><span class="w"> </span><span class="nx">memregion</span><span class="p">:</span><span class="w"> </span><span class="nx">STM32MEM</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="nx">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                                </span><span class="nx">mem</span><span class="p">.</span><span class="nx">createUninitializedBlock</span><span class="p">(</span><span class="nx">memregion</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="kn">api</span><span class="p">.</span><span class="nx">toAddr</span><span class="p">(</span><span class="nx">memregion</span><span class="p">.</span><span class="kd">addr</span><span class="p">),</span><span class="w"> </span><span class="nx">memregion</span><span class="p">.</span><span class="nx">size</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">);</span>
+<span class="w">                        </span><span class="p">}</span><span class="w"> </span><span class="nx">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">LockException</span><span class="w"> </span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                                </span><span class="c1">// TODO Auto-generated catch block</span>
+<span class="w">                                </span><span class="nx">e</span><span class="p">.</span><span class="nx">printStackTrace</span><span class="p">();</span>
+<span class="w">                        </span><span class="p">}</span><span class="w"> </span><span class="nx">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">DuplicateNameException</span><span class="w"> </span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                                </span><span class="c1">// TODO Auto-generated catch block</span>
+<span class="w">                                </span><span class="nx">e</span><span class="p">.</span><span class="nx">printStackTrace</span><span class="p">();</span>
+<span class="w">                        </span><span class="p">}</span><span class="w"> </span><span class="nx">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">MemoryConflictException</span><span class="w"> </span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                                </span><span class="c1">// TODO Auto-generated catch block</span>
+<span class="w">                                </span><span class="nx">e</span><span class="p">.</span><span class="nx">printStackTrace</span><span class="p">();</span>
+<span class="w">                        </span><span class="p">}</span><span class="w"> </span><span class="nx">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">AddressOverflowException</span><span class="w"> </span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                                </span><span class="c1">// TODO Auto-generated catch block</span>
+<span class="w">                                </span><span class="nx">e</span><span class="p">.</span><span class="nx">printStackTrace</span><span class="p">();</span>
+<span class="w">                        </span><span class="p">}</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">                </span><span class="nx">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="nx">mem</span><span class="p">.</span><span class="nx">createInitializedBlock</span><span class="p">(</span><span class="s">&quot;Main Memory&quot;</span><span class="p">,</span><span class="w"> </span><span class="kn">api</span><span class="p">.</span><span class="nx">toAddr</span><span class="p">(</span><span class="mh">0x8000000</span><span class="p">),</span><span class="w"> </span><span class="nx">inStream</span><span class="p">,</span><span class="w"> </span><span class="mh">0xFFFFF</span><span class="p">,</span><span class="w"> </span><span class="nx">monitor</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">);</span>
+<span class="w">                </span><span class="p">}</span><span class="w"> </span><span class="nx">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">LockException</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">MemoryConflictException</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">AddressOverflowException</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">CancelledException</span>
+<span class="w">                                </span><span class="o">|</span><span class="w"> </span><span class="nx">DuplicateNameException</span><span class="w"> </span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="c1">// TODO Auto-generated catch block</span>
+<span class="w">                        </span><span class="nx">e</span><span class="p">.</span><span class="nx">printStackTrace</span><span class="p">();</span>
+<span class="w">                </span><span class="p">}</span>
+</code></pre></div>
+
+<p>And with this, we have mapped out all of the memory-mapped peripherals!</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Memory Maps" src="https://wrongbaud.github.io/assets/img/ghidra-loader/mem-regions.png"></p>
+<p><strong>Disclaimer:</strong> If there is a better way to do this with the Ghidra API, please let me know or even better submit a PR. One of my favorite things about this blog is getting constructive feedback and recommendations from people.</p>
+<h4>Step 2: Create and Label Entry Point / IVT</h4>
+<p>When looking at the datasheet, we can see that the processor maps a memory region to the start address (<code>0x00000000</code>) based on the boot mode. From here, the first entry is the start of the stack address, and the next entry is the reset vector. Following these entries should also be the interrupt vector table.</p>
+<p>With our image, it appears to be mapping the flash region <code>0x8000000</code> at <code>0</code> on boot, meaning that our first DWORD will be the stack size, and the next will be the start address. We can read the data for both of these entries and create relevant labels with the code snippet below:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Top of stack is first value in memory, see page 59 of datasheet</span>
+<span class="c1">// Make pointer, label it as stack start</span>
+<span class="nb">int</span><span class="w"> </span><span class="n">stackAddr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">mem</span><span class="p">.</span><span class="n">getInt</span><span class="p">(</span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="mi">0</span><span class="n">x8000000</span><span class="p">));</span>
+<span class="n">Data</span><span class="w"> </span><span class="n">stackAddrData</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">api</span><span class="p">.</span><span class="n">createDWord</span><span class="p">(</span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="mi">0</span><span class="n">x8000000</span><span class="p">));</span>
+<span class="n">api</span><span class="p">.</span><span class="n">createLabel</span><span class="p">(</span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="n">stackAddr</span><span class="p">),</span><span class="s">&quot;_STACK_BEGIN&quot;</span><span class="p">,</span><span class="n">true</span><span class="p">);</span>
+<span class="n">api</span><span class="p">.</span><span class="n">createMemoryReference</span><span class="p">(</span><span class="n">stackAddrData</span><span class="p">,</span><span class="w"> </span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="n">stackAddr</span><span class="p">),</span><span class="w"> </span><span class="n">ghidra</span><span class="p">.</span><span class="n">program</span><span class="p">.</span><span class="n">model</span><span class="p">.</span><span class="n">symbol</span><span class="p">.</span><span class="n">RefType</span><span class="p">.</span><span class="n">DATA</span><span class="p">);</span>
+
+<span class="c1">// Mark the entry point of the binary, also referenced in the datasheet on page 59</span>
+<span class="nb">int</span><span class="w"> </span><span class="n">entryPoint</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">mem</span><span class="p">.</span><span class="n">getInt</span><span class="p">(</span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="mi">0</span><span class="n">x8000004</span><span class="p">));</span>
+<span class="n">Data</span><span class="w"> </span><span class="n">entryPointData</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">api</span><span class="p">.</span><span class="n">createDWord</span><span class="p">(</span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="mi">0</span><span class="n">x8000004</span><span class="p">));</span>
+<span class="n">api</span><span class="p">.</span><span class="n">createDWord</span><span class="p">(</span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="mi">0</span><span class="n">x8000004</span><span class="p">));</span>
+<span class="n">api</span><span class="p">.</span><span class="n">createLabel</span><span class="p">(</span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="n">entryPoint</span><span class="p">),</span><span class="s">&quot;_ENTRY_POINT&quot;</span><span class="p">,</span><span class="n">true</span><span class="p">);</span>
+<span class="n">api</span><span class="p">.</span><span class="n">createMemoryReference</span><span class="p">(</span><span class="n">entryPointData</span><span class="p">,</span><span class="w"> </span><span class="n">api</span><span class="p">.</span><span class="n">toAddr</span><span class="p">(</span><span class="n">entryPoint</span><span class="p">),</span><span class="w"> </span><span class="n">ghidra</span><span class="p">.</span><span class="n">program</span><span class="p">.</span><span class="n">model</span><span class="p">.</span><span class="n">symbol</span><span class="p">.</span><span class="n">RefType</span><span class="p">.</span><span class="n">DATA</span><span class="p">);</span>
+</code></pre></div>
+
+<p>So with this, we can read the initial entries and label them properly with the values from the datasheet on page 59. There are quite a few entries here, so we do the same thing with the IVT that we did with the memory regions, starting with the following class:</p>
+<div class="highlight"><pre><span></span><code><span class="w">        </span><span class="k">private</span><span class="w"> </span><span class="nx">static</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nx">STM32InterruptVector</span><span class="p">{</span>
+<span class="w">                </span><span class="nx">String</span><span class="w"> </span><span class="nx">name</span><span class="p">;</span>
+<span class="w">                </span><span class="nx">int</span><span class="w"> </span><span class="kd">addr</span><span class="p">;</span>
+<span class="w">                </span><span class="k">private</span><span class="w"> </span><span class="nx">STM32InterruptVector</span><span class="p">(</span><span class="nx">String</span><span class="w"> </span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="kd">addr</span><span class="p">)</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                        </span><span class="nx">this</span><span class="p">.</span><span class="nx">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">name</span><span class="p">;</span>
+<span class="w">                        </span><span class="nx">this</span><span class="p">.</span><span class="kd">addr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kd">addr</span><span class="p">;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+</code></pre></div>
+
+<p>So with this, we can create another list of IVT entries and loop over them during the loading process. The loop can be seen below:</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="nx">STM32InterruptVector</span><span class="w"> </span><span class="nx">vector</span><span class="p">:</span><span class="w"> </span><span class="nx">STM32IVT</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">int</span><span class="w"> </span><span class="nx">ptrVal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">mem</span><span class="p">.</span><span class="nx">getInt</span><span class="p">(</span><span class="kn">api</span><span class="p">.</span><span class="nx">toAddr</span><span class="p">(</span><span class="mh">0x8000000</span><span class="o">+</span><span class="nx">vector</span><span class="p">.</span><span class="kd">addr</span><span class="p">));</span>
+<span class="w">        </span><span class="nx">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">Data</span><span class="w"> </span><span class="nx">ptrData</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kn">api</span><span class="p">.</span><span class="nx">createDWord</span><span class="p">(</span><span class="kn">api</span><span class="p">.</span><span class="nx">toAddr</span><span class="p">(</span><span class="mh">0x8000000</span><span class="o">+</span><span class="nx">vector</span><span class="p">.</span><span class="kd">addr</span><span class="p">));</span>
+<span class="w">        </span><span class="kn">api</span><span class="p">.</span><span class="nx">createDWord</span><span class="p">(</span><span class="kn">api</span><span class="p">.</span><span class="nx">toAddr</span><span class="p">(</span><span class="mh">0x8000000</span><span class="o">+</span><span class="nx">vector</span><span class="p">.</span><span class="kd">addr</span><span class="p">));</span>
+<span class="w">        </span><span class="kn">api</span><span class="p">.</span><span class="nx">createLabel</span><span class="p">(</span><span class="kn">api</span><span class="p">.</span><span class="nx">toAddr</span><span class="p">(</span><span class="mh">0x8000000</span><span class="o">+</span><span class="nx">vector</span><span class="p">.</span><span class="kd">addr</span><span class="p">),</span><span class="nx">vector</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span><span class="kc">true</span><span class="p">);</span>
+<span class="w">        </span><span class="kn">api</span><span class="p">.</span><span class="nx">createMemoryReference</span><span class="p">(</span><span class="nx">ptrData</span><span class="p">,</span><span class="w"> </span><span class="kn">api</span><span class="p">.</span><span class="nx">toAddr</span><span class="p">(</span><span class="nx">ptrVal</span><span class="p">),</span><span class="w"> </span><span class="nx">ghidra</span><span class="p">.</span><span class="nx">program</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">symbol</span><span class="p">.</span><span class="nx">RefType</span><span class="p">.</span><span class="nx">DATA</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="nx">catch</span><span class="p">(</span><span class="nx">ghidra</span><span class="p">.</span><span class="nx">util</span><span class="p">.</span><span class="nx">exception</span><span class="p">.</span><span class="nx">InvalidInputException</span><span class="w"> </span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// This is ugly, need to fix</span>
+<span class="w">            </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span><span class="w"> </span><span class="nx">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">Exception</span><span class="w"> </span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// TODO Auto-generated catch block</span>
+<span class="w">    </span><span class="nx">e</span><span class="p">.</span><span class="nx">printStackTrace</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>After adding this, the start of our image now looks like this in Ghidra:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="Vectors" src="https://wrongbaud.github.io/assets/img/ghidra-loader/vectors.png"></p>
+<h4>Step 3: Label Locations of Interest</h4>
+<p>So we want to outline more of the USB functionality in this firmware image,  to make things a little more readable, we can label the USB configuration registers. To do this, we do the same thing that we did with the other regions/registers.</p>
+<p>To create these, we use a similar technique to the other regions that we identified, except for this time, we only create labels. You can look at the <a href="https://github.com/wrongbaud/ghidra-stm32">github project for specific details</a>, but the addition of the control registers cleans up the assembly quite nicely.</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="USB Annotation" src="https://wrongbaud.github.io/assets/img/ghidra-loader/usbregs.png"></p>
+<h4>Closing Thoughts on Loader Development</h4>
+<p>Writing this Ghidra loader was a beneficial exercise for me because I often end up looking at strange embedded firmware images similar to this one.</p>
+<p>If you are wondering why I created classes for each type of region or feature that we added to the ghidra database, I can explain. I end up manually generating memory maps fairly frequently and plan on building a generic loader that loads regions, register labels, and other useful things from a JSON file on startup. I spent far too much time manually entering these regions and creating labels for various esoteric CPUs and wanted to use the STM32 as a learning ground for what it would take to write a loader. After writing this preliminary loader, I think it is feasible to write a generic loader that loads the various memory segments, register labels and other things from a JSON file, but that is for another night!</p>
+<h2>Analysis</h2>
+<p>With the new loader, interesting information falls out of subroutines that would otherwise take more time to reverse engineer, take the following example:</p>
+<p>Before loader:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="USB Annotation" src="https://wrongbaud.github.io/assets/img/ghidra-loader/pre-loader.png"></p>
+<p>At a glance, it's hard to determine what this subroutine might be doing. It is accessing memory regions that are not defined, and it's hard to make heads or tails of the function's purpose. But after we run it through our loader:</p>
+<p><img class="center" height="70%" width="70%" style="border: 4px solid black;" alt="USB Annotation" src="https://wrongbaud.github.io/assets/img/ghidra-loader/post-loader.png"></p>
+<p>Using the memory regions and the registers of interest, we're able to see that this function is deciding which USB speed to use as well as setting up the central control registers. Is it perfect? No - of course not, but it does help streamline the process in some way.</p>
+<p>There are also far more xrefs generated when using the loader, pointing to things like the various USB descriptors that the device uses during enumeration.</p>
+<h2>Conclusion</h2>
+<p>With this post, we put together a simple Ghidra loader for the STM32F2 series microcontroller. While it is certainly not perfect, it was an excellent learning experience, and I hope to get some suggestions/corrections regarding how I implemented things. The loader is on my GH page, and I plan to update it as needed and start working on a more generic loader now that I've learned some of the basics. As always if you have any questions or comments, please feel free to reach out to me on <a href="https://twitter.com/wrongbaud">twitter</a></p>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3 col-sm-pull-9" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://voidstarsec.com"><i class="fa fa-vss-website-square fa-lg"></i> VSS website</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/voidstarsec"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/voidstarsec"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+    <li class="list-group-item"><a href="https://github.com/voidstarsec"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+
+<!-- Sidebar/Categories -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
+  <ul class="list-group" id="categories">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/misc.html"><i class="fa fa-folder-open fa-lg"></i>misc</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Categories -->
+
+<!-- Sidebar/Tag Cloud -->
+<li class="list-group-item">
+  <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <ul class="list-group " id="tags">
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/newblog/tag/blog.html">blog</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Tag Cloud -->
+
+<!-- Sidebar/Links -->
+<li class="list-group-item">
+  <h4><i class="fa fa-external-link-square fa-lg"></i><span class="icon-label">Links</span></h4>
+  <ul class="list-group" id="links">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/" target="_blank">VoidStar Security Website</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.training/" target="_blank">VoidStar Security Training</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.wiki/" target="_blank">Build a Hardware Hacking Lab</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra" target="_blank">Free Ghidra Course</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.wrongbaud.github.io/" target="_blank">Wrongbauds Blog (fun intro hacks)</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Links -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2025 VoidStar Security
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://voidstarsec.com/newblog/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://voidstarsec.com/newblog/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://voidstarsec.com/newblog/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>

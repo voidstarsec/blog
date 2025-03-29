@@ -106,7 +106,8 @@ VoidStar Security Blog            </a>
     
 </footer><!-- /.post-info -->                    </div>
                 </div>
-                <h1>Overview</h1>
+                <h1>Replicant: Reproducing a Fault Injection Attack on the Trezor One</h1>
+<h2>Overview</h2>
 <p>There has been a lot of public work in the last four or five years surrounding the security of cryptocurrency wallets. Much of this research has been in the realm of fault injection, which is the art/science of disrupting an embedded system just enough that it will cause undefined behavior to occur. The goal is to find a fault that allows one to modify the device's behavior to grant an attacker escalated levels of access. Examples of this might include skipping instructions, corrupting memory read operations, etc. </p>
 <h1>Goals</h1>
 <p>This post aims to provide a road map and example of how to replicate a fault injection attack and the hurdles and shortcomings that can occur when attempting to do so. Furthermore, by outlining the process of replicating one of these attacks, we hope that readers come away from this post more confident in generating their own fault injection attacks or replicating pre-existing work.</p>
@@ -536,6 +537,9 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
       <a href="https://voidstarsec.com/newblog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
     </li>
     <li class="list-group-item">
+      <a href="https://voidstarsec.com/newblog/category/misc.html"><i class="fa fa-folder-open fa-lg"></i>misc</a>
+    </li>
+    <li class="list-group-item">
       <a href="https://voidstarsec.com/newblog/category/pifex.html"><i class="fa fa-folder-open fa-lg"></i>Pifex</a>
     </li>
     <li class="list-group-item">
@@ -549,35 +553,35 @@ pi@voidstar:~/glitch/replicant<span class="w"> </span>$<span class="w"> </span>h
 <li class="list-group-item">
   <a href="https://voidstarsec.com/newblog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
-    <li class="list-group-item tag-0">
+    <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/ghidra.html">ghidra</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/newblog/tag/tools.html">tools</a>
     </li>
-    <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/newblog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/uboot.html">uboot</a>
-    </li>
-    <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/blog.html">blog</a>
-    </li>
-    <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/newblog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/newblog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/fault-injection.html">fault-injection</a>
+      <a href="https://voidstarsec.com/newblog/tag/spi.html">spi</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/newblog/tag/training.html">training</a>
+      <a href="https://voidstarsec.com/newblog/tag/blog.html">blog</a>
     </li>
   </ul>
 </li>
