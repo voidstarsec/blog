@@ -108,11 +108,11 @@ VoidStar Security Blog            </a>
                 </div>
                 <h1>Writing a GHIDRA Loader: STM32 Edition</h1>
 <h2>Overview</h2>
-<p>In my <a href="https://voidstarsec.com/newblog/xbox-swd/">last post</a>, we managed to dump the firmware off of an Xbox One controller by using the Single Wire Debug interface. Now that we have the firmware image as well as the target CPU determined, we can load it into Ghidra and attempt to learn more about how it works. For this post, we are focusing on learning more about how the firmware image works by writing a proper Ghidra loader and reviewing the USB stack. </p>
+<p>In my <a href="https://voidstarsec.com/blog/xbox-swd/">last post</a>, we managed to dump the firmware off of an Xbox One controller by using the Single Wire Debug interface. Now that we have the firmware image as well as the target CPU determined, we can load it into Ghidra and attempt to learn more about how it works. For this post, we are focusing on learning more about how the firmware image works by writing a proper Ghidra loader and reviewing the USB stack. </p>
 <h4>Required Reading / Materials</h4>
-<p>If you've not read my <a href="https://voidstarsec.com/newblog/xbox-swd/">last post</a> on SWD and OpenOCD, you want to start there; you also need the <a href="https://www.st.com/content/ccc/resource/technical/document/reference_manual/51/f7/f3/06/cd/b6/46/ec/CD00225773.pdf/files/CD00225773.pdf/jcr:content/translations/en.CD00225773.pdf">datasheet</a> for the target CPU family.</p>
+<p>If you've not read my <a href="https://voidstarsec.com/blog/xbox-swd/">last post</a> on SWD and OpenOCD, you want to start there; you also need the <a href="https://www.st.com/content/ccc/resource/technical/document/reference_manual/51/f7/f3/06/cd/b6/46/ec/CD00225773.pdf/files/CD00225773.pdf/jcr:content/translations/en.CD00225773.pdf">datasheet</a> for the target CPU family.</p>
 <h2>What is Ghidra?</h2>
-<p><a href="https://ghidra-sre.org/">Ghidra</a> is a SRE (software reverse engineering) suite of tools developed by NSA. If you are familiar with IDA-Pro, r2, or Binary Ninja, you are already likely familiar with Ghidra. We can use any of the tools mentioned above to reverse engineer this firmware image. Still, I am choosing Ghidra as it is open source (not unlike r2) and has a <a href="https://thecyberwire.com/stories/Mike-Bell-Extending-Ghidra-from-Script-to-Plugins-and-Beyond.html">relatively robust and well-documented API for scripting and analyzing binaries</a>. Ghidra is also growing with contributions from the community (most notably for me was the addition of the Infineon Tricore architecture to the list of supported CPUs) I have covered utilizing ghidra in <a href="https://voidstarsec.com/newblog/tricore-linux">previous posts</a> as well and it is quickly becoming my reverse engineering tool of choice.</p>
+<p><a href="https://ghidra-sre.org/">Ghidra</a> is a SRE (software reverse engineering) suite of tools developed by NSA. If you are familiar with IDA-Pro, r2, or Binary Ninja, you are already likely familiar with Ghidra. We can use any of the tools mentioned above to reverse engineer this firmware image. Still, I am choosing Ghidra as it is open source (not unlike r2) and has a <a href="https://thecyberwire.com/stories/Mike-Bell-Extending-Ghidra-from-Script-to-Plugins-and-Beyond.html">relatively robust and well-documented API for scripting and analyzing binaries</a>. Ghidra is also growing with contributions from the community (most notably for me was the addition of the Infineon Tricore architecture to the list of supported CPUs) I have covered utilizing ghidra in <a href="https://voidstarsec.com/blog/tricore-linux">previous posts</a> as well and it is quickly becoming my reverse engineering tool of choice.</p>
 <h2>Loading the Controller Firmware in Ghidra</h2>
 <p>First off, if you don't have Ghidra, you can always grab the latest version from <a href="https://ghidra-sre.org/">here</a> or <a href="https://github.com/dukebarman/ghidra-builder">build it yourself</a>, for this post I am using <code>9.1.2_PUBLIC</code> release from the official site. We'll start by opening the CodeBrowser window by clicking on the green dragon button.</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Ghidra Broswer" src="https://wrongbaud.github.io/assets/img/ghidra-loader/ghdra-project-window.png"></p>
@@ -346,10 +346,10 @@ VoidStar Security Blog            </a>
   <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
@@ -358,22 +358,22 @@ VoidStar Security Blog            </a>
       <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
+      <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
+      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/blog/tag/training.html">training</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
+      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
     </li>
   </ul>
 </li>
