@@ -7,14 +7,14 @@
 &lt;/ul&gt;
 &lt;p&gt;In our &lt;a href="https://voidstarsec.com/blog/brushing-up-part-2"&gt;last post&lt;/a&gt;, we began a hardware tear-down of an electronic toothbrush from AliExpress. We extracted the SPI flash, identified an active UART, and re-programmed the SPI flash to display custom images on the screen. &lt;/p&gt;
 &lt;p&gt;Unfortunately, that did not result in firmware extraction, so we need to look for other ways to extract the firmware from this device. In our previous hardware tear-down, we mentioned the presence of SWD test pads; these can be seen in the image below:&lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/swd-pads.jpg"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/swd-pads.jpg"&gt;&lt;/p&gt;
 &lt;p&gt;If you're a long-time reader of this blog or my &lt;a href="https://wrongbaud.github.io"&gt;other blog&lt;/a&gt;, this might look familiar to you. These two signals are used for something called Serial Wire Debug, or SWD, as we'll refer to it throughout the rest of this writeup. SWD was developed as an alternative to &lt;a href="https://voidstarsec.com/blog/jtag-pifex"&gt;JTAG&lt;/a&gt; and also requires half as many pins. The next question is—how do we interface with this?&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; For an introduction to SWD and how to approach it as a reverse engineer, check out our older blog post &lt;a href="https://voidstarsec.com/blog/xbox-swd"&gt;here&lt;/a&gt;&lt;/p&gt;
 &lt;h3&gt;SWD and OpenOCD&lt;/h3&gt;
 &lt;p&gt;Given that we have a part number for the MCU used on this target, we can refer to the datasheet to see if this chip meets the SWD specification. If this is the case, we can try to use OpenOCD to connect to this target and read out the internal flash memory. &lt;/p&gt;
 &lt;p&gt;If we check page 18 of the &lt;a href="https://www.mcu.com.cn/uploads/img1/tupian//%E6%89%8B%E5%86%8C%E4%B8%8B%E8%BD%BD/BAT32G135%20User%20Manual_V1.0.5.pdf"&gt;user manual&lt;/a&gt; we see the following:&lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250222192454.png"&gt;
-!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250222192545.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250222192454.png"&gt;
+&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250222192545.png"&gt;&lt;/p&gt;
 &lt;p&gt;Based on this, we will assume that this confirms the ARM CoreSight specification and can continue trying to enumerate this device. If you're new to this space or have only ever worked with hardware-level debug interfaces as a developer, this might seem like a daunting task. Luckily for us, the open-source tool &lt;a href="https://openocd.org/"&gt;OpenOCD&lt;/a&gt; can be used to probe this interface, and we can run it on our Raspberry Pi. In this scenario we will use the Raspberry Pi as our debug adapter, and utilize the GPIO pins to communicate with the SWD interface on the micrcocontroller. &lt;/p&gt;
 &lt;p&gt;In the next section, we will review the basics of OpenOCD config files and how to write a basic template for an ARM Cortex target that uses SWD&lt;/p&gt;
 &lt;h3&gt;OpenOCD Config Files&lt;/h3&gt;
@@ -109,14 +109,14 @@ reset_config srst_only srst_push_pull
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Success! We have a SWD connection. SWD (when adherent to the CoreSight specification) allows us to read memory, and given that the flash memory is mapped at a specific address, we should be able to read out the flash memory. We know from the datasheet that the internal flash is mapped at memory address &lt;code&gt;0x0&lt;/code&gt; and is 64kb in size. We can confirm this by looking at memory at address 0, as shown below: &lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227195454.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227195454.png"&gt;&lt;/p&gt;
 &lt;p&gt;As you can see in the image above, the structure of the flash memory matches what we would expect to see in a Cortex M firmware image, with the first four bytes being a stack pointer, followed by what appears to be an IVT (interrupt vector table)&lt;/p&gt;
 &lt;p&gt;In addition to reading memory, we can connect via &lt;code&gt;gdb&lt;/code&gt; and step through the firmware. This can be done by running &lt;code&gt;gdb-multiarch&lt;/code&gt; and connecting to the exposed GDB port via&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;target extended-remote :3333
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;This results in us being able to set breakpoints, read registers, and step through individual instructions:&lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250302142831.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250302142831.png"&gt;&lt;/p&gt;
 &lt;p&gt;Next, we will dump the internal flash memory as well as the "data flash" using the &lt;code&gt;dump_image&lt;/code&gt; command as shown below:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="k"&gt;&amp;gt; &lt;/span&gt;&lt;span class="ge"&gt;dump_image toothbrush-firmware.bin 0 65536&lt;/span&gt;
 dumped 65536 bytes in 2.449085s (26.132 KiB/s)
@@ -125,20 +125,20 @@ dumped 1536 bytes in 0.123736s (12.123 KiB/s)
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;If we look through the firmware, we can see that we have some of the debug strings that we saw in the UART output. The data flash region contained no data. &lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227195716.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227195716.png"&gt;&lt;/p&gt;
 &lt;p&gt;Now that we have extracted this MCU's internal flash memory using SWD, we can examine it in Ghidra to learn more about its functionality. We will specify the architecture as ARM Cortex little-endian and the load address as &lt;code&gt;0&lt;/code&gt;, as denoted in the datasheet. &lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227200309.png"&gt;&lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227200327.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227200309.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227200327.png"&gt;&lt;/p&gt;
 &lt;p&gt;When looking at a Cortex firmware image, it is always best to start with the IVT. We can see that Ghidra has already defined these for us. These values are used to handle interrupts and determine &lt;strong&gt;where&lt;/strong&gt; the CPU should jump when an interrupt occurs. Pointers can be generated in Ghidra by hovering over the location of interest ant pressing &lt;code&gt;p&lt;/code&gt; after generating pointers from the IVT. We have the following:&lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227200652.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227200652.png"&gt;&lt;/p&gt;
 &lt;p&gt;After creating these pointers, we can launch Ghidra's auto-analysis. There is not much code here, so Ghidra makes quick work of it. One of the first functions that stood out was the one responsible for printing the debug output that we monitored earlier. This function and its cross-references all make sense, which is a good sign that we have properly loaded the firmware image into Ghidra. &lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227201936.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250227201936.png"&gt;&lt;/p&gt;
 &lt;p&gt;We can see that the function listed above is checking bit certain bits to be set in &lt;code&gt;param_1&lt;/code&gt; and is using that to determine which button was pressed. Once the appropriate bit has been detected in &lt;code&gt;param_1&lt;/code&gt;, the firmware will then print debug output to the user (which we saw in &lt;a href="https://voidstarsec.com/blog/brushing-up-part-2"&gt;part 2&lt;/a&gt;)&lt;/p&gt;
 &lt;p&gt;A fun PoC might be to make this handler print different statements. However, we have one problem, since OpenOCD does not support this chip, we cannot easily modify the internal flash without writing our flash driver. This can be a heavy lift for complex targets, but in our case, the example code included on the previously linked website for this chip include code for erasing and programming the flash&lt;/p&gt;
 &lt;p&gt;Using this as a template, we should be able to develop a flash programming "algorithm" for OpenOCD that will allow us to erase and re-program the flash. We will start with the erase function.&lt;/p&gt;
 &lt;h2&gt;Flash Operations: An Overview&lt;/h2&gt;
 &lt;p&gt;When working with a micro-controller, the flash memory is accessed via memory mapped IO. In order to reprogram or erase the micro-controller these registers must be accessed in a specific manner, which can be found in the datasheet. According to our datasheet we have the following registers that can be used to interact with the flash memory&lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250303104225.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250303104225.png"&gt;&lt;/p&gt;
 &lt;p&gt;By interacting with these registers, we can perform flash erase and write operations. &lt;/p&gt;
 &lt;h2&gt;Flash Erase&lt;/h2&gt;
 &lt;p&gt;If our goal is to upload modified firmware, first, we must erase the flash. Flash cells can not be modified unless they are in the erased (0xff) state. If we look at the source files that are included with the SDK, we find an example of how to erase the flash:&lt;/p&gt;
@@ -162,7 +162,7 @@ dumped 1536 bytes in 0.123736s (12.123 KiB/s)
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;This example code performs the operations described in the datasheet as shown below:&lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250303104330.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250303104330.png"&gt;&lt;/p&gt;
 &lt;p&gt;We can emulate this using OpenOCD's TCL scripts. If you are not familiar with TCL, the &lt;code&gt;set&lt;/code&gt; command is used to create a variable. The &lt;code&gt;mww&lt;/code&gt; commands are defined by OpenOCD and stand for &lt;code&gt;Memory Write Word&lt;/code&gt;. &lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="k"&gt;proc&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;bat32_start_erase_flash&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="nv"&gt;ADDR&lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;{&lt;/span&gt;
 &lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;set&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;FLERMD&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mh"&gt;0x4002000C&lt;/span&gt;&lt;span class="w"&gt;                    &lt;/span&gt;
@@ -230,7 +230,7 @@ Polling target BAT32G135.cpu failed, trying to reexamine
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;We can see a detailed explanation of this in the user manual on page 737. &lt;/p&gt;
-&lt;p&gt;!&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250302132558.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250302132558.png"&gt;&lt;/p&gt;
 &lt;p&gt;Thus far we have done a simple flash-erase implementation using the TCL scripting language included with OpenOCD. If you are familiar with TCL, you know that dealing with raw binary files can be difficult, to implement re-flashing the MCU, we will use the OpenOCD Python/Telnet API. &lt;/p&gt;
 &lt;hr&gt;
 &lt;h2&gt;OpenOCD: Flash Read/Write in Python&lt;/h2&gt;
