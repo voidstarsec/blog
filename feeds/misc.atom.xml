@@ -91,7 +91,7 @@
 &lt;p&gt;For more information on command syntax and further examples, check out &lt;a href="helpfiles.keysight.com/csg/e5080b/Programming/Learning_about_GPIB/The_Rules_and_Syntax_of_SCPI_Commands.htm#abrev"&gt;this&lt;/a&gt; Keysight resource, and of course, always check the available documentation for the instrument that you are working with if you run into issues!&lt;/p&gt;
 &lt;h3&gt;How VISA and SCPI Work Together&lt;/h3&gt;
 &lt;p&gt;Now that we've talked about VISA and SCPI, let's review how they work together at a high level. SCPI defines the structure of the commands and their syntax, and VISA handles the physical interface through which those commands are sent. The diagram below outlines the relationship between the two:&lt;/p&gt;
-&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/VISA_SCPI.excalidraw"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/VISA_SCPI.excalidraw.png"&gt;&lt;/p&gt;
 &lt;p&gt;With our basics and definitions covered, let's review how to set up some of these tools using Python and send some commands to control a power supply!&lt;/p&gt;
 &lt;h2&gt;Setting Up PyVISA&lt;/h2&gt;
 &lt;h3&gt;Installation&lt;/h3&gt;
