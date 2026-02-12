@@ -564,7 +564,7 @@ Target<span class="w"> </span>powered<span class="w"> </span>off.<span class="w"
 <p>But now that we have this data, how do we import it into other tools for further analysis? While the screenshot is helpful, even to the trained eye, we can tell it is UART, but it doesn't give us much for low-level analysis. In the final section of this post, we'll review how to import this data into pulseview. </p>
 <h4>Loading Captures into PulseView</h4>
 <p>Now that we have captured what we think is a UART signal, let's load it into PulseView to get a closer look. Remember that we have a raw binary capture; it hasn't been formatted for a logic analyzer to understand. Luckily for us, PulseView can import raw analog captures. To do this, first select the <code>Open</code> Icon:
-<img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="Pasted image 20260209203932.png"></p>
+<img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/scpi/open.png"></p>
 <p>Next, select <code>Import Raw Analog Data Without Header</code>, which will open a file browser. For this example, we'll select the trace we just captured. Once a trace is selected, the following prompt will appear.</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="" src="https://voidstarsec.com/blog/assets/images/scpi/import_settings.png">
 For this example, we will specify the data format to be <code>U8</code> and for the sample rate, we can either look at the current scope settings <strong>or</strong> we can use the preamble text that we extracted from the device:</p>
@@ -654,19 +654,19 @@ This shows that we have a frequency of 57.611268 kHz, or approximately 57,600 bi
       <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
+      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
+      <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
+      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
+      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>

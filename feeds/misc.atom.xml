@@ -460,7 +460,7 @@ Target&lt;span class="w"&gt; &lt;/span&gt;powered&lt;span class="w"&gt; &lt;/spa
 &lt;p&gt;But now that we have this data, how do we import it into other tools for further analysis? While the screenshot is helpful, even to the trained eye, we can tell it is UART, but it doesn't give us much for low-level analysis. In the final section of this post, we'll review how to import this data into pulseview. &lt;/p&gt;
 &lt;h4&gt;Loading Captures into PulseView&lt;/h4&gt;
 &lt;p&gt;Now that we have captured what we think is a UART signal, let's load it into PulseView to get a closer look. Remember that we have a raw binary capture; it hasn't been formatted for a logic analyzer to understand. Luckily for us, PulseView can import raw analog captures. To do this, first select the &lt;code&gt;Open&lt;/code&gt; Icon:
-&lt;img alt="" src="Pasted image 20260209203932.png"&gt;&lt;/p&gt;
+&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/open.png"&gt;&lt;/p&gt;
 &lt;p&gt;Next, select &lt;code&gt;Import Raw Analog Data Without Header&lt;/code&gt;, which will open a file browser. For this example, we'll select the trace we just captured. Once a trace is selected, the following prompt will appear.&lt;/p&gt;
 &lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/import_settings.png"&gt;
 For this example, we will specify the data format to be &lt;code&gt;U8&lt;/code&gt; and for the sample rate, we can either look at the current scope settings &lt;strong&gt;or&lt;/strong&gt; we can use the preamble text that we extracted from the device:&lt;/p&gt;
