@@ -1,5 +1,497 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>VoidStar Security Blog - VoidStar Security</title><link href="https://voidstarsec.com/blog/" rel="alternate"></link><link href="https://voidstarsec.com/blog/feeds/voidstar-security.atom.xml" rel="self"></link><id>https://voidstarsec.com/blog/</id><updated>2023-10-17T00:00:00-06:00</updated><entry><title>How to Build a Hardware Hacking Lab - A Beginners Guide</title><link href="https://voidstarsec.com/blog/how-to-build-a-hardware-hacking-lab-a-beginners-guide" rel="alternate"></link><published>2023-10-17T00:00:00-06:00</published><updated>2023-10-17T00:00:00-06:00</updated><author><name>VoidStar Security</name></author><id>tag:voidstarsec.com,2023-10-17:/blog/how-to-build-a-hardware-hacking-lab-a-beginners-guide</id><summary type="html">&lt;p&gt;One of the most common questions that I get during a training is:&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>VoidStar Security Blog - VoidStar Security</title><link href="https://voidstarsec.com/blog/" rel="alternate"/><link href="https://voidstarsec.com/blog/feeds/voidstar-security.atom.xml" rel="self"/><id>https://voidstarsec.com/blog/</id><updated>2026-02-11T00:00:00-07:00</updated><entry><title>SCPI and Hardware Instrumentation for Reverse Engineers - Part 1</title><link href="https://voidstarsec.com/blog/scpi-and-hardware-instrumentation-for-reverse-engineers-part-1" rel="alternate"/><published>2026-02-11T00:00:00-07:00</published><updated>2026-02-11T00:00:00-07:00</updated><author><name>VoidStar Security</name></author><id>tag:voidstarsec.com,2026-02-11:/blog/scpi-and-hardware-instrumentation-for-reverse-engineers-part-1</id><summary type="html">&lt;p&gt;Oscilloscopes, power supplies, and multimeters are all quintessential tools in the hardware hacker's toolbox. While many of us know how to configure these tools manually, I have found that security researchers often overlook the need for remote instrumentation. In this post, we'll outline some basic, practical examples of using SCPI and VISA to instrument the hardware in your lab.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;SCPI and Hardware Instrumentation for Reverse Engineers - Part 1&lt;/h1&gt;
+&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;Oscilloscopes, power supplies, and multimeters are all quintessential tools in the hardware hacker's toolbox. While many of us know how to configure these tools manually, I have found that security researchers often overlook the need for remote instrumentation. In this post, we'll outline some basic, practical examples of using SCPI and VISA to instrument the hardware in your lab. In our next post, we'll use these tools in practice to identify SPI signals on a target and extract the contents only using our test equipment. &lt;/p&gt;
+&lt;p&gt;For this series, I will be using the following equipment:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;MSO 5354 Oscilloscope&lt;ol&gt;
+&lt;li&gt;&lt;a href="https://www.batronix.com/files/Rigol/Oszilloskope/MSO5000/MSO5000_ProgrammingGuide_EN-V2.0.pdf"&gt;Reference Manual&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://www.amazon.com/dp/B0928LX2D1"&gt;Generic Programmable Power Supply&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://www.amazon.com/HiLetgo-Analyzer-Ferrite-Channel-Arduino/dp/B077LSG5P2"&gt;FX2LA Based Logic Analyzer&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Saleae Logic Pro 8&lt;ol&gt;
+&lt;li&gt;&lt;a href="https://support.saleae.com/product/user-guide/extensions-apis-and-sdks/extensions/api-documentation"&gt;API Documentation&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Throughout the course of this series, we'll briefly review the protocols that allow us to instrument with our test equipment, provide some basic examples, and finally use them on a practical target. Please note that the commands we are using may differ in your scope, so please be sure to refer to your user manual or programming guide!&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;SCPI and VISA: A Brief Overview&lt;/h2&gt;
+&lt;h3&gt;What is VISA?&lt;/h3&gt;
+&lt;p&gt;VISA is a standard API (Application Programming Interface) for communicating with instruments regardless of the physical interface (e.g., USB, GPIB, RS-232, Ethernet). It provides a unified way to open, configure, and manage communication sessions with instruments. More detailed information about the VISA specification can be found &lt;a href="https://www.ivifoundation.org/specifications/default.html#visa-specifications"&gt;here&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;VISA is used to open and control connections to our test equipment. For our examples, we will use the PyVisa library to establish communication. With the VISA connection established, we can move on to sending SCPI commands. &lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; VISA functionality is often provided via a third-party library. The &lt;a href="https://pyvisa.readthedocs.io/en/latest/introduction/configuring.html#configuring-the-ivi-backend"&gt;PyVisa&lt;/a&gt; documentation contains instructions for installing these libraries. However, PyVisa also contains a pure-Python implementation of VISA, which is what we will be using in this post. &lt;/p&gt;
+&lt;h3&gt;What is SCPI?&lt;/h3&gt;
+&lt;p&gt;SCPI is a standardized command set for controlling programmable instruments. This standard is built on top of IEEE 488.2. It defines the syntax and structure of commands sent to instruments and provides a common language for controlling instruments, regardless of the manufacturer. &lt;/p&gt;
+&lt;p&gt;SCPI commands consist of ASCII characters and contain the following core components.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;:&lt;/code&gt; - Used to structure the hierarchy of the command&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;?&lt;/code&gt; - Indicates that the command is a query, meaning that we expect the instrument to provide a response&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;,&lt;/code&gt; - Separates multiple parameters for a given command&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;*&lt;/code&gt; - Indicates a “common command” defined by IEEE 488.2&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Using these delimiters and components, we can create two different types of commands:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Set Operations&lt;/strong&gt;: As the name describes, these are used to set parameters on the target instrument. This includes things like starting captures, configuring channels, and modifying the settings of your instrument&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Query Operations&lt;/strong&gt;: Query operations are used to request data &lt;strong&gt;from&lt;/strong&gt; your test instrument. Examples of this include querying settings, preparing captured data, and gathering identifying information about your equipment. &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The syntax of a query operation is as follows.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;:HEADER:SUBHEADER?
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For example, to query the current voltage setting on channel 1 of a power supply:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;:SOUR:VOLT?
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Or to query the vertical scale of an oscilloscope channel:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;:CHAN1:SCAL?
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The syntax of a set operation can be seen below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;:HEADER:SUBHEADER &amp;lt;value&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For example, to set the voltage output of a power supply to 3.3V:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;:SOUR:VOLT 3.3
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Or to set the time scale on an oscilloscope to 1 millisecond per division:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;:TIM:SCAL 0.001
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note that in the above example a decimal value is provided. Depending on which version of SCPI your test instrument supports you can also provide hexadecimal or binary values with the following prefixes:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Hex&lt;/strong&gt;: &lt;code&gt;#H1D&lt;/code&gt;&lt;ul&gt;
+&lt;li&gt;This will provide &lt;code&gt;0x1D&lt;/code&gt; to the instrument&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Binary&lt;/strong&gt;: &lt;code&gt;#B11011&lt;/code&gt;&lt;ul&gt;
+&lt;li&gt;This will provide &lt;code&gt;27&lt;/code&gt; to the instrument&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Some commands require more than one argument; in this case, the arguments are separated by commas as shown in the example below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;:HEADER:SUBHEADER &amp;lt;value1&amp;gt;,&amp;lt;value2&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4&gt;Short and Long Form Commands&lt;/h4&gt;
+&lt;p&gt;Before we move on, I want to point out that these commands often have abbreviated or "short" forms that require fewer characters. For example, when working with a power supply the command to control power is often documented as:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;OUTPut&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;STATe&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ON&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;OFF&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;In this example &lt;code&gt;OUTPut&lt;/code&gt; is the header, &lt;code&gt;STATe&lt;/code&gt; is the sub-header and &lt;code&gt;ON/OFF&lt;/code&gt; are the available arguments. Often, when looking at SCPI documentation, the lowercase characters in something like &lt;code&gt;OUTPut&lt;/code&gt; are optional - meaning that you could send your test equipment:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;OUTP&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;STAT&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ON&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;It should also be noted that some commands can be shortened even further - for example output control can also be performed via:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;OUTP ON
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For more information on command syntax and further examples, check out &lt;a href="helpfiles.keysight.com/csg/e5080b/Programming/Learning_about_GPIB/The_Rules_and_Syntax_of_SCPI_Commands.htm#abrev"&gt;this&lt;/a&gt; Keysight resource, and of course, always check the available documentation for the instrument that you are working with if you run into issues!&lt;/p&gt;
+&lt;h3&gt;How VISA and SCPI Work Together&lt;/h3&gt;
+&lt;p&gt;Now that we've talked about VISA and SCPI, let's review how they work together at a high level. SCPI defines the structure of the commands and their syntax, and VISA handles the physical interface through which those commands are sent. The diagram below outlines the relationship between the two:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/VISA_SCPI.excalidraw"&gt;&lt;/p&gt;
+&lt;p&gt;With our basics and definitions covered, let's review how to set up some of these tools using Python and send some commands to control a power supply!&lt;/p&gt;
+&lt;h2&gt;Setting Up PyVISA&lt;/h2&gt;
+&lt;h3&gt;Installation&lt;/h3&gt;
+&lt;p&gt;Depending on your lab environment/requirements there are two ways to utilize PyVisa&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;pyvisa&lt;/code&gt; with backends provided by your instrument manufacturer&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Note:&lt;/strong&gt; See the documentation linked at the beginning of this blog post for specific instructions on building installing specific backends&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;pyvisa-py&lt;/code&gt; with a generic backend for various instruments. &lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;This is what we'll be using for this post&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;If you are managing a python project with &lt;code&gt;uv&lt;/code&gt;, the dependencies can be installed as shown below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;uv add pyvisa
+uv add pyvisa-py
+uv add pyserial
+uv add psutil
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4&gt;Connecting to an Instrument: VISA Resource Strings&lt;/h4&gt;
+&lt;p&gt;VISA uses resource strings to identify instruments. These strings define how we will be communicating with our test equipment; some examples can be seen in the table below:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Interface&lt;/th&gt;
+&lt;th&gt;Resource String Format&lt;/th&gt;
+&lt;th&gt;Example&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Serial/USB-Serial&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;ASRL&amp;lt;port&amp;gt;::INSTR&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;ASRL/dev/ttyUSB0::INSTR&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;TCP/IP&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;TCPIP::&amp;lt;ip&amp;gt;::INSTR&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;TCPIP::192.168.1.100::INSTR&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;USB TMC&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;USB::&amp;lt;vid&amp;gt;::&amp;lt;pid&amp;gt;::&amp;lt;serial&amp;gt;::INSTR&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;USB::0x1234::0x5678::MY123::INSTR&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;GPIB&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;GPIB::&amp;lt;address&amp;gt;::INSTR&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;GPIB::1::INSTR&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;PyVisa gives us the option to connect to a number of different types of resources; these can all be seen in the documentation &lt;a href="https://pyvisa.readthedocs.io/en/latest/introduction/names.html#visa-resource-syntax-and-examples"&gt;here&lt;/a&gt;. &lt;/p&gt;
+&lt;h4&gt;Basic Connection Example&lt;/h4&gt;
+&lt;p&gt;The following example demonstrates how to use pyvisa to list all available resources:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;pyvisa&lt;/span&gt;
+&lt;span class="c1"&gt;# Create resource manager&lt;/span&gt;
+&lt;span class="n"&gt;rm&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pyvisa&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ResourceManager&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="c1"&gt;# List available instruments&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;list_resources&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For my hardware setup, I have an oscilloscope connected via Ethernet and a Power Supply that is connected via USB (which presents a serial interface). When I run this, I see the following:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;pyvisa&lt;/span&gt;
+&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;rm&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pyvisa&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ResourceManager&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;rm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;list_resources&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;ASRL/dev/ttyS31::INSTR&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;ASRL/dev/ttyUSB1::INSTR&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note that the Ethernet device did not appear (that's to be expected, don't worry!), but we do see our power supply at &lt;code&gt;/dev/ttyUSB1&lt;/code&gt;. &lt;/p&gt;
+&lt;p&gt;This resource string can be broken down as follows:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;ASRL&lt;/strong&gt;: Specifies that the resource is an asynchronous serial resource; in this case, the power supply presents a USB to serial device when connected over USB&lt;ul&gt;
+&lt;li&gt;Other options include: &lt;code&gt;TCPIP&lt;/code&gt;, &lt;code&gt;PXI&lt;/code&gt;, and &lt;code&gt;GPIB&lt;/code&gt;, you can see a full list of examples &lt;a href="https://www.ni.com/docs/en-US/bundle/ni-visa/page/visa-resource-syntax-and-examples.html"&gt;here&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;/dev/ttyUSB1&lt;/strong&gt;: This contains the path to the instrument that we want to communicate with&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;::INSTR&lt;/strong&gt;: Specifies that the resource is an instrument. This tells the VISA library that the resource is a device capable of communication using SCPI commands.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; The &lt;code&gt;INSTR&lt;/code&gt; keyword is required in VISA resource strings to differentiate instruments from other types of resources, such as raw sockets or memory blocks.&lt;/p&gt;
+&lt;p&gt;Armed with this information, we can attempt to connect to our device and query its identifying information using the built-in &lt;code&gt;query&lt;/code&gt; function. This will structure an SCPI query for us and allow us to read the response back from the instrument. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;pyvisa&lt;/span&gt;
+&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;rm&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pyvisa&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ResourceManager&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;inst&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;rm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;open_resource&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;ASRL/dev/ttyUSB1::INSTR&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;baud_rate&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;115200&lt;/span&gt;
+&lt;span class="o"&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;*IDN?&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="n"&gt;KIPRIM&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;DC310S&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;25012709&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;FV&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="n"&gt;V5&lt;/span&gt;&lt;span class="mf"&gt;.2.0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Success! We can now programmatically talk to our power supply. In the next section, we'll cover how to control and configure it using SCPI. &lt;/p&gt;
+&lt;h2&gt;Power Supply Instrumentation&lt;/h2&gt;
+&lt;p&gt;The first SCPI example that we will provide involves power supply instrumentation. This can be useful when running &lt;a href="https://voidstarsec.com/csw-2024/#15"&gt;power analysis&lt;/a&gt; or &lt;a href="https://voidstarsec.com/blog/replicant-part-1"&gt;fault injection&lt;/a&gt; experiments. For our example, our power supply shows up as a USB serial device, so we will connect to it with the following VISA resource string:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;res&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;ASRL/dev/ttyUSB1::INSTR&amp;quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;In the next few sections, we'll review what we can do with our power supply via SCPI, but before we do, let's talk about &lt;strong&gt;when&lt;/strong&gt; you might want to instrument your power supply:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Long Term Testing&lt;/strong&gt;: If you need to run tests over a long period of time and want to be able to cycle power to your target system automatically&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Physical Proximity&lt;/strong&gt;: If you're in a lab setting where you aren't directly next to your power supply, you can remotely configure and control your supply using SCPI. &lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Automatically Configuring Settings&lt;/strong&gt;: SCPI allows you to control the current and voltage settings of your power supply. If you're switching targets often and require different voltages, you can use SCPI to program presets and quickly switch between power supply configurations. &lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Probing new targets when reverse engineering&lt;/strong&gt;: One of the first steps of reverse engineering an embedded system involves probing test pads and test points for signals on startup. Manually power-cycling your target can be time-consuming and require a free hand. Automatically cycling power allows you to probe freely with your oscilloscope and continually hunt for interesting signals.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Let's look at some things we can control via SCPI:&lt;/p&gt;
+&lt;h3&gt;Querying Current Settings&lt;/h3&gt;
+&lt;p&gt;We'll start with some commands to read the current settings of our power supply. The commands to query voltage/current and the current output status are:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;VOLT?
+CURR?
+OUTP?
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We can issue this in PyVisa using the &lt;code&gt;query&lt;/code&gt; function we talked about earlier:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Query voltage setting&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;VOLT?&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="c1"&gt;# Query current limit&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;CURR?&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="c1"&gt;# Query output state&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;OUTP?&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Setting Voltage and Current&lt;/h3&gt;
+&lt;p&gt;Using PyVisa, we can control the settings of our power supply. One of the easiest things to configure is the current voltage and current output settings, as well as the current output state (whether it is &lt;strong&gt;on&lt;/strong&gt; or &lt;strong&gt;off&lt;/strong&gt; ). These commands are shown below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;SOURce&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;CURRent&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;unit&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;
+&lt;span class="n"&gt;SOURce&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;VOLTage&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;unit&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;To issue these commands, we can use the &lt;code&gt;write&lt;/code&gt; function in PyVisa as shown below:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Set voltage output to 5V&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;SOUR:VOLT 5&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="c1"&gt;# Set current limit to 2 A&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;SOUR:CURR 2A&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="c1"&gt;# Set current limit to .02 A&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;SOUR:CURR .02A&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Enabling/Disabling Output&lt;/h3&gt;
+&lt;p&gt;The &lt;code&gt;OUTP&lt;/code&gt; command can be used to turn on or off the power supply's main output. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;OUTP&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;STATE&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ON&lt;/span&gt;
+&lt;span class="n"&gt;OUTP&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;STATE&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;OFF&lt;/span&gt;
+&lt;span class="n"&gt;OUTP&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;OFF&lt;/span&gt;
+&lt;span class="n"&gt;OUTP&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ON&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Enable output&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;OUTP ON&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="c1"&gt;# Disable output&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;OUTP OFF&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="c1"&gt;# Query output state&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;OUTP?&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Voltage and Current Limits&lt;/h3&gt;
+&lt;p&gt;We can also set the voltage and current limits on our power supply using SCPI&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;VOLTage&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;LIMit&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;VAL&lt;/span&gt;
+&lt;span class="n"&gt;CURRent&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="n"&gt;LIMit&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;VAL&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Set the voltage limit to 15V&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;VOLT:LIM 15&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="c1"&gt;# Set the Current limit to 2A&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;CURR:LIM 2&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;There are all sorts of things we can control on our power supply. Let's move on to a very simple example that will cycle power to our target while we probe for interesting test points. &lt;/p&gt;
+&lt;h3&gt;Use Case: Automated Power Cycling&lt;/h3&gt;
+&lt;p&gt;This is the simplest example of SCPI. Imagine a scenario where you have an embedded target and are looking for specific signal patterns on startup. You may be looking for an SPI bus that is communicating with a TPM, or you're just hunting for classic UART output. In either scenario, you cycle power every time you want to test a new point on the board, which, after the first fifteen or so tries, can be frustrating!&lt;/p&gt;
+&lt;p&gt;In this script, we power the target device, wait a few seconds, and then output a chime to let us know we're about to power it down. &lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Some test equipment will contain SCPI commands to generate chimes, in the past I have used &lt;code&gt;SYST:BEEP:COMP:IMM&lt;/code&gt; to play an audible chime when a test is complete. Refer to your instruments' documentation for more information.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;range&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;100&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="c1"&gt;# Power Target&lt;/span&gt;
+    &lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;OUTP ON&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# Beep to let us know we&amp;#39;re about to power down, and we should switch pads&lt;/span&gt;
+    &lt;span class="n"&gt;playsound&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;beep.mp3&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# Power off target&lt;/span&gt;
+    &lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;OUTP OFF&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now that we can programmatically cycle power and inform the user of when to switch test points, could we also instrument our oscilloscope to automatically save our captures for later review? Let's talk about oscilloscope instrumentation in the next section.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;Oscilloscope Instrumentation&lt;/h2&gt;
+&lt;h3&gt;Connection Methods&lt;/h3&gt;
+&lt;p&gt;Much like our power supply, we can also instrument our oscilloscope. &lt;/p&gt;
+&lt;p&gt;For this example, our oscilloscope is connected to the network and has an IP address of &lt;code&gt;192.168.1.100&lt;/code&gt;&lt;/p&gt;
+&lt;h4&gt;Network/TCP Connection&lt;/h4&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;scope&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;rm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;open_resource&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;TCPIP::192.168.1.100::INSTR&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Taking Screenshots&lt;/h3&gt;
+&lt;p&gt;Many oscilloscopes allow taking screenshots of the currently captured trace; for this example, we will use the &lt;code&gt;DISP&lt;/code&gt; command, as shown in the example below. This example captures the screen state and returns the data in raw binary format as a PNG. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="k"&gt;def&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;get_screenshot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;filepath&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Save oscilloscope display as PNG file&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+    &lt;span class="n"&gt;png_data&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query_binary_values&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:DISP:DATA? PNG&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;datatype&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;B&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;container&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;bytes&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;with&lt;/span&gt; &lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;filepath&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;wb&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;png_data&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Notice that for this example, we're using a different function to communicate with our instrument, &lt;code&gt;query_binary_values&lt;/code&gt;. This function allows us to make a request to our test equipment and get the resulting data as raw binary. This is useful for screenshots of course, but we can also use it to capture raw trace data! Before we get to that, let's look at how to configure our scope to capture signals via SCPI. In this example, we'll set the vertical scale to 1V and the time scale to 20ms per division. &lt;/p&gt;
+&lt;h3&gt;Channel Configuration Examples&lt;/h3&gt;
+&lt;p&gt;For this post, we'll configure and use channel 1 of the oscilloscope. When working with oscilloscopes, many commands are prefixed with the channel that you want to work with. For example, to test the vertical scale for channel one, we can do the following:&lt;/p&gt;
+&lt;h4&gt;Voltage Scale (Vertical)&lt;/h4&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Query current scale&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:CHAN1:SCAL?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Set scale to 1V/div&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:CHAN1:SCAL 1&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, we'll configure the time scale as shown below, check the current timebase, print the response, then set the timebase to 50ms/div.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Query current timebase&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TIM:MAIN:SCAL?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Set timebase to 50ms/div&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TIM:MAIN:SCAL 0.05&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Finally, with our channel fully configured, we can enable the channel:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Enable channel 1&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:CHAN1:DISP ON&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now that we have our channel enabled, we need to tell the scope how to trigger. What this does is tell our oscilloscope not to begin capturing until we see a specific pattern or the signal crosses a defined voltage threshold. Configuring triggers on an oscilloscope can be confusing at first, but for our example, we'll be using a basic edge trigger. This means that the oscilloscope will not start capturing until it sees the signal cross the edge threshold we configure. In our case, we'll use a &lt;strong&gt;falling&lt;/strong&gt; edge trigger, since the first bit of a standard UART peripheral is the start bit, which is a logical &lt;strong&gt;low&lt;/strong&gt;. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Set trigger type to edge&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:MODE EDGE&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Set trigger source to channel 1&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:EDGE:SOUR CHAN1&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Set trigger level to 1.5V&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:EDGE:LEV 1.5&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Set trigger edge to falling (for UART start bit)&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:EDGE:SLOP NEG&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4&gt;Trigger Holdoff&lt;/h4&gt;
+&lt;p&gt;Holdoff prevents re-triggering for a specified time after a trigger event. This can be useful for stabilizing repetitive waveforms, capturing specific frames in serial protocols (SPI, UART), and avoiding triggering on noise/glitches. (The last example is usually what I end up using it for!)&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Set holdoff time&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:HOLD 10E-3&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;  &lt;span class="c1"&gt;# 10 milliseconds&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;With this, we're telling the scope not to trigger again unless it has been at least 10 milliseconds. This will ensure we capture the data on the first trigger. &lt;/p&gt;
+&lt;h3&gt;Capturing Waveform Data&lt;/h3&gt;
+&lt;p&gt;Now that we've configured our trigger and the channel parameters, let's capture a trace and try to save it to our host machine. In this example we are connected to a UART signal on a Smart Thermostat. Given that UART typically idles high (see &lt;a href="TODO"&gt;this post&lt;/a&gt; for more information), we will use a falling-edge trigger.&lt;/p&gt;
+&lt;h4&gt;Single Channel Capture&lt;/h4&gt;
+&lt;p&gt;For now, we will set the scope to the &lt;strong&gt;single&lt;/strong&gt; trigger mode, meaning it will trigger once and then stop. This will allow us to capture the data, take a screenshot, and save the signal back to our host machine without worrying about the oscilloscope triggering again. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# Set scope to single trigger mode&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:SING&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Wait for the trigger to fire&lt;/span&gt;
+&lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:STAT?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;STOP&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;0.5&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Configure waveform readout&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:SOUR CHAN1&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:MODE RAW&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:FORM BYTE&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Read waveform preamble (contains timing and voltage scale info)&lt;/span&gt;
+&lt;span class="n"&gt;preamble&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:PRE?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Preamble: &lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="n"&gt;preamble&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Read waveform data&lt;/span&gt;
+&lt;span class="n"&gt;raw_data&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;inst&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query_binary_values&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:DATA?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;datatype&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;B&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;container&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;bytes&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Captured &lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;raw_data&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt; data points&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Save raw data to file&lt;/span&gt;
+&lt;span class="k"&gt;with&lt;/span&gt; &lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;capture.bin&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;wb&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;raw_data&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3&gt;Tying It All Together&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;pyvisa&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nn"&gt;time&lt;/span&gt;
+
+&lt;span class="n"&gt;rm&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pyvisa&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ResourceManager&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Connect to power supply &lt;/span&gt;
+&lt;span class="n"&gt;psu&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;rm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;open_resource&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;ASRL/dev/ttyUSB1::INSTR&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;psu&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;baud_rate&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;115200&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Connect to oscilloscope &lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;rm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;open_resource&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;TCPIP::192.168.1.105::INSTR&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Verify connections&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;PSU: &lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="n"&gt;psu&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;*IDN?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Scope: &lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;*IDN?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Configure power supply: 3.3V, 500mA limit&lt;/span&gt;
+&lt;span class="n"&gt;psu&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;SOUR:VOLT 3.3&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;psu&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;SOUR:CURR 0.5&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Configure oscilloscope channel 1&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:CHAN1:DISP ON&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:CHAN1:SCAL 0.5&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;       &lt;span class="c1"&gt;# 500mV/div&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TIM:MAIN:SCAL 0.05&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;  &lt;span class="c1"&gt;# 50ms/div&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Configure falling edge trigger for UART start bit&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:MODE EDGE&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:EDGE:SOUR CHAN1&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:EDGE:LEV 1.5&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:EDGE:SLOP NEG&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:HOLD 10E-3&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Arm the scope in single trigger mode&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:SING&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Power on the target&lt;/span&gt;
+&lt;span class="n"&gt;psu&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;OUTP ON&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Target powered on, waiting for trigger...&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Wait for the scope to trigger&lt;/span&gt;
+&lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:TRIG:STAT?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;STOP&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mf"&gt;0.5&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Triggered! Reading data...&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Take a screenshot&lt;/span&gt;
+&lt;span class="n"&gt;png_data&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query_binary_values&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:DISP:DATA? PNG&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;datatype&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;B&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;container&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;bytes&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;with&lt;/span&gt; &lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;capture_screenshot.png&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;wb&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;png_data&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Screenshot saved (&lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;png_data&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt; bytes)&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Read waveform data&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:SOUR CHAN1&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:MODE RAW&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:FORM BYTE&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;preamble&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:PRE?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;raw_data&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query_binary_values&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;:WAV:DATA?&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;datatype&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;B&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;container&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;bytes&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Captured &lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;raw_data&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt; data points&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Save waveform data&lt;/span&gt;
+&lt;span class="k"&gt;with&lt;/span&gt; &lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;capture.bin&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;wb&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;raw_data&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Save preamble for later analysis&lt;/span&gt;
+&lt;span class="k"&gt;with&lt;/span&gt; &lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;capture_preamble.txt&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;w&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;preamble&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Power off the target&lt;/span&gt;
+&lt;span class="n"&gt;psu&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;OUTP OFF&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;Target powered off. Capture complete!&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Clean up&lt;/span&gt;
+&lt;span class="n"&gt;psu&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;close&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="n"&gt;scope&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;close&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="n"&gt;rm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;close&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we run this script, we see the following output:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="o"&gt;[&lt;/span&gt;wrongbaud@mechanicus&lt;span class="w"&gt; &lt;/span&gt;conduit&lt;span class="o"&gt;]&lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;uv&lt;span class="w"&gt; &lt;/span&gt;run&lt;span class="w"&gt; &lt;/span&gt;blog-example.py&lt;span class="w"&gt; &lt;/span&gt;
+PSU:&lt;span class="w"&gt; &lt;/span&gt;KIPRIM,DC310S,25012709,FV:V5.2.0
+Scope:&lt;span class="w"&gt; &lt;/span&gt;RIGOL&lt;span class="w"&gt; &lt;/span&gt;TECHNOLOGIES,MSO5354,MS5A250300248,00.01.03.03.00
+Target&lt;span class="w"&gt; &lt;/span&gt;powered&lt;span class="w"&gt; &lt;/span&gt;on,&lt;span class="w"&gt; &lt;/span&gt;waiting&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;trigger...
+Triggered!&lt;span class="w"&gt; &lt;/span&gt;Reading&lt;span class="w"&gt; &lt;/span&gt;data...
+Screenshot&lt;span class="w"&gt; &lt;/span&gt;saved&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;(&lt;/span&gt;&lt;span class="m"&gt;1843254&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;bytes&lt;span class="o"&gt;)&lt;/span&gt;
+Captured&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;25000000&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;data&lt;span class="w"&gt; &lt;/span&gt;points
+Target&lt;span class="w"&gt; &lt;/span&gt;powered&lt;span class="w"&gt; &lt;/span&gt;off.&lt;span class="w"&gt; &lt;/span&gt;Capture&lt;span class="w"&gt; &lt;/span&gt;complete!
+&lt;span class="o"&gt;[&lt;/span&gt;wrongbaud@mechanicus&lt;span class="w"&gt; &lt;/span&gt;conduit&lt;span class="o"&gt;]&lt;/span&gt;$&lt;span class="w"&gt; &lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Success, we have data! Including a nice screenshot of our digital signal:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/bp_scpi_1.png"&gt;&lt;/p&gt;
+&lt;p&gt;But now that we have this data, how do we import it into other tools for further analysis? While the screenshot is helpful, even to the trained eye, we can tell it is UART, but it doesn't give us much for low-level analysis. In the final section of this post, we'll review how to import this data into pulseview. &lt;/p&gt;
+&lt;h4&gt;Loading Captures into PulseView&lt;/h4&gt;
+&lt;p&gt;Now that we have captured what we think is a UART signal, let's load it into PulseView to get a closer look. Remember that we have a raw binary capture; it hasn't been formatted for a logic analyzer to understand. Luckily for us, PulseView can import raw analog captures. To do this, first select the &lt;code&gt;Open&lt;/code&gt; Icon:
+&lt;img alt="" src="Pasted image 20260209203932.png"&gt;&lt;/p&gt;
+&lt;p&gt;Next, select &lt;code&gt;Import Raw Analog Data Without Header&lt;/code&gt;, which will open a file browser. For this example, we'll select the trace we just captured. Once a trace is selected, the following prompt will appear.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/import_settings.png"&gt;
+For this example, we will specify the data format to be &lt;code&gt;U8&lt;/code&gt; and for the sample rate, we can either look at the current scope settings &lt;strong&gt;or&lt;/strong&gt; we can use the preamble text that we extracted from the device:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="mf"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;25000000&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;2.000000E-8&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;2.500000E-1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;0.000000&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;2.0587E-02&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;128&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The third field is our sample rate: &lt;code&gt;250000000&lt;/code&gt;, which is 25 Mpt/s. When we use these settings, we see the following:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/raw_signal.png"&gt;
+    Here is our analog signal in Pulseview! But we need to configure pulseview to convert these analog pulses into digital values. In PulseView, there are several ways to convert your analog capture into digital pulses. For this example, we will select our channel &lt;code&gt;CH1&lt;/code&gt; and use the &lt;code&gt;Logic via Threshold&lt;/code&gt; setting as shown in the image below:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/channel_settings.png"&gt;
+Now, when we look at our signal, it has been properly converted:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/converted_signal.png"&gt;&lt;/p&gt;
+&lt;p&gt;Now we can leverage all of pulseview's decoders and analysis capabilities to examine the digital signal we captured with the oscilloscope. Given that we think this is a UART we can measure the first low pulse that we see and calculate the frequency:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/first_pulse.png"&gt;
+This shows that we have a frequency of 57.611268 kHz, or approximately 57,600 bits per second!&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want a deep dive on calculating baud rates on an unknown UART, check out our blog posts &lt;a href="https://voidstarsec.com/blog/uart-uboot-and-usb"&gt;here&lt;/a&gt; and &lt;a href="https://voidstarsec.com/blog/router-teardown"&gt;here&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;After setting up the decoder, we see the following data:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/decoded_uart_hex.png"&gt;&lt;/p&gt;
+&lt;p&gt;And if we zoom out on this we have:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/decoded_output.png"&gt;&lt;/p&gt;
+&lt;p&gt;And with that - we've found a UART! We successfully instrumented both the power supply and the oscilloscope to extract UART data from this target. In the next post, we'll do a proper hardware teardown and take a look at some more complex signals!&lt;/p&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;In this post, we've talked about the basics of SCPI and visas, and how you can use them to aid reverse engineering. Not only does having an understanding of SCPI and VISA help when you're physically far away from your test equipment, but it also helps you document your findings by capturing traces and saving screenshots of interesting signals!&lt;/p&gt;
+&lt;p&gt;If you want to learn more about SCPI/VISA check out our repository with some basic examples that utilize the PyVisa library &lt;a href="https://github.com/wrongbaud/conduit"&gt;here&lt;/a&gt; We've put together a wrapper for basic oscilloscope control and power supply control, see the repository for more details!&lt;/p&gt;
+&lt;p&gt;In part two of this post, we'll look at more complex, multi-channel examples and discuss how to load multiple captures into pulseview for signal analysis. &lt;/p&gt;
+&lt;p&gt;Lastly, if you're looking to learn more about hardware reverse engineering, check out our roadmap of free resources &lt;a href="https://voidstarsec.com/roadmap"&gt;here&lt;/a&gt;. If you're interested in structured training for your team, check out our &lt;a href="https://voidstarsec.com/#training"&gt;hardware hacking bootcamp&lt;/a&gt;. If you're looking for an in-depth dive into how hardware-level debuggers work and how to reverse engineer them, check out our self-paced course &lt;a href="https://voidstarsec.training/products/hacking-hardware-debuggers"&gt;here&lt;/a&gt;. &lt;/p&gt;
+&lt;p&gt;If you want to stay informed about official releases, new courses, and blog posts, sign up for our mailing list &lt;a href="http://eepurl.com/hSl31f"&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Thanks for reading - and happy hacking!&lt;/p&gt;
+&lt;p&gt;Matt&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/brushing-up/Pasted_image_20250225195410.png"&gt;&lt;/p&gt;</content><category term="misc"/><category term="hardware-hacking raspberry-pi pigen pifex"/></entry><entry><title>How to Build a Hardware Hacking Lab - A Beginners Guide</title><link href="https://voidstarsec.com/blog/how-to-build-a-hardware-hacking-lab-a-beginners-guide" rel="alternate"/><published>2023-10-17T00:00:00-06:00</published><updated>2023-10-17T00:00:00-06:00</updated><author><name>VoidStar Security</name></author><id>tag:voidstarsec.com,2023-10-17:/blog/how-to-build-a-hardware-hacking-lab-a-beginners-guide</id><summary type="html">&lt;p&gt;One of the most common questions that I get during a training is:&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;“What do we need to build out an initial hardware hacking lab?”&lt;/p&gt;
 &lt;/blockquote&gt;
@@ -8,7 +500,7 @@
 &lt;p&gt;“What do we need to build out an initial hardware hacking lab?”&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;Of course, the answer to this question can be heavily tailored based on the goals of the team and their targets, but I wanted to attempt to document what would make for a good starter lab. The following document aims to outline the basic requirements for well rounded embedded systems laboratory.&lt;/p&gt;
-&lt;p&gt;We recently collaborated with many of our friends in the industry to create a guide and wiki for creating a hardware hacking lab, this can be found &lt;a href="https://voidstarsec.wiki"&gt;here&lt;/a&gt;&lt;/p&gt;</content><category term="Hardware"></category></entry><entry><title>On the Road at the Leahy Center: Our first in-person training of 2022!</title><link href="https://voidstarsec.com/blog/on-the-road" rel="alternate"></link><published>2022-11-11T00:00:00-07:00</published><updated>2022-11-11T00:00:00-07:00</updated><author><name>VoidStar Security</name></author><id>tag:voidstarsec.com,2022-11-11:/blog/on-the-road</id><summary type="html">&lt;p&gt;Description of the on-site course at Leahy Center&lt;/p&gt;</summary><content type="html">&lt;h1&gt;On the Road at the Leahy Center: Our first in-person training of 2022!&lt;/h1&gt;
+&lt;p&gt;We recently collaborated with many of our friends in the industry to create a guide and wiki for creating a hardware hacking lab, this can be found &lt;a href="https://voidstarsec.wiki"&gt;here&lt;/a&gt;&lt;/p&gt;</content><category term="Hardware"/></entry><entry><title>On the Road at the Leahy Center: Our first in-person training of 2022!</title><link href="https://voidstarsec.com/blog/on-the-road" rel="alternate"/><published>2022-11-11T00:00:00-07:00</published><updated>2022-11-11T00:00:00-07:00</updated><author><name>VoidStar Security</name></author><id>tag:voidstarsec.com,2022-11-11:/blog/on-the-road</id><summary type="html">&lt;p&gt;Description of the on-site course at Leahy Center&lt;/p&gt;</summary><content type="html">&lt;h1&gt;On the Road at the Leahy Center: Our first in-person training of 2022!&lt;/h1&gt;
 &lt;h2&gt;Overview&lt;/h2&gt;
 &lt;p&gt;May of this year marked the first in-person training of 2023. This training took place at the &lt;a href="https://www.champlain.edu/cybersecurity-and-digital-forensics/senator-patrick-leahy-center-for-digital-forensics-and-cybersecurity"&gt;Leahy Center for Digital Forensics and Cybersecurity.&lt;/a&gt;. The training was given to the IoT analysis team at the Leahy center, to improve the students' skills working in the field of IoT device analysis and research. In mid-May, I packed up and drove up to beautiful Burlington, Vermont, to spend a week with students hacking hardware.&lt;/p&gt;
 &lt;p&gt;&lt;img alt="Kits!" src="https://voidstarsec.com/blog/assets/images/packing-up.gif"&gt;&lt;/p&gt;
@@ -121,4 +613,4 @@ spi&lt;span class="w"&gt; &lt;/span&gt;spi&lt;span class="w"&gt; &lt;/span&gt;us
 &lt;h1&gt;Conclusion&lt;/h1&gt;
 &lt;p&gt;The week at the &lt;a href="https://www.champlain.edu/centers-of-experience/the-leahy-center"&gt;Leahy Center&lt;/a&gt; was extremely fun and productive. It was great to be able to teach students on-site again. Over the week, students learned how to assess embedded systems and how these protocols work at the signal level. They also learned to develop their tooling and troubleshoot when other tools fail. I cannot speak highly enough about the work that the Leahy Center folks do; if you're interested in doing security research, DFIR, and IOT research, check them out!&lt;/p&gt;
 &lt;p&gt;I look forward to seeing the excellent research they produce in the future, and I can't recommend the department highly enough to those looking for new hires or interns!&lt;/p&gt;
-&lt;p&gt;As always, if you have any questions about &lt;a href="https://voidstarsec.com/#training"&gt;the course&lt;/a&gt; or hardware reverse engineering in general, don't hesitate to &lt;a href="https://voidstarsec.com/#contact"&gt;contact us&lt;/a&gt;. If you're interested in staying up to date with our blog posts and upcoming courses, check out our &lt;a href="http://eepurl.com/hSl31f"&gt;mailing list&lt;/a&gt;. For more reading on hardware hacking and reverse engineering, check out our &lt;a href="https://voidstarsec.com/#research"&gt;publications&lt;/a&gt;. Thanks for reading! &lt;/p&gt;</content><category term="Training"></category><category term="training"></category><category term="blog"></category></entry></feed>
+&lt;p&gt;As always, if you have any questions about &lt;a href="https://voidstarsec.com/#training"&gt;the course&lt;/a&gt; or hardware reverse engineering in general, don't hesitate to &lt;a href="https://voidstarsec.com/#contact"&gt;contact us&lt;/a&gt;. If you're interested in staying up to date with our blog posts and upcoming courses, check out our &lt;a href="http://eepurl.com/hSl31f"&gt;mailing list&lt;/a&gt;. For more reading on hardware hacking and reverse engineering, check out our &lt;a href="https://voidstarsec.com/#research"&gt;publications&lt;/a&gt;. Thanks for reading! &lt;/p&gt;</content><category term="Training"/><category term="training"/><category term="blog"/></entry></feed>
