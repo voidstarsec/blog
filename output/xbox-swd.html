@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+          <title>VoidStar Security Blog - Hardware Debugging for Reverse Engineers Part 1: SWD, OpenOCD and Xbox One Controllers</title>
+        <meta charset="utf-8" />
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://voidstarsec.com/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Full Atom Feed" />
+        <link href="https://voidstarsec.com/blog/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Categories Atom Feed" />
+
+
+
+
+    <meta name="tags" content="jtag" />
+    <meta name="tags" content="tutorial" />
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://voidstarsec.com/blog/">VoidStar Security Blog</a></h1></hgroup>
+        <nav><ul>
+        </ul></nav>
+        </header>
+        <main>
+<article>
+  <header>
+    <h2>
+      <a href="https://voidstarsec.com/blog/xbox-swd" rel="bookmark"
+         title="Permalink to Hardware Debugging for Reverse Engineers Part 1: SWD, OpenOCD and Xbox One Controllers">Hardware Debugging for Reverse Engineers Part 1: SWD, OpenOCD and Xbox One Controllers</a></h2>
+ 
+  </header>
+  <h1>Hardware Debugging for Reverse Engineers Part 1: SWD, OpenOCD and Xbox One Controllers</h1>
+<h2>Overview</h2>
+<p>I was looking around my apartment for potential targets for my next post and was pleasantly surprised to find the following XBox One controller still in the packaging:</p>
+<p><img alt="controller_pic" src="https://pisces.bbystatic.com/image2/BestBuy_US/images/products/6362/6362974_sd.jpg;maxHeight=640;maxWidth=550"></p>
+<p>I don't really play my XBox that much so I thought it might be interesting to tear down this controller and see what kind of information we could extract from it.</p>
+<h2>Goals</h2>
+<p>When assessing an embedded platform there are a number of things you can do or try to accomplish, with this post I want to demonstrate/test the following:</p>
+<ol>
+<li>Can the firmware be extracted from the target?</li>
+<li>Can the target be debugged or instrumented in such a way that allows us to learn more about it's internal operations?</li>
+<li>Can the firmware be modified or changed, either through software exploitation or hardware modifications?</li>
+</ol>
+<p>The first step to answering some of these questions will be a hardware teardown.</p>
+<h2>Hardware Teardown</h2>
+<p>Opening up the case reveals the following PCB:</p>
+<p><img alt="controller_pcb" src="https://wrongbaud.github.io/assets/img/xbox-controller/controller_board.jpg"></p>
+<p>Note that there really isn't too much to see here, as the main chip is covered in epoxy. Luckily for us a lot of the test pads are labeled, but the labeled ones seem to be test points for various button presses, so there's nothing exciting there.</p>
+<p>There is an IC labeled AK4961 towards the bottom of the board, but this is an audio codec chip. The datasheet can be found <a href="https://www.digikey.com/product-detail/en/akm-semiconductor-inc/AK4951EN/974-1064-1-ND/5180415">here</a>. This chip is a  low  power  24-bit  stereo  CODEC  with  a  microphone,  headphone  and  speaker amplifiers. </p>
+<p><img alt="Audio IC" src="https://wrongbaud.github.io/assets/img/xbox-controller/audio_chip.jpg"></p>
+<p>If we look to the right of this however there is a small grouping of pads with <em>some</em> silk screen labelling:</p>
+<p><img alt="debug_pads" src="https://wrongbaud.github.io/assets/img/xbox-controller/debug_pads.jpg"></p>
+<p>So we see <code>3V3</code>,<code>A13</code>,<code>A14</code>,<code>RES</code> labeled in the silkscreen. This is worth taking a look at, and if you've read my previous post about the router teardown and discovering UARTs you may already have some ideas on how to proceed here. We'll start by measuring the voltage of each pin with a multimeter:</p>
+<table>
+<thead>
+<tr>
+<th>Pin</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0/NA</td>
+<td>0 (GND)</td>
+</tr>
+<tr>
+<td>RES</td>
+<td>3.3V</td>
+</tr>
+<tr>
+<td>A14</td>
+<td>0.1V</td>
+</tr>
+<tr>
+<td>A13</td>
+<td>3.3V</td>
+</tr>
+<tr>
+<td>3V3</td>
+<td>3.3V</td>
+</tr>
+</tbody>
+</table>
+<p>There was no fluctuation or modulation on RES, A14 or A13, so these must be for something else, but what? Given that one of the labels is <code>RES</code> (which likely stands for system reset) there is a good chance that there are JTAG or SWD headers. </p>
+<p>We can test if the <code>RES</code> pin actually resets the target by pulling it low with a 10k resistor (remember we're reversing things here and don't want to accidentally short something!). If you are not familiar with these types of headers or how a system reset pin typically works - they are often <em>active low</em> meaning that they idle at a high value and have to be pulled low to be activated. So if we monitor the output of <code>dmesg -w</code> and toggle this line low with a 10k resistor, what do we see?</p>
+<div class="highlight"><pre><span></span><code>[ 2108.588884] usb 1-6.4: new full-speed USB device number 10 using xhci_hcd
+[ 2108.691108] usb 1-6.4: New USB device found, idVendor=0e6f, idProduct=02a2, bcdDevice= 1.0f
+[ 2108.691113] usb 1-6.4: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 2108.691116] usb 1-6.4: Product: PDP Wired Controller for Xbox One - Crimson Red
+[ 2108.691119] usb 1-6.4: Manufacturer: Performance Designed Products
+[ 2108.691122] usb 1-6.4: SerialNumber: 0000AE38D7650465
+[ 2108.698675] input: Generic X-Box pad as /devices/pci0000:00/0000:00:14.0/usb1/1-6/1-6.4/1-6.4:1.0/input/input25
+[ 2131.403862] usb 1-6.4: USB disconnect, device number 10
+[ 2133.420350] usb 1-6.4: new full-speed USB device number 11 using xhci_hcd
+[ 2133.522469] usb 1-6.4: New USB device found, idVendor=0e6f, idProduct=02a2, bcdDevice= 1.0f
+[ 2133.522474] usb 1-6.4: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 2133.522478] usb 1-6.4: Product: PDP Wired Controller for Xbox One - Crimson Red
+[ 2133.522480] usb 1-6.4: Manufacturer: Performance Designed Products
+[ 2133.522483] usb 1-6.4: SerialNumber: 0000AE38D7650465
+[ 2133.530103] input: Generic X-Box pad as /devices/pci0000:00/0000:00:14.0/usb1/1-6/1-6.4/1-6.4:1.0/input/input26
+</code></pre></div>
+
+<p>Ah excellent, doing this caused the controller to reset, that's one pin down, 2 more to go.</p>
+<p>When looking at debug headers like this, a common assumption is that it's for JTAG or some other form of hardware level debugging. However, the JTAG spec requires that there be at least 4 pins, <code>TDO</code>,<code>TDI</code>,<code>TMS</code> and <code>TCK</code>. We only have two on our target, so there is a good chance that this is a Single Wire Debug (SWD) port. </p>
+<h2>Understanding SWD</h2>
+<p>SWD is a common debugging interface that is used for ARM Cortex targets. As the name implies, SWD only requires one data line and one clock line, but how can we determine which one is which? Before we go down that route, we should understand a little more about how SWD works and what tools can be used to interface with it.</p>
+<p>First off - SWD interfaces with something called a "Debug Access Port" (DAP). The DAP brokers access to various "Access Ports" (APs) which provide functionality including from typical hardware debugging, legacy JTAG cores, and other high performance memory busses. The image below pulled from <a href="https://stm32duinoforum.com/forum/files/pdf/Serial_Wire_Debug.pdf">this document</a> provides a visual representation of how the DAP and APs are architected. </p>
+<p><img alt="swd_arch.png" src="https://wrongbaud.github.io/assets/img/xbox-controller/swd_arch.png"></p>
+<p>Each of these APs consist of 64, 32 bit registers, with one register that is used to identify the type of AP. The function and features of the AP determine how these registers are accessed and utilized. You can find all of the information regarding these transactions for some of the standard APs <a href="https://static.docs.arm.com/ihi0031/c/IHI0031C_debug_interface_as.pdf">here</a>. The ARM interface specification defines two APs by default and they are the JTAG-AP, and the MEM-AP. The MEM-AP also includes a discovery mechanism for components that are attached to it. </p>
+<h3>SWD Protocol</h3>
+<p>As we mentioned before - SWD was developed as a pseudo-replacement for JTAG. With SWD the pin count was reduced from 4 to 2 and it provides a lot of the same functionality of JTAG. One downside to SWD however is that devices can not be daisy chained together, which JTAG allowed for. The two pins that are used in SWD are below:</p>
+<table>
+<thead>
+<tr>
+<th>Pin</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SWCLK</code></td>
+<td>Clock signal to CPU, determining when data is sampled and sent on <code>SWDIO</code></td>
+</tr>
+<tr>
+<td><code>SWDIO</code></td>
+<td>Bi directional data pin used to transfer data to and from the target CPU</td>
+</tr>
+</tbody>
+</table>
+<p>SWD utilizes a packet based protocol to read and write to registers in the DAP/AP and they consist of the following phases:</p>
+<ol>
+<li>Host to target packet request</li>
+<li>Bus turnaround</li>
+<li>Target to host acknowledgment response</li>
+<li>Data transfer phase </li>
+</ol>
+<p>The packet structure can be seen in the image below, I've broken out the various fields in the table as well. </p>
+<p><img alt="swd_arch.png" src="https://wrongbaud.github.io/assets/img/xbox-controller/swd-traffic.png"></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start</td>
+<td>Start bit, value 1</td>
+</tr>
+<tr>
+<td>APnDP</td>
+<td>This bit indicates whether the Debug Port access register or the Access Port access register is to be used.</td>
+</tr>
+<tr>
+<td>RnW</td>
+<td>Read / Write bit</td>
+</tr>
+<tr>
+<td>A[2:3]</td>
+<td>Address field for the AP or DP address</td>
+</tr>
+<tr>
+<td>Parity</td>
+<td>Parity bit for all packet requests</td>
+</tr>
+<tr>
+<td>Stop</td>
+<td>Stop bit (always 0)</td>
+</tr>
+<tr>
+<td>Park</td>
+<td>Line to be driven high during the turnaround period</td>
+</tr>
+<tr>
+<td>ACK[0:2]</td>
+<td>Ack bits from the target back to the host</td>
+</tr>
+<tr>
+<td>DATA[0:32]</td>
+<td>The actual data frame, which will be either read from the target or written to the target depending on the RnW bit</td>
+</tr>
+<tr>
+<td>Parity</td>
+<td>Final parity bit for the data frame</td>
+</tr>
+</tbody>
+</table>
+<p>After the park bit (from the host to the target) there is a turnaround period, which basically means that the target will now respond on the same line. </p>
+<p>From an extremely high level, the SWD port uses these packets to interface with the DAP, which in turn allows access to the MEM-AP which provides access to debugging as well as memory read / write capabilities. For the purposes of this post we will use a tool called OpenOCD to perform these transactions. We will review how to build and use OpenOCD next. </p>
+<h2>OpenOCD</h2>
+<p>Install the dependencies:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sudo</span><span class="w"> </span><span class="n">apt</span><span class="o">-</span><span class="n">get</span><span class="w"> </span><span class="n">install</span><span class="w"> </span><span class="n">build</span><span class="o">-</span><span class="n">essential</span><span class="w"> </span><span class="n">libusb</span><span class="o">-</span><span class="mf">1.0</span><span class="o">-</span><span class="mi">0</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">automake</span><span class="w"> </span><span class="n">libtool</span><span class="w"> </span><span class="n">gdb</span><span class="o">-</span><span class="n">multiarch</span>
+</code></pre></div>
+
+<p>Clone the repository, configure, and build!</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="mi">@115201</span><span class="o">:~/</span><span class="n">blog$</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="n">clone</span><span class="w"> </span><span class="n">https</span><span class="o">:</span><span class="c1">//git.code.sf.net/p/openocd/code openocd-code</span>
+<span class="n">cd</span><span class="w"> </span><span class="n">openocd</span><span class="o">-</span><span class="n">code</span>
+<span class="p">.</span><span class="o">/</span><span class="n">bootstrap</span>
+<span class="p">.</span><span class="o">/</span><span class="n">configure</span>
+<span class="n">make</span><span class="w"> </span><span class="o">-</span><span class="n">j$</span><span class="p">(</span><span class="n">nproc</span><span class="p">)</span>
+</code></pre></div>
+
+<p>With OpenOCD built, we can attempt to debug this controller over SWD. In order to do this we need to tell OpenOCD at least two things:</p>
+<ul>
+<li>What are we using to debug <em>with</em> (which debug adapter are we using)</li>
+<li>What target are we debugging</li>
+</ul>
+<p>To do the debugging, we will use the FT2232H which we used in a <a href="https://wrongbaud.github.io/posts/Holiday-Teardown/">previous post</a> to dump a SPI flash. With this interface we can use OpenOCD to query information about the target via SWD, which is important because at this stage in the reversing process we don't even know what the target CPU is!</p>
+<p>Below is a table for determining what pins on the FT2232H need to be connected to a SWD target:</p>
+<table>
+<thead>
+<tr>
+<th>FT2232H Pin</th>
+<th>SWD Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AD1</code></td>
+<td>SWD</td>
+</tr>
+<tr>
+<td><code>AD0</code></td>
+<td>SCLK</td>
+</tr>
+<tr>
+<td><code>AD4</code></td>
+<td>SRST (System Reset)</td>
+</tr>
+</tbody>
+</table>
+<p>Lastly, in order to use the FT2232H as a SWD adapter, you have to put a 470 OHM resistor between <code>AD1</code>/<code>AD2</code> on the FT2232H.</p>
+<p>Once we have the pins on the FT2232H hooked up to the target we can use the following script to query the <code>DPIDR</code> register on the DAP controller:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># We are using an FT2232H so specify this here</span>
+<span class="n">interface</span><span class="w"> </span><span class="n">ftdi</span>
+<span class="c1"># Provide the VID/PID of the FT2232H</span>
+<span class="n">ftdi_vid_pid</span><span class="w"> </span><span class="mh">0x0403</span><span class="w"> </span><span class="mh">0x6010</span>
+<span class="c1"># There are two channels, this is the default</span>
+<span class="n">ftdi_channel</span><span class="w"> </span><span class="mi">0</span>
+<span class="c1"># To the best of my knowledge, this is used to properly set and confiture the state of the lines we are using</span>
+<span class="n">ftdi_layout_init</span><span class="w"> </span><span class="mh">0x0018</span><span class="w"> </span><span class="mh">0x05fb</span>
+<span class="c1"># Enable SWD for the lines that we are using, and the port</span>
+<span class="n">ftdi_layout_signal</span><span class="w"> </span><span class="n">SWD_EN</span><span class="w"> </span><span class="o">-</span><span class="n">data</span><span class="w"> </span><span class="mi">0</span>
+<span class="c1"># This is used to specify the sRST pin, in our case we&#39;re using </span>
+<span class="n">ftdi_layout_signal</span><span class="w"> </span><span class="n">nSRST</span><span class="w"> </span><span class="o">-</span><span class="n">data</span><span class="w"> </span><span class="mh">0x0010</span>
+<span class="c1"># Here we are selecting SWD as opposed to another transport layer such as JTAG</span>
+<span class="n">transport</span><span class="w"> </span><span class="n">select</span><span class="w"> </span><span class="n">swd</span>
+<span class="c1"># Set the speed of the adapter, this will vary based on what your hardware supports</span>
+<span class="n">adapter_khz</span><span class="w"> </span><span class="mi">100</span>
+<span class="c1"># Create a new dap, (TAP for JTAG terms) with name chip and role CPU, -enable let&#39;s OpenOCD to know to add it to the scan</span>
+<span class="n">swd</span><span class="w"> </span><span class="n">newdap</span><span class="w"> </span><span class="n">chip</span><span class="w"> </span><span class="n">cpu</span><span class="w"> </span><span class="o">-</span><span class="n">enable</span>
+<span class="c1"># Create the DAP instance, this must be explicitly created according to the OpenOCD docs</span>
+<span class="n">dap</span><span class="w"> </span><span class="n">create</span><span class="w"> </span><span class="n">chip</span><span class="o">.</span><span class="n">dap</span><span class="w"> </span><span class="o">-</span><span class="n">chain</span><span class="o">-</span><span class="n">position</span><span class="w"> </span><span class="n">chip</span><span class="o">.</span><span class="n">cpu</span>
+</code></pre></div>
+
+<p>We can run this script with openocd as shown, with the following output (note that the first time it was run, there was no output, after swapping the <code>SWD</code>/<code>SCLK</code> lines the following output was printed out). See the table below for the connections to be made to the controller from the FT2232</p>
+<table>
+<thead>
+<tr>
+<th>FT2232H Pin</th>
+<th>Controller</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AD1</code></td>
+<td>SWD (<code>A13</code>)</td>
+</tr>
+<tr>
+<td><code>AD0</code></td>
+<td>SCLK (<code>A14</code>)</td>
+</tr>
+<tr>
+<td><code>AD4</code></td>
+<td>SRST (<code>RES</code>)</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">stm32</span><span class="o">-</span><span class="n">xbox</span><span class="err">$</span><span class="w"> </span><span class="n">sudo</span><span class="w"> </span><span class="n">openocd</span><span class="w"> </span><span class="o">-</span><span class="n">f</span><span class="w"> </span><span class="n">openocd</span><span class="p">.</span><span class="n">cfg</span><span class="w"> </span>
+<span class="k">Open</span><span class="w"> </span><span class="k">On</span><span class="o">-</span><span class="n">Chip</span><span class="w"> </span><span class="n">Debugger</span><span class="w"> </span><span class="mf">0.10.0</span><span class="o">+</span><span class="n">dev</span><span class="o">-</span><span class="mi">01040</span><span class="o">-</span><span class="n">ge7e681ac</span><span class="w"> </span><span class="p">(</span><span class="mi">2020</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">27</span><span class="o">-</span><span class="mi">18</span><span class="err">:</span><span class="mi">55</span><span class="p">)</span>
+<span class="n">Licensed</span><span class="w"> </span><span class="k">under</span><span class="w"> </span><span class="n">GNU</span><span class="w"> </span><span class="n">GPL</span><span class="w"> </span><span class="n">v2</span>
+<span class="k">For</span><span class="w"> </span><span class="n">bug</span><span class="w"> </span><span class="n">reports</span><span class="p">,</span><span class="w"> </span><span class="k">read</span>
+<span class="w">        </span><span class="nl">http</span><span class="p">:</span><span class="o">//</span><span class="n">openocd</span><span class="p">.</span><span class="n">org</span><span class="o">/</span><span class="n">doc</span><span class="o">/</span><span class="n">doxygen</span><span class="o">/</span><span class="n">bugs</span><span class="p">.</span><span class="n">html</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">FTDI</span><span class="w"> </span><span class="n">SWD</span><span class="w"> </span><span class="n">mode</span><span class="w"> </span><span class="n">enabled</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">Listening</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="mi">6666</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">tcl</span><span class="w"> </span><span class="n">connections</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">Listening</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="mi">4444</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">telnet</span><span class="w"> </span><span class="n">connections</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="n">speed</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="n">kHz</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">SWD</span><span class="w"> </span><span class="n">DPIDR</span><span class="w"> </span><span class="mh">0x2ba01477</span>
+<span class="n">Warn</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">gdb</span><span class="w"> </span><span class="n">services</span><span class="w"> </span><span class="n">need</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">more</span><span class="w"> </span><span class="n">targets</span><span class="w"> </span><span class="n">defined</span>
+</code></pre></div>
+
+<p>Excellent! We've found a chip ID of <code>0x2ba01477</code> if we google this ID we see lots of hits for various Cortex M / STM32 devices - which would make sense because this processor series supports SWD. Now that we can communicate with the DAP, we should see if we can determine the exact processor that is being used - if this is one that has a configuration file written for it we will be able to dump flash banks and get other auxiliary information from the target processor. With this additional information we can tell OpenOCD to create a target, using the chip with the Cortex M definition, this will hopefully allow us to take more advantage of the DAP and get access to some of the more generic features while we try to figure out exactly which CPU we're targeting:</p>
+<div class="highlight"><pre><span></span><code><span class="err">#</span><span class="w"> </span><span class="nx">Set</span><span class="w"> </span><span class="nx">up</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">GDB</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">CPU</span><span class="p">,</span><span class="w"> </span><span class="nx">cortex_m</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">CPU</span><span class="w"> </span><span class="k">type</span><span class="p">,</span><span class="w"> </span>
+<span class="nx">target</span><span class="w"> </span><span class="nx">create</span><span class="w"> </span><span class="nx">chip</span><span class="p">.</span><span class="nx">cpu</span><span class="w"> </span><span class="nx">cortex_m</span><span class="w"> </span><span class="o">-</span><span class="nx">dap</span><span class="w"> </span><span class="nx">chip</span><span class="p">.</span><span class="nx">dap</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">init</span><span class="w"> </span><span class="nx">reads</span><span class="w"> </span><span class="nx">out</span><span class="w"> </span><span class="nx">all</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">necessary</span><span class="w"> </span><span class="nx">information</span><span class="w"> </span><span class="nx">from</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">DAP</span><span class="p">,</span><span class="w"> </span><span class="nx">kicks</span><span class="w"> </span><span class="nx">off</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">debugging</span><span class="w"> </span><span class="nx">session</span><span class="p">,</span><span class="w"> </span><span class="nx">etc</span>
+<span class="nx">init</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">Read</span><span class="w"> </span><span class="nx">out</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">information</span><span class="w"> </span><span class="nx">from</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">DAP</span><span class="p">,</span><span class="w"> </span><span class="nx">including</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span>
+<span class="nx">dap</span><span class="w"> </span><span class="nx">info</span>
+</code></pre></div>
+
+<p>When we run openocd with this config file we see the following results:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">wrongbaud</span><span class="err">@</span><span class="nx">wubuntu</span><span class="p">:</span><span class="o">~/</span><span class="nx">blog</span><span class="o">/</span><span class="nx">stm32</span><span class="o">-</span><span class="nx">xbox</span><span class="err">$</span><span class="w"> </span><span class="nx">sudo</span><span class="w"> </span><span class="nx">openocd</span><span class="w"> </span><span class="o">-</span><span class="nx">f</span><span class="w"> </span><span class="nx">openocd</span><span class="p">.</span><span class="nx">cfg</span><span class="w"> </span>
+<span class="nx">Open</span><span class="w"> </span><span class="nx">On</span><span class="o">-</span><span class="nx">Chip</span><span class="w"> </span><span class="nx">Debugger</span><span class="w"> </span><span class="m m-Double">0.10.0</span><span class="o">+</span><span class="nx">dev</span><span class="o">-</span><span class="mi">01040</span><span class="o">-</span><span class="nx">ge7e681ac</span><span class="w"> </span><span class="p">(</span><span class="mi">2020</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">27</span><span class="o">-</span><span class="mi">18</span><span class="p">:</span><span class="mi">55</span><span class="p">)</span>
+<span class="nx">Licensed</span><span class="w"> </span><span class="nx">under</span><span class="w"> </span><span class="nx">GNU</span><span class="w"> </span><span class="nx">GPL</span><span class="w"> </span><span class="nx">v2</span>
+<span class="nx">For</span><span class="w"> </span><span class="nx">bug</span><span class="w"> </span><span class="nx">reports</span><span class="p">,</span><span class="w"> </span><span class="nx">read</span>
+<span class="w">        </span><span class="nx">http</span><span class="p">:</span><span class="c1">//openocd.org/doc/doxygen/bugs.html</span>
+<span class="nx">Info</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">FTDI</span><span class="w"> </span><span class="nx">SWD</span><span class="w"> </span><span class="nx">mode</span><span class="w"> </span><span class="nx">enabled</span>
+<span class="nx">Info</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">clock</span><span class="w"> </span><span class="nx">speed</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="nx">kHz</span>
+<span class="nx">Info</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">SWD</span><span class="w"> </span><span class="nx">DPIDR</span><span class="w"> </span><span class="mh">0x2ba01477</span>
+<span class="nx">Info</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">chip</span><span class="p">.</span><span class="nx">cpu</span><span class="p">:</span><span class="w"> </span><span class="nx">hardware</span><span class="w"> </span><span class="nx">has</span><span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="nx">breakpoints</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="nx">watchpoints</span>
+<span class="nx">Info</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">chip</span><span class="p">.</span><span class="nx">cpu</span><span class="p">:</span><span class="w"> </span><span class="kd">external</span><span class="w"> </span><span class="nx">reset</span><span class="w"> </span><span class="nx">detected</span>
+<span class="nx">Info</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">Listening</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">port</span><span class="w"> </span><span class="mi">3333</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">gdb</span><span class="w"> </span><span class="nx">connections</span>
+<span class="nx">AP</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="nx">register</span><span class="w"> </span><span class="mh">0x24770011</span>
+<span class="w">        </span><span class="nx">Type</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">MEM</span><span class="o">-</span><span class="nx">AP</span><span class="w"> </span><span class="nx">AHB3</span>
+<span class="nx">MEM</span><span class="o">-</span><span class="nx">AP</span><span class="w"> </span><span class="nx">BASE</span><span class="w"> </span><span class="mh">0xe00ff003</span>
+<span class="w">        </span><span class="nx">Valid</span><span class="w"> </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span><span class="w"> </span><span class="nx">present</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0xe00ff000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x00000a0411</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x0a0</span><span class="p">,</span><span class="w"> </span><span class="nx">STMicroelectronics</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x411</span><span class="p">,</span><span class="w"> </span><span class="nx">Unrecognized</span><span class="w"> </span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x1</span><span class="p">,</span><span class="w"> </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span>
+<span class="w">                </span><span class="nx">MEMTYPE</span><span class="w"> </span><span class="nx">system</span><span class="w"> </span><span class="nx">memory</span><span class="w"> </span><span class="nx">present</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">bus</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x0</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xfff0f003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0xe000e000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04000bb00c</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0xc</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">M4</span><span class="w"> </span><span class="nx">SCS</span><span class="w"> </span><span class="p">(</span><span class="nx">System</span><span class="w"> </span><span class="nx">Control</span><span class="w"> </span><span class="nx">Space</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0xe</span><span class="p">,</span><span class="w"> </span><span class="nx">Generic</span><span class="w"> </span><span class="nx">IP</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x4</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xfff02003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0xe0001000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04003bb002</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x2</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">M3</span><span class="w"> </span><span class="nx">DWT</span><span class="w"> </span><span class="p">(</span><span class="nx">Data</span><span class="w"> </span><span class="nx">Watchpoint</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">Trace</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0xe</span><span class="p">,</span><span class="w"> </span><span class="nx">Generic</span><span class="w"> </span><span class="nx">IP</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x8</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xfff03003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0xe0002000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04002bb003</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x3</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">M3</span><span class="w"> </span><span class="nx">FPB</span><span class="w"> </span><span class="p">(</span><span class="nx">Flash</span><span class="w"> </span><span class="nx">Patch</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">Breakpoint</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0xe</span><span class="p">,</span><span class="w"> </span><span class="nx">Generic</span><span class="w"> </span><span class="nx">IP</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0xc</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xfff01003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0xe0000000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04003bb001</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x1</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">M3</span><span class="w"> </span><span class="nx">ITM</span><span class="w"> </span><span class="p">(</span><span class="nx">Instrumentation</span><span class="w"> </span><span class="nx">Trace</span><span class="w"> </span><span class="nx">Module</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0xe</span><span class="p">,</span><span class="w"> </span><span class="nx">Generic</span><span class="w"> </span><span class="nx">IP</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x10</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xfff41003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0xe0040000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04000bb9a1</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x9a1</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">M4</span><span class="w"> </span><span class="nx">TPIU</span><span class="w"> </span><span class="p">(</span><span class="nx">Trace</span><span class="w"> </span><span class="nx">Port</span><span class="w"> </span><span class="nx">Interface</span><span class="w"> </span><span class="nx">Unit</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x9</span><span class="p">,</span><span class="w"> </span><span class="nx">CoreSight</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">                </span><span class="nx">Type</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x11</span><span class="p">,</span><span class="w"> </span><span class="nx">Trace</span><span class="w"> </span><span class="nx">Sink</span><span class="p">,</span><span class="w"> </span><span class="nx">Port</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x14</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xfff42003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0xe0041000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04000bb925</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x925</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">M4</span><span class="w"> </span><span class="nx">ETM</span><span class="w"> </span><span class="p">(</span><span class="nx">Embedded</span><span class="w"> </span><span class="nx">Trace</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x9</span><span class="p">,</span><span class="w"> </span><span class="nx">CoreSight</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">                </span><span class="nx">Type</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x13</span><span class="p">,</span><span class="w"> </span><span class="nx">Trace</span><span class="w"> </span><span class="nx">Source</span><span class="p">,</span><span class="w"> </span><span class="nx">Processor</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x18</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x0</span>
+<span class="w">                </span><span class="nx">End</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span>
+
+<span class="nx">Info</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">Listening</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">port</span><span class="w"> </span><span class="mi">6666</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">tcl</span><span class="w"> </span><span class="nx">connections</span>
+<span class="nx">Info</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">Listening</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">port</span><span class="w"> </span><span class="mi">4444</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">telnet</span><span class="w"> </span><span class="nx">connections</span>
+</code></pre></div>
+
+<p>With these new changes, we can not only interact with the DAP and MEM-AP, but we can also debug the target via GDB. We can also determine that the target CPU is an STM32F2X series because of the 0x411 part number in the MEM-AP entry:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">MEM</span><span class="o">-</span><span class="nx">AP</span><span class="w"> </span><span class="nx">BASE</span><span class="w"> </span><span class="mh">0xe00ff003</span>
+<span class="w">    </span><span class="nx">Valid</span><span class="w"> </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span><span class="w"> </span><span class="nx">present</span>
+<span class="w">        </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0xe00ff000</span>
+<span class="w">        </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x00000a0411</span>
+<span class="w">        </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x0a0</span><span class="p">,</span><span class="w"> </span><span class="nx">STMicroelectronics</span>
+<span class="w">        </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x411</span><span class="p">,</span><span class="w"> </span><span class="nx">Unrecognized</span><span class="w"> </span>
+<span class="w">        </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x1</span><span class="p">,</span><span class="w"> </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span>
+</code></pre></div>
+
+<p>However - just for fun, what if we didn't have access to the DAP and wanted to figure out what our target was via memory reads and writes? To figure this out, there are some <a href="https://github.com/antongus/stm32tpl/blob/master/stm32.h">memory regions that are common in STM32 CPUs</a> that are used to store ID and flash information. With this information we can modify the OpenOCD script to read these regions and look for relevant ID information! The table below has the necessary offsets for the ID information:</p>
+<table>
+<thead>
+<tr>
+<th>STM Series</th>
+<th>Offset</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Generic Device ID Reg</td>
+<td>0xE0042000</td>
+</tr>
+<tr>
+<td>STM32F0/STM32F3</td>
+<td>0x1FFFF7AC</td>
+</tr>
+<tr>
+<td>STM32F1</td>
+<td>0x1FFFF7E8</td>
+</tr>
+<tr>
+<td>STM32F2/STM32F4</td>
+<td>0x1FFF7A10</td>
+</tr>
+<tr>
+<td>STM32F7</td>
+<td>0x1FF0F420</td>
+</tr>
+<tr>
+<td>STM32L0</td>
+<td>0x1FF80050</td>
+</tr>
+<tr>
+<td>STM32L0/ L1 Cat.1,Cat.2</td>
+<td>0x1FF80050</td>
+</tr>
+<tr>
+<td>L1 Cat.3,Cat.4,Cat.5,Cat.6</td>
+<td>0x1FF800D0</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code>mdw 0x1FFFF7AC 3
+mdw 0x1FFFF7E8 3
+mdw 0x1FFF7A10 3
+mdw 0x1FF0F420 3
+mdw 0x1FF80050 3
+mdw 0x1FF800D0 3
+</code></pre></div>
+
+<p>When we run the updated OpenOCd script and the above commands we see the following results:</p>
+<div class="highlight"><pre><span></span><code>&gt; mdw 0x1FFFF7AC 3
+0x1ffff7ac: ffffffff ffffffff ffffffff 
+
+&gt; mdw 0x1FFFF7E8 3
+0x1ffff7e8: ffffffff ffffffff ffffffff 
+
+&gt; mdw 0x1FFF7A10 3
+0x1fff7a10: 006c0028 31385114 30373639 
+
+&gt; mdw 0x1FF0F420 3
+SWD DPIDR 0x2ba01477
+Failed to read memory at 0x1ff0f424
+
+&gt; mdw 0x1FF80050 3
+SWD DPIDR 0x2ba01477
+Failed to read memory at 0x1ff80054
+
+&gt; mdw 0x1FF800D0 3
+SWD DPIDR 0x2ba01477
+Failed to read memory at 0x1ff800d4
+
+&gt; 
+</code></pre></div>
+
+<p>We can get the flash size with the following command, using the flash address from the datasheet for this chip, or the <a href="https://github.com/antongus/stm32tpl/blob/master/stm32.h">repository</a> linked above:</p>
+<div class="highlight"><pre><span></span><code>&gt; mdh 0x1FFF7A22
+0x1fff7a22: 0100 
+</code></pre></div>
+
+<p>Now that we know the exact target, we can remove the target <code>swd</code>, <code>dap</code> and <code>target</code> lines from our config file, and replace them with a call to <code>-f /usr/local/share/openocd/scripts/target/stm32f2x.cfg</code> from the command line. This will properly enumerate the target CPU. We also know now that this STM32F2 series chip has 0x100 1kb pages of flash memory.</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">stm32</span><span class="o">-</span><span class="n">xbox</span><span class="err">$</span><span class="w"> </span><span class="n">sudo</span><span class="w"> </span><span class="n">openocd</span><span class="w"> </span><span class="o">-</span><span class="n">f</span><span class="w"> </span><span class="n">openocd</span><span class="p">.</span><span class="n">cfg</span><span class="w"> </span><span class="o">-</span><span class="n">f</span><span class="w"> </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="k">local</span><span class="o">/</span><span class="n">share</span><span class="o">/</span><span class="n">openocd</span><span class="o">/</span><span class="n">scripts</span><span class="o">/</span><span class="n">target</span><span class="o">/</span><span class="n">stm32f2x</span><span class="p">.</span><span class="n">cfg</span><span class="w"> </span>
+<span class="o">[</span><span class="n">sudo</span><span class="o">]</span><span class="w"> </span><span class="n">password</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nl">wrongbaud</span><span class="p">:</span><span class="w"> </span>
+<span class="k">Open</span><span class="w"> </span><span class="k">On</span><span class="o">-</span><span class="n">Chip</span><span class="w"> </span><span class="n">Debugger</span><span class="w"> </span><span class="mf">0.10.0</span><span class="o">+</span><span class="n">dev</span><span class="o">-</span><span class="mi">01040</span><span class="o">-</span><span class="n">ge7e681ac</span><span class="w"> </span><span class="p">(</span><span class="mi">2020</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">27</span><span class="o">-</span><span class="mi">18</span><span class="err">:</span><span class="mi">55</span><span class="p">)</span>
+<span class="n">Licensed</span><span class="w"> </span><span class="k">under</span><span class="w"> </span><span class="n">GNU</span><span class="w"> </span><span class="n">GPL</span><span class="w"> </span><span class="n">v2</span>
+<span class="k">For</span><span class="w"> </span><span class="n">bug</span><span class="w"> </span><span class="n">reports</span><span class="p">,</span><span class="w"> </span><span class="k">read</span>
+<span class="w">    </span><span class="nl">http</span><span class="p">:</span><span class="o">//</span><span class="n">openocd</span><span class="p">.</span><span class="n">org</span><span class="o">/</span><span class="n">doc</span><span class="o">/</span><span class="n">doxygen</span><span class="o">/</span><span class="n">bugs</span><span class="p">.</span><span class="n">html</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">FTDI</span><span class="w"> </span><span class="n">SWD</span><span class="w"> </span><span class="n">mode</span><span class="w"> </span><span class="n">enabled</span>
+<span class="n">adapter</span><span class="w"> </span><span class="nl">speed</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="n">kHz</span>
+
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">Listening</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="mi">6666</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">tcl</span><span class="w"> </span><span class="n">connections</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">Listening</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="mi">4444</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">telnet</span><span class="w"> </span><span class="n">connections</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="n">speed</span><span class="w"> </span><span class="mi">1000</span><span class="w"> </span><span class="n">kHz</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">SWD</span><span class="w"> </span><span class="n">DPIDR</span><span class="w"> </span><span class="mh">0x2ba01477</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">stm32f2x</span><span class="p">.</span><span class="nl">cpu</span><span class="p">:</span><span class="w"> </span><span class="n">hardware</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="n">breakpoints</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="n">watchpoints</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">Listening</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="mi">3333</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">gdb</span><span class="w"> </span><span class="n">connections</span>
+</code></pre></div>
+
+<p>Now that this is working, we can dump the internal flash with the following commands:</p>
+<div class="highlight"><pre><span></span><code><span class="k">&gt; </span><span class="ge">flash list</span>
+{name stm32f2x base 0 size 0 bus_width 0 chip_width 0} {name stm32f2x base 536836096 size 0 bus_width 0 chip_width 0}
+
+<span class="k">&gt; </span><span class="ge">flash read_bank 0 bank0.bin</span>
+device id = 0x00016423
+flash size = 256 kbytes
+wrote 262144 bytes to file bank0.bin from flash bank 0 at offset 0x00000000 in 3.690861s (69.361 KiB/s)
+
+<span class="k">&gt; </span><span class="ge">flash read_bank 1 bank1.bin</span>
+flash size = 512 bytes
+wrote 512 bytes to file bank1.bin from flash bank 1 at offset 0x00000000 in 0.007852s (63.678 KiB/s)
+</code></pre></div>
+
+<p>We can also debug the controller with gdb using the commands below:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">wrongbaud</span><span class="err">@</span><span class="nx">wubuntu</span><span class="p">:</span><span class="o">~/</span><span class="nx">blog</span><span class="o">/</span><span class="nx">stm32</span><span class="o">-</span><span class="nx">xbox</span><span class="err">$</span><span class="w"> </span><span class="nx">gdb</span><span class="o">-</span><span class="nx">multiarch</span><span class="w"> </span>
+<span class="nx">GNU</span><span class="w"> </span><span class="nx">gdb</span><span class="w"> </span><span class="p">(</span><span class="nx">Ubuntu</span><span class="w"> </span><span class="m m-Double">8.1</span><span class="o">-</span><span class="mi">0</span><span class="nx">ubuntu3</span><span class="m m-Double">.2</span><span class="p">)</span><span class="w"> </span><span class="m m-Double">8.1.0.20180409</span><span class="o">-</span><span class="nx">git</span>
+<span class="nx">Copyright</span><span class="w"> </span><span class="p">(</span><span class="nx">C</span><span class="p">)</span><span class="w"> </span><span class="mi">2018</span><span class="w"> </span><span class="nx">Free</span><span class="w"> </span><span class="nx">Software</span><span class="w"> </span><span class="nx">Foundation</span><span class="p">,</span><span class="w"> </span><span class="nx">Inc</span><span class="p">.</span>
+<span class="nx">License</span><span class="w"> </span><span class="nx">GPLv3</span><span class="o">+</span><span class="p">:</span><span class="w"> </span><span class="nx">GNU</span><span class="w"> </span><span class="nx">GPL</span><span class="w"> </span><span class="nx">version</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="nx">later</span><span class="w"> </span><span class="p">&lt;</span><span class="nx">http</span><span class="p">:</span><span class="c1">//gnu.org/licenses/gpl.html&gt;</span>
+<span class="nx">This</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">free</span><span class="w"> </span><span class="nx">software</span><span class="p">:</span><span class="w"> </span><span class="nx">you</span><span class="w"> </span><span class="nx">are</span><span class="w"> </span><span class="nx">free</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">change</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">redistribute</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span>
+<span class="nx">There</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">NO</span><span class="w"> </span><span class="nx">WARRANTY</span><span class="p">,</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">extent</span><span class="w"> </span><span class="nx">permitted</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">law</span><span class="p">.</span><span class="w">  </span><span class="nx">Type</span><span class="w"> </span><span class="s">&quot;show copying&quot;</span>
+<span class="k">and</span><span class="w"> </span><span class="s">&quot;show warranty&quot;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">details</span><span class="p">.</span>
+<span class="nx">This</span><span class="w"> </span><span class="nx">GDB</span><span class="w"> </span><span class="nx">was</span><span class="w"> </span><span class="nx">configured</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s">&quot;x86_64-linux-gnu&quot;</span><span class="p">.</span>
+<span class="nx">Type</span><span class="w"> </span><span class="s">&quot;show configuration&quot;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">configuration</span><span class="w"> </span><span class="nx">details</span><span class="p">.</span>
+<span class="nx">For</span><span class="w"> </span><span class="nx">bug</span><span class="w"> </span><span class="nx">reporting</span><span class="w"> </span><span class="nx">instructions</span><span class="p">,</span><span class="w"> </span><span class="nx">please</span><span class="w"> </span><span class="nx">see</span><span class="p">:</span>
+<span class="p">&lt;</span><span class="nx">http</span><span class="p">:</span><span class="c1">//www.gnu.org/software/gdb/bugs/&gt;.</span>
+<span class="nx">Find</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">GDB</span><span class="w"> </span><span class="nx">manual</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">other</span><span class="w"> </span><span class="nx">documentation</span><span class="w"> </span><span class="nx">resources</span><span class="w"> </span><span class="nx">online</span><span class="w"> </span><span class="nx">at</span><span class="p">:</span>
+<span class="p">&lt;</span><span class="nx">http</span><span class="p">:</span><span class="c1">//www.gnu.org/software/gdb/documentation/&gt;.</span>
+<span class="nx">For</span><span class="w"> </span><span class="nx">help</span><span class="p">,</span><span class="w"> </span><span class="k">type</span><span class="w"> </span><span class="s">&quot;help&quot;</span><span class="p">.</span>
+<span class="nx">Type</span><span class="w"> </span><span class="s">&quot;apropos word&quot;</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">search</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">commands</span><span class="w"> </span><span class="nx">related</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="s">&quot;word&quot;</span><span class="p">.</span>
+<span class="p">(</span><span class="nx">gdb</span><span class="p">)</span><span class="w"> </span><span class="nx">set</span><span class="w"> </span><span class="nx">architecture</span><span class="w"> </span><span class="nx">arm</span>
+<span class="nx">The</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="nx">architecture</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">assumed</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">be</span><span class="w"> </span><span class="nx">arm</span>
+<span class="p">(</span><span class="nx">gdb</span><span class="p">)</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="nx">remote</span><span class="w"> </span><span class="nx">localhost</span><span class="p">:</span><span class="mi">3333</span>
+<span class="nx">Remote</span><span class="w"> </span><span class="nx">debugging</span><span class="w"> </span><span class="nx">using</span><span class="w"> </span><span class="nx">localhost</span><span class="p">:</span><span class="mi">3333</span>
+<span class="nx">warning</span><span class="p">:</span><span class="w"> </span><span class="nx">No</span><span class="w"> </span><span class="nx">executable</span><span class="w"> </span><span class="nx">has</span><span class="w"> </span><span class="nx">been</span><span class="w"> </span><span class="nx">specified</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="nx">does</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="nx">support</span>
+<span class="nx">determining</span><span class="w"> </span><span class="nx">executable</span><span class="w"> </span><span class="nx">automatically</span><span class="p">.</span><span class="w">  </span><span class="nx">Try</span><span class="w"> </span><span class="nx">using</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="s">&quot;file&quot;</span><span class="w"> </span><span class="nx">command</span><span class="p">.</span>
+<span class="mh">0x0800307e</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">??</span><span class="w"> </span><span class="p">()</span>
+<span class="p">(</span><span class="nx">gdb</span><span class="p">)</span><span class="w"> </span><span class="nx">x</span><span class="o">/</span><span class="mi">10</span><span class="nx">x</span><span class="w"> </span><span class="mh">0x1FFF7A10</span>
+<span class="mh">0x1fff7a10</span><span class="p">:</span><span class="w"> </span><span class="mh">0x006c0028</span><span class="w">  </span><span class="mh">0x31385114</span><span class="w">  </span><span class="mh">0x30373639</span><span class="w">  </span><span class="mh">0xc000fcc0</span>
+<span class="mh">0x1fff7a20</span><span class="p">:</span><span class="w"> </span><span class="mh">0x0100c000</span><span class="w">  </span><span class="mh">0x67ff47d2</span><span class="w">  </span><span class="mh">0x05dcf000</span><span class="w">  </span><span class="mh">0x04a803b3</span>
+<span class="mh">0x1fff7a30</span><span class="p">:</span><span class="w"> </span><span class="mh">0x451744b1</span><span class="w">  </span><span class="mh">0xffffffff</span>
+<span class="p">(</span><span class="nx">gdb</span><span class="p">)</span><span class="w"> </span>
+</code></pre></div>
+
+<p>So at this point, we have the flash dumped, we can debug and single step through the firmware, but ...  can we reflash the MCU?</p>
+<p>If we can locate the USB descriptor strings in the firmware image and patch them, we can use that as a visible method to determine if we can patch the firmware. Let's load up the firmware in GHIDRA and see if we can find them, the firmware image can be loaded at address <code>0x8000000</code>. We know that the firmware is loaded at <code>0x8000000</code> based on the datasheet, however if we did not have the datasheet this could be determined from OpenOCD by issuing the <code>reset halt</code> command and single stepping through the first instruction. Luckily, this firmware image is rather small and Ghidra makes quick work of it. The strings that were seen in the <code>dmesg</code> output can be seen in the screenshot below:</p>
+<p><img alt="xrefs" src="https://wrongbaud.github.io/assets/img/xbox-controller/xrefs.png"></p>
+<p>Let's do a simple patch with the product string, changing it to "Testing Firmware Patches". The flash can be overwritten with the following commands in the OpenOCD telnet console:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">stm32</span><span class="o">-</span><span class="n">xbox</span><span class="err">$</span><span class="w"> </span><span class="n">telnet</span><span class="w"> </span><span class="n">localhost</span><span class="w"> </span><span class="mi">4444</span>
+<span class="n">Trying</span><span class="w"> </span><span class="mf">127.0.0.1</span><span class="p">...</span>
+<span class="n">Connected</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">localhost</span><span class="p">.</span>
+<span class="k">Escape</span><span class="w"> </span><span class="k">character</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="s1">&#39;^]&#39;</span><span class="p">.</span>
+<span class="k">Open</span><span class="w"> </span><span class="k">On</span><span class="o">-</span><span class="n">Chip</span><span class="w"> </span><span class="n">Debugger</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">flash</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">bank0</span><span class="o">-</span><span class="n">orig</span><span class="p">.</span><span class="n">bin</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">flash</span><span class="w"> </span><span class="n">read_bank</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">bank1</span><span class="o">-</span><span class="n">orig</span><span class="p">.</span><span class="n">bin</span><span class="w"> </span>
+<span class="n">flash</span><span class="w"> </span><span class="k">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">512</span><span class="w"> </span><span class="n">bytes</span>
+<span class="n">wrote</span><span class="w"> </span><span class="mi">512</span><span class="w"> </span><span class="n">bytes</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">file</span><span class="w"> </span><span class="n">bank1</span><span class="o">-</span><span class="n">orig</span><span class="p">.</span><span class="n">bin</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">flash</span><span class="w"> </span><span class="n">bank</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">at</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="mh">0x00000000</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="mf">0.007867</span><span class="n">s</span><span class="w"> </span><span class="p">(</span><span class="mf">63.557</span><span class="w"> </span><span class="n">KiB</span><span class="o">/</span><span class="n">s</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">stm32f2x</span><span class="w"> </span><span class="n">unlock</span><span class="w"> </span><span class="mi">0</span>
+<span class="n">Target</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">halted</span>
+<span class="n">stm32f2x</span><span class="w"> </span><span class="n">failed</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">unlock</span><span class="w"> </span><span class="n">device</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">halt</span>
+<span class="n">target</span><span class="w"> </span><span class="n">halted</span><span class="w"> </span><span class="n">due</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">debug</span><span class="o">-</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="k">current</span><span class="w"> </span><span class="nl">mode</span><span class="p">:</span><span class="w"> </span><span class="n">Handler</span><span class="w"> </span><span class="k">External</span><span class="w"> </span><span class="n">Interrupt</span><span class="p">(</span><span class="mi">67</span><span class="p">)</span>
+<span class="nl">xPSR</span><span class="p">:</span><span class="w"> </span><span class="mh">0x61000053</span><span class="w"> </span><span class="nl">pc</span><span class="p">:</span><span class="w"> </span><span class="mh">0x0800839c</span><span class="w"> </span><span class="nl">msp</span><span class="p">:</span><span class="w"> </span><span class="mh">0x2000ff48</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">stm32f2x</span><span class="w"> </span><span class="n">unlock</span><span class="w"> </span><span class="mi">0</span>
+<span class="n">stm32f2x</span><span class="w"> </span><span class="n">unlocked</span><span class="p">.</span>
+<span class="nl">INFO</span><span class="p">:</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">reset</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="nf">power</span><span class="w"> </span><span class="k">cycle</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">required</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">settings</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">take</span><span class="w"> </span><span class="n">effect</span><span class="p">.</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">reset</span><span class="w"> </span><span class="n">halt</span><span class="w">       </span>
+<span class="n">target</span><span class="w"> </span><span class="n">halted</span><span class="w"> </span><span class="n">due</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">debug</span><span class="o">-</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="k">current</span><span class="w"> </span><span class="nl">mode</span><span class="p">:</span><span class="w"> </span><span class="n">Thread</span><span class="w"> </span>
+<span class="nl">xPSR</span><span class="p">:</span><span class="w"> </span><span class="mh">0x01000000</span><span class="w"> </span><span class="nl">pc</span><span class="p">:</span><span class="w"> </span><span class="mh">0x080002a4</span><span class="w"> </span><span class="nl">msp</span><span class="p">:</span><span class="w"> </span><span class="mh">0x20010000</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">stm32f2x</span><span class="w"> </span><span class="n">mass_erase</span><span class="w"> </span><span class="mi">0</span>
+<span class="n">stm32x</span><span class="w"> </span><span class="n">mass</span><span class="w"> </span><span class="n">erase</span><span class="w"> </span><span class="n">complete</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">flash</span><span class="w"> </span><span class="n">write_bank</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">bank0</span><span class="o">-</span><span class="n">patch</span><span class="p">.</span><span class="n">bin</span>
+<span class="n">wrote</span><span class="w"> </span><span class="mi">262144</span><span class="w"> </span><span class="n">bytes</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="k">file</span><span class="w"> </span><span class="n">bank0</span><span class="o">-</span><span class="n">patch</span><span class="p">.</span><span class="n">bin</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">flash</span><span class="w"> </span><span class="n">bank</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">at</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="mh">0x00000000</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="mf">3.744948</span><span class="n">s</span><span class="w"> </span><span class="p">(</span><span class="mf">68.359</span><span class="w"> </span><span class="n">KiB</span><span class="o">/</span><span class="n">s</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">reset</span><span class="w"> </span>
+<span class="o">&gt;</span><span class="w"> </span>
+</code></pre></div>
+
+<p>There are a few steps here that might not make sense, so I wanted to explain them:</p>
+<ol>
+<li>Always, always always take a backup of <em>any</em> flash image before you attempt to reflash. </li>
+<li>See bullet 1</li>
+<li>The STM32 flash controller has a lock bit which keeps prevents unwanted writes. This is set in the "Option bytes" of the STM32</li>
+<li>Luckily for us we were able to unlock the flash, which can sometimes not be an option!</li>
+<li>For the internal flash on the STM32, we need to perform an erase operation before we write to it</li>
+<li>I should add here, that this is never something you want to do if your target is expensive or important unless you're 100% certain you can return it to it's original state</li>
+<li>We write the patched firmware image, and restart the CPU, prompting the following to show up in <code>dmesg</code></li>
+</ol>
+<div class="highlight"><pre><span></span><code>[54691.886194] usb 1-6.4: new full-speed USB device number 14 using xhci_hcd
+[54691.992411] usb 1-6.4: New USB device found, idVendor=0e6f, idProduct=02a2, bcdDevice= 1.0f
+[54691.992417] usb 1-6.4: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[54691.992420] usb 1-6.4: Product: Testing Firmware Patches
+[54691.992423] usb 1-6.4: Manufacturer: Performance Designed Products
+[54691.992426] usb 1-6.4: SerialNumber: 0000AE38D7650465
+[54691.998102] input: Generic X-Box pad as /devices/pci0000:00/0000:00:14.0/usb1/1-6/1-6.4/1-6.4:1.0/input/input28
+</code></pre></div>
+
+<p>Excellent - so we now have the firmware fully extracted and loaded into ghidra, as well as the ability to modify it as we see fit...now it's time to write some macros. But it's getting late and I almost missed the monthly post deadline for January so I think I'm going to wrap it up here!</p>
+<h2>Conclusion</h2>
+<p>When performing an assessment of an embedded system, you typically want to enumerate and explore all possible interfaces and methods of interacting with the target. Whether your end goal is to hunt for bugs, modify the device's normal operation or just learn more about how it works, hardware debugging is <em>extremely</em> useful. By utilizing hardware debugging we were able to extract the firmware from this target, set up a live debugger and also modify the firmware. Through this this exercise, we also covered how Single Wire Debug works, as well as how to identify, enumerate and debug an unknown CPU with hardware debugging tools. OpenOCD was also used with a FT2232H based interface to extract firmware images as well as reflash new firmware onto the target. Thanks for reading and if you have any questions or just want to talk more about this kind of stuff please feel free to ping me on <a href="https://twitter.com/wrongbaud">twitter</a></p>
+<p>If you're interested in <a href="https://voidstarsec.com/#training">hardware security training</a> at your organization, please don't hesitate to <a href="https://voidstarsec.com/#contact">contact us</a>. We also have a self-paced training available <a href="https://voidstarsecurity.thinkific.com/">here</a></p>
+<p>If you want to stay informed about official releases, new courses, and blog posts, sign up for our mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
+  <footer>
+    <p>Published: <time datetime="2020-01-30T00:00:00-07:00">
+      Thu 30 January 2020
+    </time></p>
+    <address>
+      By           <a href="https://voidstarsec.com/blog/author/matthew-alt.html">"Matthew Alt"</a>
+    </address>
+    <p>
+        Category: <a href="https://voidstarsec.com/blog/category/hardware.html">Hardware</a>
+    </p>
+    <p>
+        Tags:
+            <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
+            <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
+</html>

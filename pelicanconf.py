@@ -1,6 +1,6 @@
 AUTHOR = 'VoidStar Security'
 SITENAME = 'VoidStar Security Blog'
-SITEURL = 'https://wrongbaud.github.io/newblog/'
+SITEURL = 'https://voidstarsec.com/blog/'
 PLUGIN_PATHS = ['/home/wrongbaud/projects/vss/blog-resources/pelican-plugins']
 PLUGINS = ['i18n_subsites','pelican_just_table','tag_cloud']
 JINJA_ENVIRONMENT = {
@@ -12,7 +12,7 @@ TIMEZONE = 'America/Boise'
 DEFAULT_LANG = 'en'
 TAG_CLOUD_MAX_ITEMS=10
 SIDEBAR_ON_LEFT=True
-
+ARTICLE_URL='{slug}'
 # Blogroll
 LINKS = (('VoidStar Security Website', 'https://voidstarsec.com/'),
          ('VoidStar Security Training', 'https://www.voidstarsec.training/'),
@@ -36,4 +36,4 @@ DISPLAY_ARTICLE_INFO_ON_INDEX=True
 SHOW_ARTICLE_AUTHOR=True
 SHOW_ARTICLE_CATEGORY=True
 # journal lumen spacelab
-BOOTSTRAP_THEME='sandstone'
+BOOTSTRAP_THEME='flatly'

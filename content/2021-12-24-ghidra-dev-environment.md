@@ -3,13 +3,13 @@ layout: post
 title: Extending Ghidra Part 1: Setting up a Development Environment
 description: Instructions on how to set up a build Ghidra and set up a development environment
 summary: With this post, I hope to explain how to set up a development environment for the latest Ghidra release on Ubuntu 20.04. After following the steps outlined below, we will have the ability to write, debug and export custom Ghidra plugins, modules, and scripts. 
-tags: ghidra,tutorial
+tags: ghidra,tutorial,tools
 author: "Matthew Alt"
 category: Ghidra
 slug: ghidra-dev-environment
 ---
 
-# Extending Ghidra Part 1: Setting up a Development Environment
+# Extending Ghidra: Setting up a Development Environment
 
 # Overview
 
@@ -298,8 +298,8 @@ With this post, we have reviewed how to:
 
 With this, we now have all the tools in place needed to extend and augment Ghidra. For some examples of what can be done through Ghidra scripting, check out the following posts:
 
-* [Ghidra Loader](https://wrongbaud.github.io/posts/writing-a-ghidra-loader/)
-* [PCode Emulation](https://wrongbaud.github.io/posts/kong-vs-ghidra/)
+* [Ghidra Loader](https://voidstarsec.com/blog/ghidra-loader)
+* [PCode Emulation](https://voidstarsec.com/blog/ghidra-pcode)
 
 If you would like to learn more about Ghidra, check out [this course](https://wrongbaud.github.io/posts/ghidra-training/) that I authored at hackaday.
 - [Github Repository](https://github.com/wrongbaud/hackaday-u)

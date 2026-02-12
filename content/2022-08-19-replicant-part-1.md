@@ -3,13 +3,15 @@ layout: post
 title: Replicant: Reproducing a Fault Injection Attack on the Trezor One
 description: Introduction to Fault Injection Attacks
 summary:  This post aims to provide a road map and example of how to replicate a fault injection attack and the hurdles and shortcomings that can occur when attempting to do so. Furthermore, by outlining the process of replicating one of these attacks, we hope that readers come away from this post more confident in generating their own fault injection attacks or replicating pre-existing work.
-category: Glitching
+category: Fault Injection
 tags: fault-injection,chipwhisperer
 author: "Matthew Alt"
 slug: replicant-part-1
 ---
 
-# Overview
+# Replicant: Reproducing a Fault Injection Attack on the Trezor One
+
+## Overview
 
 There has been a lot of public work in the last four or five years surrounding the security of cryptocurrency wallets. Much of this research has been in the realm of fault injection, which is the art/science of disrupting an embedded system just enough that it will cause undefined behavior to occur. The goal is to find a fault that allows one to modify the device's behavior to grant an attacker escalated levels of access. Examples of this might include skipping instructions, corrupting memory read operations, etc. 
 
@@ -474,6 +476,11 @@ You might be asking yourself, is there a way we could do this without connecting
 If you are interested in this type of hardware-level reverse engineering, check out [our training course](https://voidstarsec.com/training) or [reach out](https://voidstarsec.com/index.html#contact) to us for any consulting needs. If you want to get notified when a new blog post, course, or tool is released, consider signing up for the [mailing list](http://eepurl.com/hSl31f). I only send emails when there are actual posts or course updates. Lastly, you can follow me on [twitter](https://twitter.com/wrongbaud) for various updates on side projects and classes. 
 
 This work was done alongside my friends Cody Gallagher and Aaron Phelps ([LI](https://www.linkedin.com/in/phelps-aaron/)/[twitter](https://twitter.com/phelps_yelps)), between the three of us we had a lot of fun replicating this attack. We also have to give a massive shout out to [@stacksmashing](https://twitter.com/stacksmashing) and [@colinoflynn](https://twitter.com/colinoflynn) who were very helpful and answered many of our early questions. 
+
+
+If you're interested in [hardware security training](https://voidstarsec.com/hhb.html) at your organization, please don't hesitate to [contact us](https://voidstarsec.com/#contact). We also have a self-paced training available [here](https://voidstarsecurity.thinkific.com/)
+
+If you want to stay informed about official releases, new courses, and blog posts, sign up for our mailing list [here](http://eepurl.com/hSl31f).
 
 ----
 

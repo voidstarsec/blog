@@ -1,16 +1,17 @@
 ---
 layout: post
-title: JTAG Hacking with a Raspberry Pi - Introducing the PiFex
+title: JTAG Hacking with a Raspberry Pi
 description: JTAG for Reverse Engineers
 summary: With this blog post, we'll introduce the PiFex, a basic companion board for the Raspberry Pi designed to teach users the basics of hardware hacking and embedded protocols. We will then demonstrate how to use the PiFex to access a JTAG tap on an undocumented SSD, allowing memory reads and GDB access to the SSD CPU.
-tags: pifex,jtag,hardware,blog
+tags: pifex,jtag,hardware
 author: "Matthew Alt"
 slug: jtag-pifex
-category: Pifex
+category: Hardware
 ---
 
+# JTAG Hacking with a Raspberry Pi
 
-# Overview
+## Overview
 
 When performing initial hardware analysis and recon, I have become very fond of using Armbian-based single-board computers (SBCs) for things like UART, SPI, I2C, JTAG, and SWD. One of the main benefits of using one of these boards is that since the peripherals we are interested in are exposed as character devices in Linux, a wide variety of tools are available for interfacing with them, including most programming and scripting languages. 
 
@@ -22,11 +23,11 @@ With this blog post, we'll introduce the PiFex, a basic companion board for the 
 
 ## Background Information
 
- If you are unfamiliar with JTAG at a low level, you might want to read my [previous](https://wrongbaud.github.io/posts/jtag-hdd/) blog post about reverse engineering JTAG taps. 
+ If you are unfamiliar with JTAG at a low level, you might want to read my [previous](https://voidstarsec.com/blog/jtag-ssd) blog post about reverse engineering JTAG taps. 
 
 # PiFex: An Overview
 
-The Pi Interface Explorer or PiFex, is a simple hat for a Raspberry Pi designed for tinkerers and hardware hackers alike. By breaking out the commonly used interfaces and routing them through bi-directional level shifters, we aimed to streamline some of the initial steps when reverse engineering a new device or trying to learn how a new sensor works. While this device was initially designed for use during our [hardware hacking bootcamp](https://voidstarsec.com/hhb.html) it has quickly become my go-to when performing initial hardware assessments of COTS devices.
+The Pi Interface Explorer or PiFex, is a simple hat for a Raspberry Pi designed for tinkerers and hardware hackers alike. By breaking out the commonly used interfaces and routing them through bi-directional level shifters, we aimed to streamline some of the initial steps when reverse engineering a new device or trying to learn how a new sensor works. While this device was initially designed for use during our [hardware hacking bootcamp](https://voidstarsec.com/#training) it has quickly become my go-to when performing initial hardware assessments of COTS devices.
 
 The PCB is well documented, and the IO pins are all labeled as shown in the image below:
 
@@ -108,6 +109,7 @@ So, we've talked about our new hardware tooling. How about a demonstration of it
 ![](https://voidstarsec.com/blog/assets/images/jtag-pifex/top_pcb_labelled.jpg)
 
 If we break down the hardware, we have the following:
+
 
 | Component | Part Number   | Datasheet / Information                                                                                    |
 | --------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -579,9 +581,9 @@ If you've read this far, thank you for taking the time to read it all. This prob
 
 With this blog post, we introduced the PiFex hardware and software tools. These tools utilize open-source software and commercial hardware to aid in embedded device assessments. We then demonstrated how to use these tools to discover and enumerate an undocumented JTAG TAP on an SSD. Using this TAP, we were able to read memory and control execution on the target, giving us full control over the device. 
 
-If you want to stay up to date on the official release, sign up for our mailing list [here](http://eepurl.com/hSl31f), or you can order one [here](https://voidmalt.gumroad.com/l/pifex)
+If you want to stay up to date on the official release, sign up for our mailing list [here](http://eepurl.com/hSl31f), or you can order one [here](https://voidstarsec.com/#training)
 
-If you're interested in a [private training](https://voidstarsec.com/hhb.html) at your organization, please don't hesitate to [contact us](https://voidstarsec.com/#contact). We also have our only public training available this year at [RingZer0 DoubleDown Vegas](https://ringzer0.training/doubledown24-hardware-hacking-bootcamp/)
+If you're interested in a [private training](https://voidstarsec.com/#training) at your organization, please don't hesitate to [contact us](https://voidstarsec.com/#contact). We also have our only public training available this year at [RingZer0 DoubleDown Vegas](https://ringzer0.training/doubledown24-hardware-hacking-bootcamp/)
 
 A big thanks goes out to Nash Reilly for his help and review of the initial hardware design; you can check out his blog [here](https://cushychicken.github.io) and his other two job sites below:
 

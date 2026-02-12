@@ -75,5 +75,10 @@ github: publish
 	ghp-import -m "Generate Pelican site" -b $(GITHUB_PAGES_BRANCH) "$(OUTPUTDIR)"
 	git push origin $(GITHUB_PAGES_BRANCH)
 
+custom:
+	pelican content -o output/ -s pelicanconf.py -t /home/wrongbaud/projects/vss/blog-resources/pelican-themes/pelican-bootstrap3
+	./prep.sh
+	cp vss-style.css output/theme/css/style.css
+	ghp-import output/ -b gh-pages -r origin -p -n
 
 .PHONY: html help clean regenerate serve serve-global devserver publish github

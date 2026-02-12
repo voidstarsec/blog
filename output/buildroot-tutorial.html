@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+          <title>VoidStar Security Blog - Using Buildroot for Reverse Engineering</title>
+        <meta charset="utf-8" />
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://voidstarsec.com/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Full Atom Feed" />
+        <link href="https://voidstarsec.com/blog/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Categories Atom Feed" />
+
+
+
+    <meta name="description" content="Using Buildroot for Reverse Engineering" />
+
+    <meta name="tags" content="buildroot" />
+    <meta name="tags" content="tutorial" />
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://voidstarsec.com/blog/">VoidStar Security Blog</a></h1></hgroup>
+        <nav><ul>
+        </ul></nav>
+        </header>
+        <main>
+<article>
+  <header>
+    <h2>
+      <a href="https://voidstarsec.com/blog/buildroot-tutorial" rel="bookmark"
+         title="Permalink to Using Buildroot for Reverse Engineering">Using Buildroot for Reverse Engineering</a></h2>
+ 
+  </header>
+  <h1>Using Buildroot for Reverse Engineering</h1>
+<h2>Overview</h2>
+<p>When reverse engineering an embedded system that is Linux based, one often wishes that they had an examplar system that could be virtualized, if only to gain familiarity with the nuances of the specific kernel version or to learn more about the running applications without needing the native hardware. Make no mistake, this is a bit of a pipe dream when working with bespoke embedded systems, but if you're working with a more generalized system (or if you just want to quickly spin up a Linux system to test against using QEMU) buildroot is a tool that can be used to generate images that will run in QEMU! The purpose of this post will be to describe how to build specific kernel images for QEMU using buildroot.</p>
+<h2>So what is Buildroot?</h2>
+<p>Buildroot is a collection of tools that can be used to build all of the necessary components to get Linux running on various embedded platforms.  Using buildroot we can generate the following (and almost certainly more since I am no expert)</p>
+<ul>
+<li>Kernel Images</li>
+<li>Root Filesystem images, including busybox, etc</li>
+<li>Ramdisk images</li>
+</ul>
+<p>The idea behind buildroot is that given a supported hardware target (or QEMU) one can build a specific version of the Linux kernel as well as a root file-system image. Both of these can be customized to the user's liking but for the purposes of this post we're just going that will run in QEMU as an example.</p>
+<h2>Installing</h2>
+<p>First install the following dependencies (my host machine is Ubuntu 18.04):</p>
+<div class="highlight"><pre><span></span><code>sudo apt-get install qemu-system-arm sed make binutils build-essential gcc g++ gzip bzip2 perl tar cpio python unzip rsync bc wget libncurses-dev
+</code></pre></div>
+
+<p>Download the buildroot source code from <a href="https://buildroot.org/downloads/buildroot-2019.02.4.tar.gz">here</a></p>
+<p>Unpack it</p>
+<div class="highlight"><pre><span></span><code>tar xvf buildroot-2019.02.4.tar
+</code></pre></div>
+
+<h2>Building your first image</h2>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">buildroot</span><span class="err">$</span><span class="w"> </span><span class="n">cd</span><span class="w"> </span><span class="n">buildroot</span><span class="o">-</span><span class="mf">2019.02.4</span>
+</code></pre></div>
+
+<p>We're going to target the ARM Versatile PB board for qemu so use the following defconfig:</p>
+<div class="highlight"><pre><span></span><code>make qemu_arm_versatile_defconfig
+</code></pre></div>
+
+<p>Next, you can run menuconfig, and from this menu you can configure everything about your target system. </p>
+<p>We'll change the banner of our system just to make sure that the changes take effect.</p>
+<p><img alt="Buildroot Menconfig" src="https://wrongbaud.github.io/assets/img/BUILDROOT_MENUCONFIG.png"></p>
+<p>Save your changes and exit, next make the images with the following command:</p>
+<p><code>make -j$(nproc)</code></p>
+<p>Assuming this completes without issues, you will find your resulting kernel and root filesystem in <code>output\images</code></p>
+<p>Next we can run and test our resulting image in qemu, use the command line options below from your buildroot directory!</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">buildroot</span><span class="o">/</span><span class="n">buildroot</span><span class="o">-</span><span class="mf">2019.02.4</span><span class="err">$</span><span class="w"> </span><span class="n">qemu</span><span class="o">-</span><span class="k">system</span><span class="o">-</span><span class="n">arm</span><span class="w"> </span><span class="o">-</span><span class="n">M</span><span class="w"> </span><span class="n">versatilepb</span><span class="w"> </span><span class="o">-</span><span class="n">m</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">-</span><span class="n">kernel</span><span class="w"> </span><span class="k">output</span><span class="o">/</span><span class="n">images</span><span class="o">/</span><span class="n">zImage</span><span class="w"> </span><span class="o">-</span><span class="n">dtb</span><span class="w"> </span><span class="k">output</span><span class="o">/</span><span class="n">images</span><span class="o">/</span><span class="n">versatile</span><span class="o">-</span><span class="n">pb</span><span class="p">.</span><span class="n">dtb</span><span class="w"> </span><span class="o">-</span><span class="n">hda</span><span class="w"> </span><span class="k">output</span><span class="o">/</span><span class="n">images</span><span class="o">/</span><span class="n">rootfs</span><span class="p">.</span><span class="n">ext2</span><span class="w"> </span><span class="o">-</span><span class="n">append</span><span class="w"> </span><span class="ss">&quot;root=/dev/s</span>
+<span class="ss">da console=/dev/ttyAMA0,115200&quot;</span><span class="w"> </span><span class="o">-</span><span class="n">nographic</span>
+<span class="nl">WARNING</span><span class="p">:</span><span class="w"> </span><span class="nc">Image</span><span class="w"> </span><span class="nf">format</span><span class="w"> </span><span class="n">was</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">specified</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="s1">&#39;output/images/rootfs.ext2&#39;</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">probing</span><span class="w"> </span><span class="n">guessed</span><span class="w"> </span><span class="n">raw</span><span class="p">.</span>
+<span class="w">         </span><span class="n">Automatically</span><span class="w"> </span><span class="n">detecting</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="nf">format</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">dangerous</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">raw</span><span class="w"> </span><span class="n">images</span><span class="p">,</span><span class="w"> </span><span class="k">write</span><span class="w"> </span><span class="n">operations</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">block</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">will</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">restricted</span><span class="p">.</span>
+<span class="w">         </span><span class="n">Specify</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="s1">&#39;raw&#39;</span><span class="w"> </span><span class="nf">format</span><span class="w"> </span><span class="n">explicitly</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">remove</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">restrictions</span><span class="p">.</span>
+<span class="nl">pulseaudio</span><span class="p">:</span><span class="w"> </span><span class="n">set_sink_input_volume</span><span class="p">()</span><span class="w"> </span><span class="n">failed</span>
+<span class="nl">pulseaudio</span><span class="p">:</span><span class="w"> </span><span class="nl">Reason</span><span class="p">:</span><span class="w"> </span><span class="n">Invalid</span><span class="w"> </span><span class="n">argument</span>
+<span class="nl">pulseaudio</span><span class="p">:</span><span class="w"> </span><span class="n">set_sink_input_mute</span><span class="p">()</span><span class="w"> </span><span class="n">failed</span>
+<span class="nl">pulseaudio</span><span class="p">:</span><span class="w"> </span><span class="nl">Reason</span><span class="p">:</span><span class="w"> </span><span class="n">Invalid</span><span class="w"> </span><span class="n">argument</span>
+<span class="nl">vpb_sic_write</span><span class="p">:</span><span class="w"> </span><span class="n">Bad</span><span class="w"> </span><span class="n">register</span><span class="w"> </span><span class="n">offset</span><span class="w"> </span><span class="mh">0x2c</span>
+
+<span class="n">Welcome</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">Buildroot</span>
+<span class="n">buildroot</span><span class="w"> </span><span class="nl">login</span><span class="p">:</span><span class="w"> </span><span class="n">root</span>
+<span class="err">#</span>
+</code></pre></div>
+
+<p>For those of you new to QEMU, here is a rundown of the arguments we used:</p>
+<table>
+<thead>
+<tr>
+<th>Arg</th>
+<th>Purpose</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-M</code></td>
+<td>Machine</td>
+<td>This defines the qemu machine that we are targeting</td>
+</tr>
+<tr>
+<td><code>-kernel</code></td>
+<td>Kernel Image</td>
+<td>This is our target Linux kernel, QEMU has it's own bootstrap loader that can be used to load a kernel and run it which is very convenient for us!</td>
+</tr>
+<tr>
+<td><code>-dtb</code></td>
+<td>Device Tree Blob</td>
+<td>When the kernel boots, it needs to have some understanding of the underlying hardware, this is what the device tree is for, this is a flat binary file defining various memory mapped peripherals and other system specific features for the target processor!</td>
+</tr>
+<tr>
+<td><code>-hda</code></td>
+<td>Hard Drive</td>
+<td>This is the drive image that buildroot created that we will use for our root filesystem</td>
+</tr>
+<tr>
+<td>```-append</td>
+<td>Append to kernel command line</td>
+<td>These are the additional kernel command line arguments that we will provide to allow are system to boot. In this example we provide it with the path to the rootfs and the console we want it to use on bootup</td>
+</tr>
+<tr>
+<td><code>-nographic</code></td>
+<td>No Graphical Interface</td>
+<td>This keeps an SDL window from being opened and instead redirects serial output to the terminal we launch from</td>
+</tr>
+</tbody>
+</table>
+<h2>Side Note: Building specialized images</h2>
+<p>Remember when we ran <code>make menuconfig</code> earlier? This can be used to determine what kernel version to build. If we try to build a <code>3.14.1</code> kernel what happens? Start by changing the following items in menuconfig</p>
+<ol>
+<li><code>Toolchain</code> -&gt; <code>Custom Kernel headers series</code> -&gt; <code>3.14.1</code></li>
+<li><code>Kernel</code> -&gt; <code>Kernel Version</code> -&gt; <code>3.14.1</code></li>
+</ol>
+<p>After saving your config, run <code>make -j$(nproc)</code></p>
+<p>After a while you will notice multiple error messages involving building the kernel and the host toolchain!</p>
+<p>There are multiple issues here with how we've tried to configure it, mainly that being that we are trying to build an old kernel with a new version of GCC. In the next blog post we will look into how to mitigate some of this and set up a reproducible environment for building older images using Docker!</p>
+<h2>Conclusion</h2>
+<p>Using buildroot we were quickly able to spin up a 4.19 Linux image that could be run in Qemu. This could be useful when performing vulnerability research, reverse engineering or when trying to reproduce other people's work that targets a specific Linux kernel version!</p>
+<p>If you're interested in <a href="https://voidstarsec.com/#training">hardware security training</a> at your organization, please don't hesitate to <a href="https://voidstarsec.com/#contact">contact us</a>. We also have a self-paced training available <a href="https://voidstarsecurity.thinkific.com/">here</a></p>
+<p>If you want to stay informed about official releases, new courses, and blog posts, sign up for our mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
+  <footer>
+    <p>Published: <time datetime="2019-09-28T00:00:00-06:00">
+      Sat 28 September 2019
+    </time></p>
+    <address>
+      By           <a href="https://voidstarsec.com/blog/author/matthew-alt.html">"Matthew Alt"</a>
+    </address>
+    <p>
+        Category: <a href="https://voidstarsec.com/blog/category/hardware.html">Hardware</a>
+    </p>
+    <p>
+        Tags:
+            <a href="https://voidstarsec.com/blog/tag/buildroot.html">buildroot</a>
+            <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
+</html>

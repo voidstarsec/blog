@@ -8,6 +8,10 @@ tags: training,blog
 slug: on-the-road
 ---
 
+# On the Road at the Leahy Center: Our first in-person training of 2022!
+
+## Overview
+
 May of this year marked the first in-person training of 2023. This training took place at the [Leahy Center for Digital Forensics and Cybersecurity.](https://www.champlain.edu/cybersecurity-and-digital-forensics/senator-patrick-leahy-center-for-digital-forensics-and-cybersecurity). The training was given to the IoT analysis team at the Leahy center, to improve the students' skills working in the field of IoT device analysis and research. In mid-May, I packed up and drove up to beautiful Burlington, Vermont, to spend a week with students hacking hardware.
 
 ![Kits!](https://voidstarsec.com/blog/assets/images/packing-up.gif)
@@ -191,4 +195,4 @@ The week at the [Leahy Center](https://www.champlain.edu/centers-of-experience/t
 
 I look forward to seeing the excellent research they produce in the future, and I can't recommend the department highly enough to those looking for new hires or interns!
 
-As always, if you have any questions about [the course](https://voidstarsec.com/training.html) or hardware reverse engineering in general, don't hesitate to [contact us](https://voidstarsec.com/index.html#contact). If you're interested in staying up to date with our blog posts and upcoming courses, check out our [mailing list](http://eepurl.com/hSl31f). For more reading on hardware hacking and reverse engineering, check out our [publications](https://voidstarsec.com/pubs.html). Thanks for reading! 
+As always, if you have any questions about [the course](https://voidstarsec.com/#training) or hardware reverse engineering in general, don't hesitate to [contact us](https://voidstarsec.com/#contact). If you're interested in staying up to date with our blog posts and upcoming courses, check out our [mailing list](http://eepurl.com/hSl31f). For more reading on hardware hacking and reverse engineering, check out our [publications](https://voidstarsec.com/#research). Thanks for reading! 

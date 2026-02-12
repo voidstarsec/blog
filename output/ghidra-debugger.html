@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+          <title>VoidStar Security Blog - A first look at Ghidra's Debugger - Game Boy Advance Edition</title>
+        <meta charset="utf-8" />
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://voidstarsec.com/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Full Atom Feed" />
+        <link href="https://voidstarsec.com/blog/feeds/ghidra.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Categories Atom Feed" />
+
+
+
+    <meta name="description" content="Instructions on how to set up a build Ghidra and set up a development environment" />
+
+    <meta name="tags" content="ghidra" />
+    <meta name="tags" content="tutorial" />
+    <meta name="tags" content="tools" />
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://voidstarsec.com/blog/">VoidStar Security Blog</a></h1></hgroup>
+        <nav><ul>
+        </ul></nav>
+        </header>
+        <main>
+<article>
+  <header>
+    <h2>
+      <a href="https://voidstarsec.com/blog/ghidra-debugger" rel="bookmark"
+         title="Permalink to A first look at Ghidra's Debugger - Game Boy Advance Edition">A first look at Ghidra's Debugger - Game Boy Advance Edition</a></h2>
+ 
+  </header>
+  <h1>A first look at Ghidra's Debugger - Game Boy Advance Edition</h1>
+<h2>Overview</h2>
+<p><a href="https://twitter.com/NSACyber/status/1339652646513291264">Yesterday</a> the NSA Twitter account announced that a new branch of Ghidra has been release with the long-awaited debugging capability. This will allow for single-step debugging of a program within <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra">Ghidra</a> through a GDB stub or other various debug mechanisms. To celebrate this (and my being stuck at home quarantining...) I wanted to review how to build this version of Ghidra and give an example of how to use this debugger on a fun target.</p>
+<p>This post will explain the following:</p>
+<ul>
+<li>How to build the latest (or any) version of Ghidra using a <a href="https://github.com/dukebarman/ghidra-builder">Docker Container</a></li>
+<li>How to build the Ghidra Eclipse plugins</li>
+<li>How to build a program <a href="https://github.com/SiD3W4y/GhidraGBA">loader</a> for Ghidra</li>
+<li>Debugging a program with Ghidra using the GDB stub</li>
+<li>Use the debugging capability to help us learn about how passwords are processed for a GBA game</li>
+</ul>
+<p>For this post, we're going to be taking a look at the Game Boy Advance game Spiderman: Mysterio's Menace. I've been very much inspired by all of the awesome work that <a href="https://youtu.be/VVbRe7wr3G4">stacksmashing and Liveoverflow have been doing regarding these topics</a>. This was a game that I spent a lot of time playing and it's always fun revisiting childhood favorites from an RE perspective. The ultimate goal is to demonstrate how to properly load this ROM using a custom loader, and connect to an emulator's GDB stub using Ghidra's debugging features.</p>
+<p><strong>RE Note/Tangent:</strong> When taking on a new reversing project, it's important to try to compartmentalize goals and targets. For example, if we said we just want to <em>reverse</em> this game, that opens up endless possibilities. We could reverse engineer the collision detection, how enemy AI works, or how level maps are generated. For this post, we will pick a specific target and take a look at the password mechanism in use by this game.</p>
+<p>I am doing all of this work on an Ubuntu 20.04 machine, with the latest updates. </p>
+<h2>Building Ghidra</h2>
+<p>First things first, this debugger branch has not yet been included in an official release so we're going to have to build it ourselves. Luckily for us <a href="https://github.com/dukebarman/ghidra-builder">dukebarman</a> has put together a docker container for us to do this, all we need to do is modify the <code>build_ghidra.sh</code> script to checkout the debugger branch, see the following line below:</p>
+<div class="highlight"><pre><span></span><code>git clone https://github.com/NationalSecurityAgency/ghidra -b debugger
+</code></pre></div>
+
+<p>We are also going to build the Eclipse development extensions for this version of Ghidra, this will help us later on when we build a loader and write our analysis scripts. To do this we add the following line to the <code>build_ghidra.sh</code> script:</p>
+<div class="highlight"><pre><span></span><code>gradle prepDev
+gradle eclipse -PeclipsePDE
+</code></pre></div>
+
+<p>Next follow the instructions in the <code>README</code>:</p>
+<div class="highlight"><pre><span></span><code>cd ghidra-builder
+sudo docker-tpl/build
+cd workdir
+sudo ../docker-tpl/run ./build_ghidra.sh
+</code></pre></div>
+
+<p>This will take some time, so maybe go grab a coffee or two and come back to your freshly built Ghidra. The resulting build can be found in <code>workdir/out</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">gba</span><span class="o">-</span><span class="n">re</span><span class="o">-</span><span class="n">gbd</span><span class="o">/</span><span class="n">ghidra</span><span class="o">-</span><span class="n">builder</span><span class="o">/</span><span class="n">workdir</span><span class="err">$</span><span class="w"> </span><span class="n">ls</span><span class="w"> </span><span class="k">out</span><span class="o">/</span>
+<span class="n">ghidra_9</span><span class="mf">.3</span><span class="n">_DEV_20201218_linux64</span><span class="p">.</span><span class="n">zip</span>
+</code></pre></div>
+
+<p>Unzip this file, and you can launch Ghidra via the <code>./ghidraRun</code> script. For this post, I will unzip this into the <code>ghidra-builder/workdir</code> directory because we're going to be using the docker container to build a Ghidra loader for this version of Ghidra. If you're following along, your workdir directory should look like this:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">gba</span><span class="o">-</span><span class="n">re</span><span class="o">-</span><span class="n">gbd</span><span class="o">/</span><span class="n">ghidra</span><span class="o">-</span><span class="n">builder</span><span class="o">/</span><span class="n">workdir</span><span class="err">$</span><span class="w"> </span><span class="n">ls</span>
+<span class="n">build_ghidra</span><span class="p">.</span><span class="n">sh</span><span class="w">  </span><span class="n">ghidra</span><span class="w">  </span><span class="n">ghidra_9</span><span class="mf">.3</span><span class="n">_DEV</span><span class="w"> </span><span class="k">out</span><span class="w">  </span><span class="n">set_exec_flag</span><span class="p">.</span><span class="n">sh</span>
+</code></pre></div>
+
+<h2>Building Eclipse Plugins</h2>
+<p>Now that we have a new version of Ghidra built, we also need to build the GhidraDev plugin for Eclipse. The eclipse projects can be found in the <code>ghidra-builder/workdir/ghidra/GhidraBuild/EclipsePlugins/GhidraDev</code> directory. </p>
+<ol>
+<li>Install <a href="https://www.eclipse.org/downloads/packages/installer">Eclipse</a><ul>
+<li>Select the Java IDE</li>
+</ul>
+</li>
+<li>Install CDT, PyDev, and Plugin Development Environment<ul>
+<li>This can be done from the Eclipse marketplace</li>
+</ul>
+</li>
+<li>Import the GhidraDevFeature and GhidraDevPlugin projects<ul>
+<li>These can be found in the <code>ghidra-builder/workdir/ghidra/GhidraBuild/EclipsePlugins/GhidraDev/</code> directory</li>
+<li><code>File</code> -&gt; <code>Import</code> -&gt; <code>General</code> -&gt; <code>Existing Projects into Workspace</code></li>
+<li>Add <code>ghidra-builder/workdir/ghidra/GhidraBuild/EclipsePlugins/GhidraDev</code></li>
+<li>Select "Search for nested projects"</li>
+<li>Import the projects!</li>
+<li><strong>Note:</strong> you may see some build errors when these are imported, you can ignore these as you are just exporting the plugin!</li>
+</ul>
+</li>
+<li>With these projects loaded, we can now <a href="https://github.com/NationalSecurityAgency/ghidra/blob/debugger/GhidraBuild/EclipsePlugins/GhidraDev/GhidraDevPlugin/build_README.txt">export the plugin</a><ul>
+<li><code>File</code> -&gt; <code>Export</code></li>
+<li><code>Plug-in Development</code> -&gt; <code>Deployable Features</code></li>
+<li><code>ghidradev.ghidradev</code></li>
+<li>Select an archive location for the plugin to be exported to</li>
+<li>Click Finish!</li>
+</ul>
+</li>
+</ol>
+<p>Now we have our Ghidra plugin, built for our custom version of Ghidra that we can load via <code>Help</code>-&gt;<code>Install New Software</code>.</p>
+<p>And with that, we have built Ghidra from the <code>debugger</code> branch, and have also built the Eclipse development extensions so we can build plugins for our new version of Ghidra!</p>
+<p><strong>Note:</strong> I just want to take a second to outline just how incredible the <a href="https://github.com/NationalSecurityAgency/ghidra/blob/15c1f43fa51f210836cb451aff587b227dffe0a7/DevGuide.md">help docs</a> are for Ghidra. From the P-Code manuals to the instructions on building and exporting these plugins - the project is very well documented. </p>
+<h2>Building the ROM Loader</h2>
+<p>To properly analyze this ROM in Ghidra, we are going to need to define all of the <a href="https://problemkaputt.de/gbatek.htm#gbamemorymap">memory regions and peripherals</a> for the Game Boy Advance. Luckily for us, <a href="https://github.com/SiD3W4y/GhidraGBA">SiD3W4y</a> on GitHub has already written one.</p>
+<p>If you are a regular reader of this blog, a <a href="https://voidstarsec.com/blog/ghidra-loader">ghidra loader</a> may be a familiar subject to you. If not, the purpose of a Ghidra loader is to set up all of the necessary memory regions, identify any debug information or symbols that may be present in the file, and provide as much information as possible about the target file. The loader that was mentioned before outlines all of the basic peripherals of the GBA and is an excellent example loader to work with, let's start by cloning it into the <code>ghidra-builder/workdir</code> directory. We're doing this because we're going to use the same docker container we built Ghidra with to build this loader.</p>
+<div class="highlight"><pre><span></span><code><span class="n">cd</span><span class="w"> </span><span class="n">ghidra</span><span class="o">-</span><span class="n">builder</span><span class="o">/</span><span class="n">workdir</span>
+<span class="n">git</span><span class="w"> </span><span class="n">clone</span><span class="w"> </span><span class="n">https</span><span class="o">:</span><span class="c1">//github.com/SiD3W4y/GhidraGBA</span>
+<span class="n">sudo</span><span class="w"> </span><span class="p">..</span><span class="o">/</span><span class="n">docker</span><span class="o">-</span><span class="n">tpl</span><span class="o">/</span><span class="n">run</span><span class="w"> </span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">bash</span>
+<span class="n">dockerbot</span><span class="mi">@797</span><span class="n">eb43ce05f</span><span class="o">:/</span><span class="n">$</span><span class="w"> </span><span class="n">cd</span><span class="w"> </span><span class="o">/</span><span class="n">files</span><span class="o">/</span><span class="n">GhidraGBA</span><span class="w"> </span>
+<span class="n">dockerbot</span><span class="mi">@797</span><span class="n">eb43ce05f</span><span class="o">:/</span><span class="n">files</span><span class="o">/</span><span class="n">GhidraGBA$</span><span class="w"> </span><span class="n">export</span><span class="w"> </span><span class="n">GHIDRA_INSTALL_DIR</span><span class="o">=/</span><span class="n">files</span><span class="o">/</span><span class="n">ghidra_9</span><span class="mf">.3</span><span class="n">_DEV</span><span class="o">/</span>
+<span class="n">dockerbot</span><span class="mi">@797</span><span class="n">eb43ce05f</span><span class="o">:/</span><span class="n">files</span><span class="o">/</span><span class="n">GhidraGBA$</span><span class="w"> </span><span class="n">gradle</span>
+<span class="n">dockerbot</span><span class="mi">@797</span><span class="n">eb43ce05f</span><span class="o">:/</span><span class="n">files</span><span class="o">/</span><span class="n">GhidraGBA$</span><span class="w"> </span><span class="n">cp</span><span class="w"> </span><span class="n">dist</span><span class="o">/</span><span class="n">ghidra_9</span><span class="mf">.3</span><span class="n">_DEV_20201218_GhidraGBA</span><span class="p">.</span><span class="n">zip</span><span class="w"> </span><span class="p">..</span><span class="o">/</span><span class="n">ghidra_9</span><span class="mf">.3</span><span class="n">_DEV</span><span class="o">/</span><span class="n">Extensions</span><span class="o">/</span><span class="n">Ghidra</span><span class="o">/</span>
+<span class="n">dockerbot</span><span class="mi">@797</span><span class="n">eb43ce05f</span><span class="o">:/</span><span class="n">files</span><span class="o">/</span><span class="n">GhidraGBA$</span><span class="w"> </span><span class="n">exit</span>
+<span class="n">exit</span>
+</code></pre></div>
+
+<p>In case the above steps are confusing, what we are doing is:
+1. Launching the docker container
+1. Building the GhidraGBA extension, providing the path to our installation
+3. Copying it to Ghidra's extensions directory (so it will show up under the Install Extensions menu)
+4. Exiting the docker container</p>
+<p>Launch Ghidra via <code>ghidraRun</code> and go to <code>File</code>-&gt; <code>Install Extensions</code>. Select the GhidraGBA loader and click <code>OK</code>. You will need to restart Ghidra for the change to take effect. Now when you load a GBA ROM you should see the following:</p>
+<p><img alt="GBA" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gba.png"></p>
+<p>After running the auto analysis, Ghidra seems to make a pretty quick sense of the ROM. There are a lot of functions defined and things are looking good. So the next step is to figure out some way to narrow down what we care about in this ROM image, in other words, we need to find our needle in the haystack. Let's start by examining how the password system works in this game by entering a few passwords.</p>
+<h2>Analyzing the Rom</h2>
+<p>As mentioned before, our goal here is to try to understand the password system in use by this game. If we attempt to enter a password, the following screen is displayed:</p>
+<p><img alt="ROM1" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/rom-1.png"></p>
+<p>Note that we have all of the consonants and no vowels and numbers "0-9", and our passwords are only 5 characters long. This is a nice starting point for us as reverse engineers. We can use this information to help us narrow down functions of interest. For example- let's look through the strings in the ROM and see if these values are represented in a string somewhere. If we open the strings window, <code>Window</code> -&gt; <code>Defined Strings</code>, and filter for the first 5 characters available to us as password characters we see the following:</p>
+<p><img alt="" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/strings-password-characters.png"></p>
+<p>So far so good - we only have two instances of this string in use. One is located at <code>0x804c11fc</code> and one at <code>0x84b86f0</code>. Upon examination of the first one, we see that this string gets passed to a function in the subroutine located at <code>0x8003358</code>, see below:</p>
+<div class="highlight"><pre><span></span><code><span class="n">undefined4</span><span class="w"> </span><span class="nf">passwd_1</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">param_1</span><span class="p">,</span><span class="kt">int</span><span class="w"> </span><span class="n">param_2</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">iVar1</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uint</span><span class="w"> </span><span class="n">uVar2</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uint</span><span class="w"> </span><span class="n">uVar3</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">in_lr</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined</span><span class="w"> </span><span class="n">auStack52</span><span class="w"> </span><span class="p">[</span><span class="mi">36</span><span class="p">];</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">uStack4</span><span class="p">;</span>
+
+<span class="w">  </span><span class="n">uStack4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">in_lr</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_080231f4</span><span class="p">(</span><span class="n">auStack52</span><span class="p">,</span><span class="s">&quot;BCDFGHJKLMNPQRSTVWXYZ0123456789-&quot;</span><span class="p">,</span><span class="mh">0x21</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="p">(</span><span class="n">uint</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x8c</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_080025f8</span><span class="p">(</span><span class="n">param_1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_08002674</span><span class="p">(</span><span class="n">param_1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_08002714</span><span class="p">(</span><span class="n">param_1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_0800282c</span><span class="p">(</span><span class="n">param_1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">iVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uVar3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="n">uint</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x8c</span><span class="p">);</span>
+<span class="w">  </span><span class="n">uVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="k">do</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">*</span><span class="p">(</span><span class="n">undefined</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">iVar1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">auStack52</span><span class="p">[</span><span class="n">uVar3</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">(</span><span class="n">uVar2</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xff</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x1f</span><span class="p">];</span>
+<span class="w">    </span><span class="n">uVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uVar2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">    </span><span class="n">iVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">iVar1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">iVar1</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">uStack4</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Notice also the while loop that is looping while a variable is less than five, this is a good indicator that this function might be useful as we know that the password length is 5! Let's label it <code>passwd_1</code> and move onto the other uses of our character string. The next one that we can see is in the function at <code>0x8002CEC</code>, the decompilation can be seen below:</p>
+<div class="highlight"><pre><span></span><code><span class="n">undefined8</span><span class="w"> </span><span class="nf">passwd_2</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">iVar1</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">iVar2</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uint</span><span class="w"> </span><span class="n">uVar3</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">in_lr</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined</span><span class="w"> </span><span class="n">local_98</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">];</span>
+<span class="w">  </span><span class="n">undefined</span><span class="w"> </span><span class="n">local_93</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined</span><span class="w"> </span><span class="n">auStack144</span><span class="w"> </span><span class="p">[</span><span class="mi">36</span><span class="p">];</span>
+<span class="w">  </span><span class="n">undefined</span><span class="w"> </span><span class="n">auStack108</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>
+<span class="w">  </span><span class="n">undefined</span><span class="w"> </span><span class="n">auStack100</span><span class="w"> </span><span class="p">[</span><span class="mi">72</span><span class="p">];</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">uStack4</span><span class="p">;</span>
+
+<span class="w">  </span><span class="n">uStack4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">in_lr</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_08000b0c</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="n">DAT_03001fd0</span><span class="p">.</span><span class="n">_0_2_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1444</span><span class="p">;</span>
+<span class="w">  </span><span class="n">DISPCNT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1444</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_0801e330</span><span class="p">(</span><span class="o">&amp;</span><span class="n">DAT_0838277c</span><span class="p">);</span>
+<span class="w">  </span><span class="n">iVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DAT_03001fe0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_080231f4</span><span class="p">(</span><span class="n">auStack144</span><span class="p">,</span><span class="s">&quot;BCDFGHJKLMNPQRSTVWXYZ0123456789-&quot;</span><span class="p">,</span><span class="mh">0x21</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="p">(</span><span class="n">uint</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">iVar1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x8c</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_080025f8</span><span class="p">(</span><span class="n">iVar1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_08002674</span><span class="p">(</span><span class="n">iVar1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_08002714</span><span class="p">(</span><span class="n">iVar1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_0800282c</span><span class="p">(</span><span class="n">iVar1</span><span class="p">);</span>
+<span class="w">  </span><span class="n">iVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uVar3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="k">do</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">local_98</span><span class="p">[</span><span class="n">iVar2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">auStack144</span><span class="p">[</span><span class="o">*</span><span class="p">(</span><span class="n">uint</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">iVar1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x8c</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">(</span><span class="n">uVar3</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xff</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0x1f</span><span class="p">];</span>
+<span class="w">    </span><span class="n">uVar3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uVar3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">    </span><span class="n">iVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">iVar2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">iVar2</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="w">  </span><span class="n">local_93</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_0801d1bc</span><span class="p">(</span><span class="n">auStack108</span><span class="p">,</span><span class="n">local_98</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_0801d92c</span><span class="p">(</span><span class="n">DAT_03001ff0</span><span class="p">,</span><span class="mh">0x10</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_08000b0c</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">DAT_03002028</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0xc</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x200</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_08000f1c</span><span class="p">();</span>
+<span class="w">  </span><span class="n">iVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FUN_0801d26c</span><span class="p">(</span><span class="n">auStack108</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">DAT_03002028</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0xc</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_08000f1c</span><span class="p">();</span>
+<span class="w">  </span><span class="n">FUN_0801dcac</span><span class="p">(</span><span class="n">DAT_03001ff0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_08000b0c</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">  </span><span class="n">FUN_08004408</span><span class="p">(</span><span class="n">auStack100</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">CONCAT44</span><span class="p">(</span><span class="n">uStack4</span><span class="p">,(</span><span class="n">uint</span><span class="p">)(</span><span class="n">iVar1</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Once again we see the character string being passed into a function, and we also see another while loop that runs for 5 iterations - let's label this one as <code>passwd_2</code> and move on to the next usage. The string located at <code>0x84b86f0</code> is also used in two subroutines, investigating the first one located at <code>FUN_0801c37c</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">undefined4</span><span class="w"> </span><span class="nf">render_pw_screen</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">param_1</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">iVar1</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">iVar2</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uint</span><span class="w"> </span><span class="n">uVar3</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">uVar4</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uint</span><span class="w"> </span><span class="n">uVar5</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">in_lr</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">char</span><span class="w"> </span><span class="n">local_1c</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">uStack4</span><span class="p">;</span>
+
+<span class="w">  </span><span class="n">uStack4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">in_lr</span><span class="p">;</span>
+<span class="w">  </span><span class="n">iVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FUN_0801b834</span><span class="p">(</span><span class="n">DAT_03001ffc</span><span class="p">,</span><span class="s">&quot;@ - Accept   &amp; - Backspace&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="n">iVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DAT_03001ffc</span><span class="p">;</span>
+<span class="w">  </span><span class="o">*</span><span class="p">(</span><span class="n">uint</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">DAT_03001ffc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x90</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xf0U</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">iVar2</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">  </span><span class="o">*</span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">iVar1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x94</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x96</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_0801b764</span><span class="p">(</span><span class="n">iVar1</span><span class="p">,</span><span class="s">&quot;@ - Accept   &amp; - Backspace&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="n">uVar3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="n">uint</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x51c</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">uVar3</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">uVar5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">uVar3</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">do</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">local_1c</span><span class="p">[</span><span class="n">uVar5</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;BCDFGHJKLMNPQRSTVWXYZ0123456789-&quot;</span><span class="p">[</span><span class="o">*</span><span class="p">(</span><span class="n">byte</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x520</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">uVar5</span><span class="p">)];</span>
+<span class="w">        </span><span class="n">uVar5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uVar5</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">uVar5</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">uVar3</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">local_1c</span><span class="p">[</span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x51c</span><span class="p">)]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">iVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FUN_0801b834</span><span class="p">(</span><span class="n">DAT_03002000</span><span class="p">,</span><span class="n">local_1c</span><span class="p">);</span>
+<span class="w">    </span><span class="n">iVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DAT_03002000</span><span class="p">;</span>
+<span class="w">    </span><span class="o">*</span><span class="p">(</span><span class="n">uint</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">DAT_03002000</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x90</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xf0U</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">iVar2</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="o">*</span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">iVar1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x94</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x3f</span><span class="p">;</span>
+<span class="w">    </span><span class="n">iVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FUN_0800118c</span><span class="p">(</span><span class="n">DAT_03001fdc</span><span class="p">,</span><span class="mi">5</span><span class="p">);</span>
+<span class="w">    </span><span class="o">*</span><span class="p">(</span><span class="n">byte</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">iVar1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="n">byte</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">iVar1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xf</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">byte</span><span class="p">)(</span><span class="n">iVar2</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span>
+<span class="w">    </span><span class="n">FUN_0801b764</span><span class="p">(</span><span class="n">DAT_03002000</span><span class="p">,</span><span class="n">local_1c</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x51c</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">uVar4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FUN_0801a6d4</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x18</span><span class="p">));</span>
+<span class="w">    </span><span class="o">*</span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uVar4</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">uStack4</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>If we take a look at this function, we can see that a <code>FUN_0801b764</code> is being called with the <code>@ - Accept   &amp; - Backspace</code> string. Later on, we see that the same function is called with the variable containing our string of interest. If we investigate <code>FUN_0801b764</code> further, it copies the data from the second variable (the ASCII string) to the memory address of the first argument.  At this point, we can't say for sure - but this makes me think that this particular subroutine is likely for rendering the text on the screen so I am going to ignore it for now and move onto the next usage of our password character string which can be seen below:</p>
+<div class="highlight"><pre><span></span><code><span class="n">undefined8</span><span class="w"> </span><span class="nf">FUN_0801c454</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">param_1</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">iVar1</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">iVar2</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">in_lr</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">char</span><span class="w"> </span><span class="n">local_14</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">uStack4</span><span class="p">;</span>
+
+<span class="w">  </span><span class="n">iVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uStack4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">in_lr</span><span class="p">;</span>
+<span class="w">  </span><span class="n">FUN_080231f4</span><span class="p">(</span><span class="n">local_14</span><span class="p">,</span><span class="s">&quot;CRDT5&quot;</span><span class="p">,</span><span class="mi">6</span><span class="p">);</span>
+<span class="w">  </span><span class="n">iVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="k">do</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">local_14</span><span class="p">[</span><span class="n">iVar1</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;BCDFGHJKLMNPQRSTVWXYZ0123456789-&quot;</span><span class="p">[</span><span class="o">*</span><span class="p">(</span><span class="n">byte</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x520</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">iVar1</span><span class="p">)])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">iVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">iVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">iVar1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">iVar1</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">(</span><span class="n">iVar2</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">));</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">CONCAT44</span><span class="p">(</span><span class="n">uStack4</span><span class="p">,</span><span class="n">iVar2</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>So what is happening here? First we have <code>FUN_080231f4</code> which is essentially a memcpy operation:</p>
+<div class="highlight"><pre><span></span><code><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nf">memcpy_1</span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="n">dest</span><span class="p">,</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="n">src</span><span class="p">,</span><span class="n">uint</span><span class="w"> </span><span class="n">count</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="n">uVar1</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="n">puVar2</span><span class="p">;</span>
+<span class="w">  </span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="n">puVar3</span><span class="p">;</span>
+
+<span class="w">  </span><span class="n">puVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dest</span><span class="p">;</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">((</span><span class="mh">0xf</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">count</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">((((</span><span class="n">uint</span><span class="p">)</span><span class="n">src</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">uint</span><span class="p">)</span><span class="n">dest</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">do</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="o">*</span><span class="n">puVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">src</span><span class="p">;</span>
+<span class="w">      </span><span class="n">puVar2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">src</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+<span class="w">      </span><span class="n">puVar3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">src</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="w">      </span><span class="n">puVar2</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">src</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+<span class="w">      </span><span class="n">src</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">src</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="w">      </span><span class="n">puVar2</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">puVar3</span><span class="p">;</span>
+<span class="w">      </span><span class="n">puVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">puVar2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="w">      </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mh">0x10</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mh">0xf</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">count</span><span class="p">);</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">count</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">uVar1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">src</span><span class="p">;</span>
+<span class="w">      </span><span class="n">src</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">src</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">      </span><span class="o">*</span><span class="n">puVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">uVar1</span><span class="p">;</span>
+<span class="w">      </span><span class="n">puVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">puVar2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">      </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mh">0xffffffff</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">*</span><span class="p">(</span><span class="n">undefined</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">puVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="n">undefined</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">src</span><span class="p">;</span>
+<span class="w">    </span><span class="n">src</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="p">)((</span><span class="kt">int</span><span class="p">)</span><span class="n">src</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">puVar2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">undefined4</span><span class="w"> </span><span class="o">*</span><span class="p">)((</span><span class="kt">int</span><span class="p">)</span><span class="n">puVar2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">dest</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>So what this is doing is copying the string <code>CRDT5</code> to the memory location pointer to by <code>local_14</code>. Next we can see in the while loop, that this value is used in a comparison:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">local_14</span><span class="p">[</span><span class="n">iVar1</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;BCDFGHJKLMNPQRSTVWXYZ0123456789-&quot;</span><span class="p">[</span><span class="o">*</span><span class="p">(</span><span class="n">byte</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">param_1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x520</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">iVar1</span><span class="p">)])</span>
+</code></pre></div>
+
+<p>So what is happening here? On each iteration, a character from <code>local_14</code> is compared with a value from our available characters in the <code>BCDFGHJKLMNPQRSTVWXYZ0123456789-</code> string. This behavior seems to match up with what we might expect a password checking function to do...but we know that <code>iVar1</code> is incremented by 1 with every iteration, does this mean that the passwords have to be made up of contiguous characters in the <code>BCDFGHJKLMNPQRSTVWXYZ0123456789-</code>? That would seem very silly, there is also no way that this would allow for the string <code>CRDT5</code> to pass this check! If you look again at this comparison, you notice that there is a variable <code>param_1</code> that is also being used as the index, which <code>iVar1</code> and <code>0x520</code> are added to - these values are then used as an INDEX into our available characters. </p>
+<p>So what does this mean for us exactly? The <code>param_1</code> likely points to an array of offsets that represent which characters were typed in the password screen, for example, if we type the password <code>GHDRR</code> the array might contain <code>[0x4,0x5,0x2,0xd,0xd]</code>.</p>
+<p>But let's not get ahead of ourselves, let's try to type in the password <code>CRDT5</code> and see what happens:</p>
+<p><img alt="rom2" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/rom-2.png"></p>
+<p>Aha! We've got a credits scene!</p>
+<p>Seems simple enough right? But what if we could find out a little more about where our password is being stored in memory? If we knew where <code>param_1</code> pointed to, we can calculate where our password is located in RAM and look for cross-references. Now that we have a function of interest, let's break out the debugger!</p>
+<h2>Debugging the ROM</h2>
+<p>If you're following along at home, you might have noticed a new tool showed up in our Ghidra project manager, see the image below:</p>
+<p><img alt="Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/debugger.png"></p>
+<p><img alt="Open Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/open-with-debugger.png"></p>
+<p>Notice the Bug icon - this is used to open the debugger! When you clock on the bug, the following window will appear:</p>
+<p><img alt="Full Debugger" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/full-debugger.png"></p>
+<p>You'll notice that there are a lot of additional tabs and windows compared to the normal analyzer view. For starters in the top left, we've got the debugger targets view, this is what we will use to establish a connection to our debugger or launch a new debugging session</p>
+<p><img alt="Debugger Targets" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/debugger-targets.png"></p>
+<p>Right below that there is an "Objects" window, this shows the active debugging "Objects" that are being debugged. From here you can pause, single step, etc. </p>
+<p><img alt="Objects" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/objects.png"></p>
+<p>Under that, towards the bottom of the screen, we have the memory regions view, stack view, and standard console view. </p>
+<p><img alt="Regions" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/regions.png"></p>
+<p>Next to that, we have a view for threads (if applicable to your application) and a Time window - for what we are doing (debugging a single-threaded ARM system) we won't be using these views</p>
+<p><img alt="Threads" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/threads.png"></p>
+<p>Finally, on the right we have a few more tabs than we would normally see in a Ghidra analyzer session, we have Breakpoints, which displays breakpoints that you have set:</p>
+<p><img alt="Breakpoints" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/breakpoints.png"></p>
+<p>We also have a Registers view that will update with register values when breakpoints are hit:</p>
+<p><img alt="Registers" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/registers.png"></p>
+<p>And finally, we have a modules view - where various loaded modules will show up if necessary - again for this simple application we won't be seeing anything here:</p>
+<p><img alt="Modules" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/modules.png"></p>
+<h3>Attaching to the Emulator</h3>
+<p>For this work, I'm using the <code>mGBA</code> emulator, mainly because it has the ability to present a remote GDB stub. We will be connecting to this with <code>gdb-multiarch</code>. To do this from the Debugger view in Ghidra we will do the following, int he debugger targets window - click the green plug (Connect) which will open the following window:</p>
+<p><img alt="Connect" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/connect.png"></p>
+<p>There are multiple options here for remote debugging. For this post we will be using the <code>IN-VM GNU gdb local debugger</code></p>
+<p>I have added gdb-multiarch to the gdb launch command path. After clicking connect a standard GDB prompt will appear:</p>
+<p><img alt="GDB Prompt" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gdb-prompt.png"></p>
+<p>Now we have to start the server, from within mGBA, load your ROM and select <code>Tools</code> -&gt; <code>Start GDB Server</code>, the following prompt will appear:</p>
+<p><img alt="GDB Server" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/gdb-server.png"></p>
+<p>Click start and return to the Ghidra debugger window. Within the gdb prompt - run the following commands:</p>
+<div class="highlight"><pre><span></span><code>set architecture arm
+set arm fallback-mode thumb
+set arm force-mode thumb
+target remote localhost:2345
+break *0x801c470
+c
+</code></pre></div>
+
+<p>This is setting the appropriate architecture for gdb to use, connecting to our remote server, and finally setting a breakpoint at the function that we think is used to check if the credit screen should be played. Specifically at the segment comparing our provided character to the one pulled from the string of available characters. We will be focusing on this assembly snippet:</p>
+<div class="highlight"><pre><span></span><code><span class="w">                             </span><span class="n">LAB_0801c470</span><span class="w">                                    </span><span class="n">XREF</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">:</span><span class="w">     </span><span class="mi">0801</span><span class="n">c48c</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w">  </span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c470</span><span class="w"> </span><span class="mi">69</span><span class="w"> </span><span class="mi">46</span><span class="w">           </span><span class="n">mov</span><span class="w">        </span><span class="n">r1</span><span class="p">,</span><span class="n">sp</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c472</span><span class="w"> </span><span class="mi">88</span><span class="w"> </span><span class="mi">18</span><span class="w">           </span><span class="n">add</span><span class="w">        </span><span class="n">r0</span><span class="p">,</span><span class="n">r1</span><span class="p">,</span><span class="n">r2</span><span class="w"> </span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c474</span><span class="w"> </span><span class="n">a1</span><span class="w"> </span><span class="mi">18</span><span class="w">           </span><span class="n">add</span><span class="w">        </span><span class="n">r1</span><span class="p">,</span><span class="n">r4</span><span class="p">,</span><span class="n">r2</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="n">Update</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">pointer</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">password</span><span class="w"> </span><span class="n">we</span><span class="w"> </span><span class="n">entered</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">current</span><span class="w"> </span><span class="n">index</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c476</span><span class="w"> </span><span class="mi">09</span><span class="w"> </span><span class="mi">78</span><span class="w">           </span><span class="n">ldrb</span><span class="w">       </span><span class="n">r1</span><span class="p">,[</span><span class="n">r1</span><span class="p">,</span><span class="err">#</span><span class="mh">0x0</span><span class="p">];</span><span class="w"> </span><span class="n">r1</span><span class="w"> </span><span class="n">contains</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">provided</span><span class="w"> </span><span class="n">password</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">example</span><span class="w"> </span><span class="s">&quot;B&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;C&quot;</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">etc</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c478</span><span class="w"> </span><span class="n">c9</span><span class="w"> </span><span class="mi">18</span><span class="w">           </span><span class="n">add</span><span class="w">        </span><span class="n">r1</span><span class="p">,</span><span class="n">r1</span><span class="p">,</span><span class="n">r3</span><span class="p">;</span><span class="w"> </span><span class="n">r3</span><span class="w"> </span><span class="n">contains</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">pointer</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">string</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">available</span><span class="w"> </span><span class="n">characters</span><span class="p">,</span><span class="w"> </span><span class="n">we</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="n">adding</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">current</span><span class="w"> </span><span class="n">password</span><span class="w"> </span><span class="n">character</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">pointer</span><span class="p">.</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c47a</span><span class="w"> </span><span class="mo">00</span><span class="w"> </span><span class="mi">78</span><span class="w">           </span><span class="n">ldrb</span><span class="w">       </span><span class="n">r0</span><span class="o">=&gt;</span><span class="n">local_14</span><span class="p">,[</span><span class="n">r0</span><span class="p">,</span><span class="err">#</span><span class="mh">0x0</span><span class="p">]</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="n">Load</span><span class="w"> </span><span class="n">r0</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="s">&quot;CRDT5&quot;</span><span class="w"> </span><span class="n">string</span><span class="w"> </span><span class="n">at</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="n">specified</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">r2</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">location</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">stack</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c47c</span><span class="w"> </span><span class="mi">09</span><span class="w"> </span><span class="mi">78</span><span class="w">           </span><span class="n">ldrb</span><span class="w">       </span><span class="n">r1</span><span class="p">,[</span><span class="n">r1</span><span class="p">,</span><span class="err">#</span><span class="mh">0x0</span><span class="p">]</span><span class="o">=&gt;</span><span class="n">s_BCDFGHJKLMNPQRSTVWXYZ012345678</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;BCDFGHJKLMNPQRSTVWXYZ01234567 ; Load the character representation of the entered value we provided for the password</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c47e</span><span class="w"> </span><span class="mi">88</span><span class="w"> </span><span class="mi">42</span><span class="w">           </span><span class="n">cmp</span><span class="w">        </span><span class="n">r0</span><span class="p">,</span><span class="n">r1</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="n">Compare</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">two</span><span class="o">!</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c480</span><span class="w"> </span><span class="mo">00</span><span class="w"> </span><span class="n">d0</span><span class="w">           </span><span class="n">beq</span><span class="w">        </span><span class="n">LAB_0801c484</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c482</span><span class="w"> </span><span class="mo">00</span><span class="w"> </span><span class="mi">25</span><span class="w">           </span><span class="n">mov</span><span class="w">        </span><span class="n">r5</span><span class="p">,</span><span class="err">#</span><span class="mh">0x0</span>
+<span class="w">                             </span><span class="n">LAB_0801c484</span><span class="w">                                    </span><span class="n">XREF</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">:</span><span class="w">     </span><span class="mi">0801</span><span class="n">c480</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w">  </span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c484</span><span class="w"> </span><span class="mo">01</span><span class="w"> </span><span class="mi">32</span><span class="w">           </span><span class="n">add</span><span class="w">        </span><span class="n">r2</span><span class="p">,</span><span class="err">#</span><span class="mh">0x1</span><span class="p">;</span><span class="w"> </span><span class="n">Increment</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="n">counter</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c486</span><span class="w"> </span><span class="mo">04</span><span class="w"> </span><span class="mi">2</span><span class="n">a</span><span class="w">           </span><span class="n">cmp</span><span class="w">        </span><span class="n">r2</span><span class="p">,</span><span class="err">#</span><span class="mh">0x4</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c488</span><span class="w"> </span><span class="mo">01</span><span class="w"> </span><span class="n">dc</span><span class="w">           </span><span class="n">bgt</span><span class="w">        </span><span class="n">LAB_0801c48e</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c48a</span><span class="w"> </span><span class="mo">00</span><span class="w"> </span><span class="mi">2</span><span class="n">d</span><span class="w">           </span><span class="n">cmp</span><span class="w">        </span><span class="n">r5</span><span class="p">,</span><span class="err">#</span><span class="mh">0x0</span>
+<span class="w">        </span><span class="mi">0801</span><span class="n">c48c</span><span class="w"> </span><span class="n">f0</span><span class="w"> </span><span class="n">d1</span><span class="w">           </span><span class="n">bne</span><span class="w">        </span><span class="n">LAB_0801c470</span>
+</code></pre></div>
+
+<p>After entering these commands, let's see if our breakpoint gets hit using Ghidra...</p>
+<p><img alt="Breakpoint Hit" src="https://wrongbaud.github.io/assets/img/ghidra-dbg/breakpoint-hit.png"></p>
+<p>Excellent - not only the the breakpoint hit but all of the registers have been updated in the resisters window. Now let's investigate these assumptions that we've made about the password checking and see if they are correct. If we step through a few instructions until we hit <code>0801c474</code>. The assumption at this point is that we r1 will be pointing to an array of indexes representing the characters we entered. Let's examine memory and find out:</p>
+<p><strong>Note:</strong> If you are remotely debugging using <code>gdb-multiarch</code> and are finding that some breakpoints aren't being hit - try using the <code>stepi</code> command instead of <code>c</code>. This is an issues that I've seen in mGBA before and does not have anything to do with Ghidra's GDB server. </p>
+<div class="highlight"><pre><span></span><code>(gdb)x/10x $r1
+0x2005998:  0x01  0x0d  0x02  0x0f  0x1a  0x00  0x00  0x00
+0x20059a0:  0x00  0x4f
+</code></pre></div>
+
+<p>Aha! This is exactly what was expected, instead of storing the actual ascii characters that we enter as a password it stores their index value into a table of available characters:</p>
+<table>
+<thead>
+<tr>
+<th>Index Val</th>
+<th>Character Val</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x1</td>
+<td>"C"</td>
+</tr>
+<tr>
+<td>0x0d</td>
+<td>"R"</td>
+</tr>
+<tr>
+<td>0x02</td>
+<td>"D"</td>
+</tr>
+<tr>
+<td>0x0f</td>
+<td>"T"</td>
+</tr>
+<tr>
+<td>0x1a</td>
+<td>"5"</td>
+</tr>
+</tbody>
+</table>
+<p>Just to test this theory, let's see what happens if we enter <code>CGHDR</code> as the password and set the same breakpoints:</p>
+<div class="highlight"><pre><span></span><code>Breakpoint 3, 0x0801c476
+Can&#39;t determine the current process&#39;s PID: you must name one.
+(gdb)x/10x $r1
+0x2005998:  0x01  0x04  0x05  0x02  0x0d  0x00  0x00  0x00
+0x20059a0:  0x00  0x60
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>Index Val</th>
+<th>Character Val</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x1</td>
+<td>"C"</td>
+</tr>
+<tr>
+<td>0x04</td>
+<td>"G"</td>
+</tr>
+<tr>
+<td>0x05</td>
+<td>"H"</td>
+</tr>
+<tr>
+<td>0x02</td>
+<td>"D"</td>
+</tr>
+<tr>
+<td>0xD</td>
+<td>"R"</td>
+</tr>
+</tbody>
+</table>
+<p>Exactly as we expected - so now we have an idea as to how these passwords get stored, what they look like in memory and we can debug/set breakpoints from within Ghidra. I think that this makes for a good stopping point - for the next post, we will research some of these other password functions using Ghidra and the remote GDB debugging functionality that we set up today.</p>
+<h2>Conclusion</h2>
+<p>With this post, we've taken a look at what tools are available to help with building Ghidra. We also reviewed some of announced debugging capabilities and using those were able to remotely debug a Game Boy Advance game. A lot of what we did today you could have also done using gdb-multiarch without having Ghidra in the mix - but I wanted to learn how some of this worked and share my findings along the way. As usual, if you have any questions or comments - please feel free to reach out to me on <a href="https://twitter.com/wrongbaud">Twitter</a>. If you'd like to learn more about Ghidra, or <a href="https://www.voidstarsec.com">hardware hacking</a> in general check out some of my <a href="https://voidstarsec.com/#research">free course materials</a>.</p>
+<h3>Extra Information / Notes</h3>
+<table>
+<thead>
+<tr>
+<th>Emulator</th>
+<th>Debugger</th>
+<th>BP Count</th>
+<th>Reg Working</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mgba-qt</td>
+<td>gdb-multiarch</td>
+<td>3</td>
+<td></td>
+</tr>
+<tr>
+<td>mgba-qt</td>
+<td>dkp-gdb</td>
+<td>5</td>
+<td></td>
+</tr>
+<tr>
+<td>vba</td>
+<td>dkp-gdb</td>
+<td>1</td>
+<td>Unknown packet errors</td>
+</tr>
+<tr>
+<td>vba</td>
+<td>gdb-multiarch</td>
+<td>0</td>
+<td>Unknown packet errors</td>
+</tr>
+<tr>
+<td>gvba</td>
+<td>gdb-multiarch</td>
+<td>0</td>
+<td>Unknown packet errors</td>
+</tr>
+<tr>
+<td>gvba</td>
+<td>dkp-gdb</td>
+<td>0</td>
+<td>Unknown packet errors</td>
+</tr>
+<tr>
+<td>mgba</td>
+<td>dkp-gdb</td>
+<td>5</td>
+<td></td>
+</tr>
+<tr>
+<td>mgba</td>
+<td>gdb-multiarch</td>
+<td>5</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Takeaways here - gvba does not work with any sort of modern GDB. gdb-multiarch seems to miss breakpoints for some reason, and gdb from devkitarm does not respond to ghidra appropriately to provide registers. </p>
+  <footer>
+    <p>Published: <time datetime="2020-12-19T00:00:00-07:00">
+      Sat 19 December 2020
+    </time></p>
+    <address>
+      By           <a href="https://voidstarsec.com/blog/author/matthew-alt.html">"Matthew Alt"</a>
+    </address>
+    <p>
+        Category: <a href="https://voidstarsec.com/blog/category/ghidra.html">Ghidra</a>
+    </p>
+    <p>
+        Tags:
+            <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
+            <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+            <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
+</html>

@@ -1,10 +1,10 @@
 ---
 layout: post
-title: Intro to Embedded RE Part 1: Tools and Series Overview
+title: Intro to Embedded Reverse Engineering: Tools and Series Overview
 description: Tools required to set up an embedded reverse engineering lab
 summary:  This post reviews some of the tools needed when setting up a lab for reverse engineering embedded systems. There will be two sections, one for hardware tools and one for software tools. After reading this blog post, the reader should know what is needed to set up an introductory lab for reverse engineering embedded systems and firmware images.
 category: Hardware
-tags: hardware,uart,uboot
+tags: hardware,uart,uboot,tools
 author: "Matthew Alt"
 slug: intro-to-embedded-part-1
 ---
@@ -281,13 +281,11 @@ This series aims to review the fundamentals of embedded system reverse engineeri
 
 - Part 1: [Tools / Series Overview](https://voidstarsec.com/blog/intro-to-embedded-part-1)
 - Part 2: [Building a Development Environment for Ghidra](https://voidstarsec.com/blog/ghidra-dev-environment)
-- Part 3: [UART Discovery and Firmware Extraction via UBOOT](https://voidstarsec.com/blog/uart-uboot-and-usb)
-- Part 4: Understanding Memory Maps and Address Spaces in Ghidra
-- Part 5: Firmware Extraction via SPI and USB
-- Part 6: Kaitai Struct for Firmware Analysis
-- Part 7: I2C and Parallel Flash Extraction
-- Part 8: PCode Emulation
-- Part 9: JTAG Overview and Applications
+- Part 3: [Firmware Extraction via UART, UBoot and USB](https://voidstarsec.com/blog/uart-uboot-and-usb)
+- Part 4: [Firmware Extraction via SPI](https://voidstarsec.com/blog/brushing-up-part-2)
+- Part 5: [I2C and Parallel Flash Extraction](https://voidstarsec.com/blog/i2c-parallel-flash)
+- Part 6: [PCode Emulation](https://voidstarsec.com/blog/ghidra-pcode)
+- Part 7: [JTAG Overview and Applications](https://voidstarsec.com/blog/jtag-pifex)
 
 Each post will focus on the fundamentals of embedded systems reverse engineering. I selected these targets to showcase the various protocols and necessary Ghidra modifications to analyze their firmware correctly. 
 
@@ -295,18 +293,10 @@ Each post will focus on the fundamentals of embedded systems reverse engineering
 
 Each post in this series will begin with an overview describing the target and what we hope to learn. We will then outline the objectives of the post, relating to the reader in detail what our specific goals are with this target.
 
-The rough outline for each post will be as follows:
-
-- Objectives
-- Tooling
-- Hardware/Software Teardown
-- Conclusion
-- Resources
-
 Each post will end with a link to a GitHub repository where all materials for a given target will be accessible. The repositories, of course, will not contain firmware images or any proprietary or confidential data - only the tools required to replicate the work described. 
 
 # Conclusion
 
-This post outlined a series of posts for 2022 whose goal is to serve as a roadmap for both hardware and software engineers. If you're interested in learning more about this and would like to take a course, check the availability [here](https://www.voidstarsec.com/training.html). if you want to get updated when new posts come out as well as my quarterly newsletter - [sign up here](http://eepurl.com/hSl31f)
+This post outlined a series of posts for 2022 whose goal is to serve as a roadmap for both hardware and software engineers. If you're interested in learning more about this and would like to take a course, check the availability [here](https://www.voidstarsec.com/#training). if you want to get updated when new posts come out as well as my quarterly newsletter - [sign up here](http://eepurl.com/hSl31f)
 
 Thank you for your time, and if you have any feedback, please don't hesitate to contact me through [Twitter](https://twitter.com/wrongbaud) or [email](mailto:contact@voidstarsec.com)!

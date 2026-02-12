@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+          <title>VoidStar Security Blog - Hardware Debugging for Reverse Engineers Part 2: JTAG, SSDs and Firmware Extraction</title>
+        <meta charset="utf-8" />
+        <meta name="generator" content="Pelican" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://voidstarsec.com/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Full Atom Feed" />
+        <link href="https://voidstarsec.com/blog/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate" title="VoidStar Security Blog Categories Atom Feed" />
+
+
+
+    <meta name="description" content="A Free Ghidra course, sponsored by Hack-a-Day" />
+
+    <meta name="tags" content="jtag" />
+    <meta name="tags" content="tutorial" />
+
+</head>
+
+<body>
+        <header>
+              <hgroup><h1><a href="https://voidstarsec.com/blog/">VoidStar Security Blog</a></h1></hgroup>
+        <nav><ul>
+        </ul></nav>
+        </header>
+        <main>
+<article>
+  <header>
+    <h2>
+      <a href="https://voidstarsec.com/blog/jtag-ssd" rel="bookmark"
+         title="Permalink to Hardware Debugging for Reverse Engineers Part 2: JTAG, SSDs and Firmware Extraction">Hardware Debugging for Reverse Engineers Part 2: JTAG, SSDs and Firmware Extraction</a></h2>
+ 
+  </header>
+  <h1>Hardware Debugging for Reverse Engineers Part 2: JTAG, SSDs and Firmware Extraction</h1>
+<h2>Overview</h2>
+<p>To follow up on my <a href="https://voidstarsec.com/blog/xbox-swd">last post</a> about SWD and hardware debugging, I wanted to do a deep dive into JTAG from a reverse-engineering perspective. The previous post received a lot of great feedback and it seems that people are interested in this topic, so I wanted to continue the series and expand upon another hardware debugging mechanism. For those who are unfamiliar, JTAG is a hardware level debugging mechanism that many embedded CPUs utilize, with this post I hope to explain how to approach JTAG from a reverse engineers perspective and provide some practical examples along the way.</p>
+<h2>Goals</h2>
+<p>With this post, I hope to do the following:</p>
+<ol>
+<li>Explain how JTAG works</li>
+<li>Demonstrate how to discover and utilize a JTAG port/interface on an unknown target</li>
+<li>Provide an overview of some of the current OSS tools that can be used to interact with a JTAG interface </li>
+<li>Utilize JTAG to extract firmware and debug a target </li>
+</ol>
+<p>Also, before I give an overview, I wanted to point out a few great resources for learning about JTAG</p>
+<ul>
+<li><a href="https://github.com/cyphunk/JTAGenum/wiki/Embedded-Analysis#jtag">Cyphunk's Embedded Analysis Page</a></li>
+<li><a href="https://www.fpga4fun.com/JTAG.html">FPGA4Fun JTAG Overview</a></li>
+<li><a href="https://pdfs.semanticscholar.org/69ac/07f94832ceb4d2344c9c2d2bc8fc04e68124.pdf?_ga=2.81325524.238759085.1584580795-2049975628.1584580795">Blackbox JTAG Reverse Engineering</a></li>
+</ul>
+<h2>JTAG Overview</h2>
+<p>JTAG is a hardware interface that was developed to assist developers and testers with low level debugging. JTAG was originally developed for testing integrated circuits and more specifically, sampling IO pins on a target under test. This type of debugging interface allows engineers to test connections on PCBs without needing the probe the physical pin itself. The JTAG interface is controlled via the state machine outlined below:</p>
+<p><img alt="JTAG State Machine" src="http://openocd.org/doc-release/doxygen/jtag-state-machine-large.png"></p>
+<p>One of the important things to remember about JTAG at this level is that it involves two registers, the instruction register, and the data register. To utilize these registers, the proper states in the above state machine must be entered using the following interface signals:</p>
+<table>
+<thead>
+<tr>
+<th>Line</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TMS</td>
+<td>This pin is used to navigate and control the JTAG state machine</td>
+</tr>
+<tr>
+<td>TDI</td>
+<td>Input pin, used to write data to the target</td>
+</tr>
+<tr>
+<td>TDO</td>
+<td>Output pin, Used to read data back out from the target</td>
+</tr>
+<tr>
+<td>TCK</td>
+<td>Used to determine when data is sampled for all inputs and outputs</td>
+</tr>
+<tr>
+<td>TRST (Optional)</td>
+<td>This pin can be used to reset the state machine to the starting state</td>
+</tr>
+</tbody>
+</table>
+<p>The state machine is navigated using the TMS and TCK lines, while data is written to or read from via TDI and TDO respectively. TMS is sampled on the rising edge of TCK, meaning that the TMS line must be asserted before TCK is toggled to navigate through the state machine. Data is then shifted into the instruction register (IR) or data register (DR) depending on the state of the JTAG state machine. When an operation is completed (or after the update DR/IR phase) the resulting data can be <em>shifted</em> out of DR by entering the <code>Shift-DR</code> state.  With these primitives in place, manufacturers can implement whatever features they wish over JTAG. </p>
+<p>The JTAG standard treats IR and DR as shift registers, and due to this, multiple targets can be daisy-chained together. </p>
+<p><img alt="JTAG Daisy Chain" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Jtag_chain.svg/654px-Jtag_chain.svg.png"></p>
+<p>In a nutshell, JTAG defines a state machine that is navigated with a minimum of 4 signals. With this state machine in place, end users can write and read from two shift registers, IR and DR.</p>
+<h3>JTAG Registers</h3>
+<p>JTAG utilizes two main registers, the instruction register, and the data register. The instruction register is used to determine what function the JTAG controller is about to carry out such as a memory read, or memory write for example. The data register is then used as an additional input to the instruction register, for the previous example, they may be used to provide an address to read from or write to. These registers can vary in size based on their function.</p>
+<p>To write to a register one would perform the following steps, we'll use the IR as an example:</p>
+<ol>
+<li>Enter <code>Test Logic Reset</code> state (TLR) (This can be done by asserting the <code>TMS</code> line and cycling <code>CLK</code> 5 times)</li>
+<li>Enter <code>Select IR Scan</code> state</li>
+<li>Enter <code>Capture IR</code> state</li>
+<li>Enter <code>Shift IR</code> -- This is where we load the data into IR from TDI</li>
+<li>Enter <code>Exit IR</code> state</li>
+<li>Enter <code>Update IR</code> state -- This stage "latches" the value into IR.</li>
+</ol>
+<p>Following this, if there were no data registers required, the operation would be performed, and the result (if any) would be loaded into the data register to be shifted out. However, many instructions require a data register to be filled out as well before operating. In that case, once the data register is written to and updated, the operation will be performed and the result can be shifted out of the data register.</p>
+<p>Some instructions do not require the DR to be loaded, for example, if we had loaded the <code>IDCODE</code> instruction into IR (1110b), this would load the processor's IDCODE value into the data register for us to then clock out and read it on <code>TDO</code>. To read the result out of <code>TDO</code>, one would navigate to the <code>Shift-DR</code> state, and clock in 32 bits on <code>TDI</code>, this would cause the data in the data register to be shifted out on the <code>TDO</code> line. See the image below for a visual representation of what would happen if one loaded the IR with the <code>IDCODE</code> instruction</p>
+<p><img alt="IDCODE Instruction" src="https://www.embecosm.com/appnotes/ean5/images/jtag-architecture-2.png"></p>
+<p>It's important to remember, that <code>IR</code> and <code>DR</code> can be thought of as shift registers, meaning that when we update them with new values, the old values are then shifted out on <code>TDO</code>. </p>
+<p>The JTAG standard defines the following instruction registers:</p>
+<ul>
+<li><code>BYPASS</code><ul>
+<li>This instruction connects <code>TDI</code> and <code>TDO</code></li>
+<li>In the <code>Shift DR</code> state, data is transferred from <code>TDI</code> to <code>TDO</code> with a delay of one <code>TCK</code> cycle</li>
+<li>0 is loaded into the data register during the <code>Capture DR</code> state</li>
+<li>This can be used to determine how many devices are in a scan chain</li>
+</ul>
+</li>
+<li>
+<p><code>IDCODE</code></p>
+<ul>
+<li>When loaded the Device Code Id Register is selected as the serial path between TDI and TDO</li>
+<li>In the Capture-DR state, the 32-bit device ID code is loaded into this shift section</li>
+<li>In the Shift-DR state, this data is shifted out, least significant bit first</li>
+</ul>
+</li>
+<li>
+<p><strong>Core JTAG Concepts</strong></p>
+<ul>
+<li>The state machine is navigated with 4 signals: <code>TCK</code>,<code>TMS</code>,<code>TDO</code> and <code>TDI</code></li>
+<li><code>TDI</code> is used to provide input, <code>TDO</code> is used for output</li>
+<li>Using this state machine data can be shifted into the IR (<code>Shift IR</code>) and the DR (<code>Shift DR</code>)</li>
+<li>The instruction register (<code>IR</code>) can be thought of as a function, and the data register (<code>DR</code>) can be considered the argument to that function</li>
+<li>As data is shifted into <code>DR</code> and <code>IR</code>, the previous contents are shifted out on <code>TDO</code></li>
+<li>Once data is shifted into these registers, an operation can be performed (entirely dependent on host implementation aside from a few reserved instructions)</li>
+<li>Data is <em>read</em> out of the target by shifting it onto <code>TDO</code> from the data register in the <code>Shift DR</code> state. </li>
+</ul>
+</li>
+</ul>
+<p>So now that we have gone over how JTAG works at a low level, we should talk about why we might care about it, and how this interface can grant access to useful features for reverse engineers. One of the most commonly used applications of the JTAG interface is hardware-level debugging (hence the title of this post). This is implemented by the chip manufacturer, and can vary from chip to chip, however, one of the most common implementations of hardware-level debugging for ARM targets is <a href="http://infocenter.arm.com/help/topic/com.arm.doc.ddi0314h/DDI0314H_coresight_components_trm.pdf">ARM's CoreSight Debug Interface</a>. This is the same implementation that we <a href="https://wrongbaud.github.io/posts/stm-xbox-jtag/">communicated with over SWD in my last post</a>, only, in this case, the Debug Access Port is communicated with over JTAG. The specifics of the JTAG implementation can be <a href="https://static.docs.arm.com/ihi0031/c/IHI0031C_debug_interface_as.pdf">found here</a>. Luckily for us, some excellent OSS tools can be used to communicate with these ports - this post will focus on using OpenOCD.</p>
+<p>OpenOCD takes care of utilizing the JTAG or SWD interface to grant the end-user various primitives that are provided by the debug interface exposed through the CoreSight DAP. The Coresight / DAP architecture is fairly complicated and too much to cover in this (already long) post, so I will potentially save that for another post</p>
+<h2>JTAG for Reverse Engineers</h2>
+<p>It's extremely important to have a solid understanding of the protocol fundamentals when approaching something like this from a reverse engineer's perspective. When reverse engineering hardware (or software) you want to have your ground truth covered since there are always infinite unknowns. These next few sections will go over how we can take advantage of our low-level knowledge of these protocols to assist us on our path to gaining access to hardware level debugging via JTAG. The first thing that we need to do is determine the pinout, and if the pins exposed allow access to the JTAG interface. </p>
+<h3>Determining the pinout</h3>
+<p>JTAG signal lines are often grouped together, sometimes (if you're extremely lucky!) you will see one of the following headers:</p>
+<p><img alt="JTAG Headers" src="https://elinux.org/images/4/48/Ti_arm_jtag.jpg"></p>
+<p>If you find something like this however, it may not have the exact signal groupings, so we will discuss how to determine a pinout if one assumes it's used for JTAG.</p>
+<p>When reverse engineering something like this, you want to start with what you know. Since we know that most manufacturers at <em>least</em> implement <code>IDCODE</code> and <code>BYPASS</code> let's talk about how we can take advantage of those two instructions. </p>
+<p>If you have identified what you believe to be a potential JTAG header or pinout, but do not know the pins, we can use the behavior of these two registers to determine the pinout. </p>
+<p>Since the <code>IDCODE</code> register is typically loaded as the default IR, one can test an assumed pinout by doing the following:</p>
+<ol>
+<li>Assign roles to potential output pins (TMS, TCK, etc)</li>
+<li>Enter the <code>Test Logic Reset</code> state</li>
+<li>Enter the <code>Select DR Scan</code>, <code>Capture DR</code>, <code>Shift DR</code></li>
+<li>Clock 32 values on <code>TDI</code> and monitor <code>TDO</code> for a valid <code>IDCODE</code> value</li>
+<li>Check the <code>IDCODE</code> value that you shifted out if it looks valid congratulations! Otherwise, reassign pins and repeat!</li>
+</ol>
+<p>In addition to taking advantage of the fact that the <code>IDCODE</code> register is often loaded into the IR by default, we can also utilize the fact that both the IR and DR behave as shift registers, so if we assume a common register length (32 bits often works) we can attempt to brute force the pinout by doing the following:</p>
+<ol>
+<li>Assign roles to potential output pins (TMS, TCK,etc)</li>
+<li>Using these assumed values, enter the <code>Test Logic Reset</code> state</li>
+<li>Enter the <code>Shift IR</code> state</li>
+<li>Shift in a unique 32-bit value on <code>TDI</code></li>
+<li>Continue to shift 1's on <code>TDI</code> while monitoring for your unique pattern on TDO (be sure to do this as lease 32 times!).</li>
+<li>If the pattern is discovered, congratulations! Otherwise, choose new assignments for the pins and repeat!</li>
+</ol>
+<p>Both of these methods are used by the previously mentioned <a href="https://github.com/cyphunk/JTAGenum/blob/master/JTAGenum.sh">JTAGEnum</a> script, as well as the <a href="http://www.grandideastudio.com/jtagulator/">JTAGULATOR</a>.</p>
+<h3>Determining Instruction Length</h3>
+<p>Once you have determined the pinout of the target, then the real fun can begin. The next step is to then determine the length of the IR / DR. To do this, starting with IR, enter the <code>Shift IR</code> state and flood the chain with 1's on <code>TDI</code>, using a large number like 1024 or 4096, and then clock in a 0. Once this has been done, simply continue to clock in 1's on <code>TDI</code>, counting the number of clock cycles that it takes before a 0 appears on <code>TDO</code>. This will tell you the length of the IR. Once you have that, you can enter the <code>Shift DR</code> state and repeat the process to determine the state of the DR. This is something that <a href="http://urjtag.org/">urjtag</a> does very well.</p>
+<h2>Practical Example: Samsung M.2 SSD</h2>
+<p>The target for this post is going to be a Samsung M.2 SSD that I recently recovered from an older laptop. After looking at the PCB and spotting what could potentially be JTAG headers, I wanted to outline the process from start to finish.</p>
+<p><img alt="PCB Target" src="https://wrongbaud.github.io/assets/img/jtag-ssd/hdd.jpg">
+<img alt="PCB Target" src="https://wrongbaud.github.io/assets/img/jtag-ssd/PCB.png"></p>
+<h3>Practical Example: Locating JTAG Headers / Determining Pinout</h3>
+<p>As mentioned before JTAG lines are often grouped - so when looking at a new platform from a hardware perspective, looking for pin groupings greater than 5 is always a good start. Luckily for us on this target, there are 9 vias located along the outside of the PCB. Let's start by examining the voltage levels of these pins with the drive in a normal operating state</p>
+<table>
+<thead>
+<tr>
+<th>Pin</th>
+<th>Voltage Level</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0.1 V</td>
+<td>???</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.8 V</td>
+<td>???</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0.1 V</td>
+<td>???</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0.1 V</td>
+<td>???</td>
+</tr>
+<tr>
+<td>5</td>
+<td>0.1 V</td>
+<td>???</td>
+</tr>
+<tr>
+<td>6</td>
+<td>0.1 V</td>
+<td>???</td>
+</tr>
+<tr>
+<td>7</td>
+<td>GND</td>
+<td>GND</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1.8 V</td>
+<td>???</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1.8 V</td>
+<td>???</td>
+</tr>
+</tbody>
+</table>
+<p>From a first pass - these voltage values don't tell us anything, so what can we determine based on the information we have? First off, we have a GND which is an easy one to determine by using continuity mode on the multimeter and testing against something like a shield of the USB connector (while the target is unplugged of course!). Next, we have one line at 1.8V, typically one would expect this to be TMS as it is recommended to be held high in most documentation.</p>
+<p>To determine the pinout, we will use a Raspberry Pi and the <a href="https://github.com/cyphunk/JTAGenum/blob/master/JTAGenum.sh">JTAGEnum</a> project. This script uses the aforementioned methods to attempt to identify a JTAG pinout. It is also important to note here that the logic levels are at 1.8V so we will need to use a logic level shifter if we're going to interface to this target. JTAGEnum.sh uses the Raspberry Pi's GPIO lines to actuate the target interface, in the shell script they include a map of the GPIO values which can be seen below:</p>
+<div class="highlight"><pre><span></span><code><span class="err">#</span><span class="w"> </span><span class="n">define</span><span class="w"> </span><span class="n">BCM</span><span class="w"> </span><span class="n">pins</span><span class="w"> </span><span class="p">(</span><span class="n">mapped</span><span class="w"> </span><span class="n">directly</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="o">/</span><span class="n">sys</span><span class="o">/</span><span class="k">class</span><span class="o">/</span><span class="n">gpio</span><span class="o">/</span><span class="n">gpio</span><span class="err">${</span><span class="n">pin</span><span class="o">[</span><span class="n">N</span><span class="o">]</span><span class="err">}</span><span class="p">)</span>
+<span class="err">#</span><span class="w"> </span><span class="mi">5</span><span class="n">v</span><span class="w"> </span><span class="mi">5</span><span class="n">v</span><span class="w">  </span><span class="n">g</span><span class="w"> </span><span class="mi">14</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="mi">18</span><span class="w">  </span><span class="n">g</span><span class="w"> </span><span class="mi">23</span><span class="w"> </span><span class="mi">24</span><span class="w">  </span><span class="n">g</span><span class="w"> </span><span class="mi">25</span><span class="w">  </span><span class="mi">8</span><span class="w">  </span><span class="mi">7</span><span class="w">  </span><span class="mi">1</span><span class="w">  </span><span class="n">g</span><span class="w"> </span><span class="mi">12</span><span class="w">  </span><span class="n">g</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="mi">20</span><span class="w"> </span><span class="mi">21</span>
+<span class="err">#</span><span class="w"> </span><span class="mi">3</span><span class="n">v</span><span class="w">  </span><span class="mi">2</span><span class="w">  </span><span class="mi">3</span><span class="w">  </span><span class="mi">4</span><span class="w">  </span><span class="n">g</span><span class="w"> </span><span class="mi">17</span><span class="w"> </span><span class="mi">27</span><span class="w"> </span><span class="mi">22</span><span class="w"> </span><span class="mi">3</span><span class="n">v</span><span class="w"> </span><span class="mi">10</span><span class="w">  </span><span class="mi">9</span><span class="w"> </span><span class="mi">11</span><span class="w">  </span><span class="n">g</span><span class="w">  </span><span class="mi">0</span><span class="w">  </span><span class="mi">5</span><span class="w">  </span><span class="mi">6</span><span class="w"> </span><span class="mi">13</span><span class="w"> </span><span class="mi">19</span><span class="w"> </span><span class="mi">26</span><span class="w">  </span><span class="n">g</span>
+</code></pre></div>
+
+<p><img alt="RPI" src="https://www.bigmessowires.com/wp-content/uploads/2018/05/Raspberry-GPIO.jpg"></p>
+<p>Using our table above, we will wire the following GPIOs to the unknown header:</p>
+<table>
+<thead>
+<tr>
+<th>SSD Header Pin</th>
+<th>RPi GPIO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>3</td>
+</tr>
+<tr>
+<td>3</td>
+<td>9</td>
+</tr>
+<tr>
+<td>4</td>
+<td>10</td>
+</tr>
+<tr>
+<td>5</td>
+<td>11</td>
+</tr>
+<tr>
+<td>6</td>
+<td>25</td>
+</tr>
+</tbody>
+</table>
+<p>In <code>JTAGenum.sh</code> we will modify the pins variable to be as follows:</p>
+<div class="highlight"><pre><span></span><code>pins=(9 11 25 2 3 10)
+pinnames=(pin1 pin2 pin3 pin4 pin5 pin6)
+</code></pre></div>
+
+<p>Now with the pins wired up, and the logic level shifter in place we can run <code>JTAGenum.sh</code>.</p>
+<p>Running the script wired up as shown below yields a TON of results, the output can be seen [here]. Luckily for us, it properly identifies two possible configurations which can be seen below:</p>
+<div class="highlight"><pre><span></span><code>FOUND!  ntrst:pin4 (RPi GPIO 2) tck:pin6 (RPi GPIO 10) tms:pin1 (RPi GPIO 9) tdo:pin3 (RPi GPIO 25) tdi:pin2 (RPi GPIO 11) IR length: 4
+FOUND!  ntrst:pin5 (RPi GPIO 3) tck:pin6 (RPi GPIO 10) tms:pin1 (RPi GPIO 9) tdo:pin3 (RPi GPIO 25) tdi:pin2 (RPi GPIO 11) IR length: 4
+</code></pre></div>
+
+<p>Next, the script ran an ID scan. You might notice that a lot of results were generated for this, how do we filter through these? There are a few things that you can do to filter through the results, for example, we probably only have 1-2 devices on the scan chain (CPU and flash) so we can immediately ignore those that have more than 2-3 entries. Next, you can rule out those that have long (more than 4-5) sequences of 1's or 0's. Luckily in this list, there is an ID that I have seen before: <code>0x4ba00477</code>  - this ID is for an ARM Cortex core and I've seen it before when attempting to get access to <a href="https://beagleboard.org/black">Beaglebone Black</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="n">ntrst</span><span class="o">:</span><span class="n">pin4</span><span class="w"> </span><span class="n">tck</span><span class="o">:</span><span class="n">pin6</span><span class="w"> </span><span class="n">tms</span><span class="o">:</span><span class="n">pin1</span><span class="w"> </span><span class="n">tdo</span><span class="o">:</span><span class="n">pin3</span><span class="w"> </span><span class="n">tdi</span><span class="o">:</span><span class="n">pin2</span><span class="w">  </span><span class="n">devices</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="mh">0x4ba00477</span>
+<span class="n">ntrst</span><span class="o">:</span><span class="n">pin4</span><span class="w"> </span><span class="n">tck</span><span class="o">:</span><span class="n">pin6</span><span class="w"> </span><span class="n">tms</span><span class="o">:</span><span class="n">pin1</span><span class="w"> </span><span class="n">tdo</span><span class="o">:</span><span class="n">pin3</span><span class="w"> </span><span class="n">tdi</span><span class="o">:</span><span class="n">pin5</span><span class="w">  </span><span class="n">devices</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="mh">0x4ba00477</span>
+<span class="n">ntrst</span><span class="o">:</span><span class="n">pin5</span><span class="w"> </span><span class="n">tck</span><span class="o">:</span><span class="n">pin6</span><span class="w"> </span><span class="n">tms</span><span class="o">:</span><span class="n">pin1</span><span class="w"> </span><span class="n">tdo</span><span class="o">:</span><span class="n">pin3</span><span class="w"> </span><span class="n">tdi</span><span class="o">:</span><span class="n">pin2</span><span class="w">  </span><span class="n">devices</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="mh">0x4ba00477</span>
+<span class="n">ntrst</span><span class="o">:</span><span class="n">pin5</span><span class="w"> </span><span class="n">tck</span><span class="o">:</span><span class="n">pin6</span><span class="w"> </span><span class="n">tms</span><span class="o">:</span><span class="n">pin1</span><span class="w"> </span><span class="n">tdo</span><span class="o">:</span><span class="n">pin3</span><span class="w"> </span><span class="n">tdi</span><span class="o">:</span><span class="n">pin4</span><span class="w">  </span><span class="n">devices</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="mh">0x4ba00477</span>
+</code></pre></div>
+
+<p>You'll notice that with the IDCODE scan, the value for <code>TDI</code> varies, that is because this method does not rely on <code>TDI</code> at all so it is a guess.</p>
+<p>Luckily some of these results line up nicely with the pattern scan, so we can now assume that we know the pinout of the JTAG interface!</p>
+<table>
+<thead>
+<tr>
+<th>Pin</th>
+<th>Voltage Level</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0.1</td>
+<td>???</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.8</td>
+<td>???</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0.1</td>
+<td>TMS</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0.1</td>
+<td>CLK</td>
+</tr>
+<tr>
+<td>5</td>
+<td>0.1</td>
+<td>TDI</td>
+</tr>
+<tr>
+<td>6</td>
+<td>0.1</td>
+<td>TDO</td>
+</tr>
+<tr>
+<td>7</td>
+<td>GND</td>
+<td>GND</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1.8</td>
+<td>???</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1.8</td>
+<td>???</td>
+</tr>
+</tbody>
+</table>
+<h3>Practical Example: Determining Instruction Length with UrJtag</h3>
+<p>While OpenOCD is excellent for interfacing with DAP controllers and connecting to debugging cores, the <a href="http://urjtag.org/">UrJTAG</a> project is great for interfacing with JTAG at a low level. We can use this to detect the various DR lengths with their useful <code>discover</code> command. This method uses the same principles mentioned earlier to select an <code>IR</code> then shift a large number of 1's into <code>DR</code> followed by a 0, then clocking more 1's until a 0 is read on TDO!</p>
+<p>UrJTAG can use an rc file located at <code>~/.jtag/rc</code> mine is as follows</p>
+<div class="highlight"><pre><span></span><code><span class="nf">pi</span><span class="nv">@raspberrypi</span><span class="err">:</span><span class="o">~</span><span class="w"> </span><span class="err">$</span><span class="w"> </span><span class="n">cat</span><span class="w"> </span><span class="p">.</span><span class="n">jtag</span><span class="o">/</span><span class="n">rc</span><span class="w"> </span>
+<span class="n">cable</span><span class="w"> </span><span class="n">gpio</span><span class="w"> </span><span class="n">tck</span><span class="o">=</span><span class="mi">10</span><span class="w"> </span><span class="n">tms</span><span class="o">=</span><span class="mi">9</span><span class="w"> </span><span class="n">tdi</span><span class="o">=</span><span class="mi">11</span><span class="w"> </span><span class="n">tdo</span><span class="o">=</span><span class="mi">25</span>
+<span class="n">detect</span>
+<span class="n">discover</span>
+</code></pre></div>
+
+<p>Below we can see the result of running UrJTAG with these commands:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">pi</span><span class="nv">@raspberrypi</span><span class="err">:</span><span class="o">~</span><span class="w"> </span><span class="err">$</span><span class="w"> </span><span class="n">sudo</span><span class="w"> </span><span class="o">-</span><span class="n">E</span><span class="w"> </span><span class="n">jtag</span><span class="w"> </span>
+
+<span class="n">UrJTAG</span><span class="w"> </span><span class="mf">2019.12</span><span class="w"> </span><span class="err">#</span>
+<span class="n">Copyright</span><span class="w"> </span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="w"> </span><span class="mi">2002</span><span class="p">,</span><span class="w"> </span><span class="mi">2003</span><span class="w"> </span><span class="n">ETC</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">r</span><span class="p">.</span><span class="n">o</span><span class="p">.</span>
+<span class="n">Copyright</span><span class="w"> </span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="w"> </span><span class="mi">2007</span><span class="p">,</span><span class="w"> </span><span class="mi">2008</span><span class="p">,</span><span class="w"> </span><span class="mi">2009</span><span class="w"> </span><span class="n">Kolja</span><span class="w"> </span><span class="n">Waschk</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">respective</span><span class="w"> </span><span class="n">authors</span>
+
+<span class="n">UrJTAG</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">free</span><span class="w"> </span><span class="n">software</span><span class="p">,</span><span class="w"> </span><span class="n">covered</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">GNU</span><span class="w"> </span><span class="k">General</span><span class="w"> </span><span class="k">Public</span><span class="w"> </span><span class="n">License</span><span class="p">,</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">you</span><span class="w"> </span><span class="k">are</span>
+<span class="n">welcome</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">change</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="ow">and</span><span class="o">/</span><span class="ow">or</span><span class="w"> </span><span class="n">distribute</span><span class="w"> </span><span class="n">copies</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">under</span><span class="w"> </span><span class="n">certain</span><span class="w"> </span><span class="n">conditions</span><span class="p">.</span>
+<span class="n">There</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">no</span><span class="w"> </span><span class="n">warranty</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">UrJTAG</span><span class="p">.</span>
+
+<span class="nl">warning</span><span class="p">:</span><span class="w"> </span><span class="n">UrJTAG</span><span class="w"> </span><span class="n">may</span><span class="w"> </span><span class="n">damage</span><span class="w"> </span><span class="n">your</span><span class="w"> </span><span class="n">hardware</span><span class="err">!</span>
+<span class="n">Type</span><span class="w"> </span><span class="ss">&quot;quit&quot;</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">exit</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;help&quot;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">help</span><span class="p">.</span>
+
+<span class="n">Initializing</span><span class="w"> </span><span class="n">GPIO</span><span class="w"> </span><span class="n">JTAG</span><span class="w"> </span><span class="n">Chain</span>
+<span class="n">IR</span><span class="w"> </span><span class="nl">length</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span>
+<span class="n">Chain</span><span class="w"> </span><span class="nl">length</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Device</span><span class="w"> </span><span class="nl">Id</span><span class="p">:</span><span class="w"> </span><span class="mi">01001011101000000000010001110111</span><span class="w"> </span><span class="p">(</span><span class="mh">0x4BA00477</span><span class="p">)</span>
+<span class="w">  </span><span class="k">Unknown</span><span class="w"> </span><span class="n">manufacturer</span><span class="err">!</span><span class="w"> </span><span class="p">(</span><span class="mi">01000111011</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="k">local</span><span class="o">/</span><span class="n">share</span><span class="o">/</span><span class="n">urjtag</span><span class="o">/</span><span class="n">MANUFACTURERS</span><span class="p">)</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">4</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1111</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;--</span><span class="w"> </span><span class="n">This</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">BYPASS</span><span class="err">!</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0000</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0001</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0010</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0011</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0100</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0101</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0110</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">0111</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1000</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">35</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1001</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1010</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">35</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1011</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">35</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1100</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1101</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">Detecting</span><span class="w"> </span><span class="n">DR</span><span class="w"> </span><span class="n">length</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">IR</span><span class="w"> </span><span class="mi">1110</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="mi">32</span><span class="w"> </span><span class="o">&lt;</span><span class="c1">-- This is IDCODE!</span>
+</code></pre></div>
+
+<p>I wanted to highlight UrJTAG in this post because it is extremely useful when looking at a target with a completely unknown scan chain, or DAP architecture. Luckily for us, the <code>IDCODE</code> of this target tells us that it is ARM and we will likely be able to utilize the CoreSight DAP, to do this, we will use OpenOCD. If you are looking at a scan chain where you know <em>nothing</em> about it, I typically start with UrJtag just to get a map of all of the registers. The python bindings for UrJTAG also work quite well and can be used to interface with JTAG at a low level. </p>
+<h2>JTAG Debugging via OpenOCD.</h2>
+<p>Since we know the pinout of the JTAG interface on our target, we can now move onto using OpenOCD to communicate with it. I am choosing OpenOCD for this task because it has excellent debugging support for ARM MCUs, particularly the Cortex series which uses CoreSight. The first thing we'll need to do is choose a hardware adapter, we will use the FT2232H breakout module.</p>
+<h3>JTAG via FT2232H</h3>
+<p>With the pinout understood, we can now attempt to talk to the DAP using OpenOCD. For this we will use an FT2232H adapter, for this post I am using a <a href="https://www.seeedstudio.com/FT2232H-USB-2-0-Hi-Speed-breakout-board-p-737.html">standard FT2232H breakout board</a>. These boards can be used to interract with multiple hardware level interfaces and have excellent software support. You may recall I've used them for things such as <a href="https://voidstarsec.com/blog/xbox-swd">SWD</a> as well as <a href="https://wrongbaud.github.io/posts/Holiday-Teardown/">dumping SPI flash</a>. Using this board, along with a 3.3V to 1.8V logic level converyer we can  wire it up to the target as follows:</p>
+<table>
+<thead>
+<tr>
+<th>FT2232H Pin</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CN2-7</td>
+<td>TCK</td>
+</tr>
+<tr>
+<td>CN2-10</td>
+<td>TDI</td>
+</tr>
+<tr>
+<td>CN2-9</td>
+<td>TDO</td>
+</tr>
+<tr>
+<td>CN2-12</td>
+<td>TMS</td>
+</tr>
+</tbody>
+</table>
+<p>Next, we will write the outline of our config file, starting with the variables that we know about the target.</p>
+<div class="highlight"><pre><span></span><code>source [find target/swj-dp.tcl]
+
+<span class="gh">#</span> This is using the name on the SoC
+if { [info exists CHIPNAME] } {
+  set _CHIPNAME $CHIPNAME
+} else {
+  set _CHIPNAME s4ln045x01
+}
+
+<span class="gh">#</span> This is the TAP ID that we discovered in the previous step
+if { [info exists CPUTAPID] } {
+  set _CPUTAPID $CPUTAPID
+} else {
+  set _CPUTAPID 0x4ba00477
+}
+
+<span class="gh">#</span> Set the speed of our adapter
+adapter_khz 200
+<span class="gh">#</span> We are indeed using JTAG
+transport select jtag
+<span class="gh">#</span> We don&#39;t have a SRST pin, only TRST it would seem
+reset_config trst_only
+
+<span class="gh">#</span> Here we create the JTAG TAP/DAP, defining the location and characteristics of our DAP
+swj_newdap $_CHIPNAME cpu -irlen 4 -ircapture 0x1 -irmask 0xf -expected-id $_CPUTAPID
+dap create $_CHIPNAME.dap -chain-position $_CHIPNAME.cpu
+set _TARGETNAME $_CHIPNAME.cpu
+</code></pre></div>
+
+<p>When we run openocd with this config file, these are the results:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wrongbaud</span><span class="nv">@wubuntu</span><span class="err">:</span><span class="o">~/</span><span class="n">blog</span><span class="o">/</span><span class="n">samsung</span><span class="o">-</span><span class="n">jtag</span><span class="err">$</span><span class="w"> </span><span class="n">sudo</span><span class="w"> </span><span class="n">openocd</span><span class="w"> </span><span class="o">-</span><span class="n">f</span><span class="w"> </span><span class="n">minimodule</span><span class="p">.</span><span class="n">cfg</span><span class="w"> </span><span class="o">-</span><span class="n">f</span><span class="w"> </span><span class="n">config</span><span class="p">.</span><span class="n">cfg</span><span class="w"> </span>
+<span class="k">Open</span><span class="w"> </span><span class="k">On</span><span class="o">-</span><span class="n">Chip</span><span class="w"> </span><span class="n">Debugger</span><span class="w"> </span><span class="mf">0.10.0</span><span class="o">+</span><span class="n">dev</span><span class="o">-</span><span class="mi">01040</span><span class="o">-</span><span class="n">ge7e681ac</span><span class="w"> </span><span class="p">(</span><span class="mi">2020</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">27</span><span class="o">-</span><span class="mi">18</span><span class="err">:</span><span class="mi">55</span><span class="p">)</span>
+<span class="n">Licensed</span><span class="w"> </span><span class="k">under</span><span class="w"> </span><span class="n">GNU</span><span class="w"> </span><span class="n">GPL</span><span class="w"> </span><span class="n">v2</span>
+<span class="k">For</span><span class="w"> </span><span class="n">bug</span><span class="w"> </span><span class="n">reports</span><span class="p">,</span><span class="w"> </span><span class="k">read</span>
+<span class="w">        </span><span class="nl">http</span><span class="p">:</span><span class="o">//</span><span class="n">openocd</span><span class="p">.</span><span class="n">org</span><span class="o">/</span><span class="n">doc</span><span class="o">/</span><span class="n">doxygen</span><span class="o">/</span><span class="n">bugs</span><span class="p">.</span><span class="n">html</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">auto</span><span class="o">-</span><span class="n">selecting</span><span class="w"> </span><span class="k">first</span><span class="w"> </span><span class="n">available</span><span class="w"> </span><span class="k">session</span><span class="w"> </span><span class="n">transport</span><span class="w"> </span><span class="ss">&quot;jtag&quot;</span><span class="p">.</span><span class="w"> </span><span class="k">To</span><span class="w"> </span><span class="n">override</span><span class="w"> </span><span class="k">use</span><span class="w"> </span><span class="s1">&#39;transport select &lt;transport&gt;&#39;</span><span class="p">.</span>
+<span class="n">Warn</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">Transport</span><span class="w"> </span><span class="ss">&quot;jtag&quot;</span><span class="w"> </span><span class="n">was</span><span class="w"> </span><span class="n">already</span><span class="w"> </span><span class="n">selected</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="n">speed</span><span class="w"> </span><span class="mi">200</span><span class="w"> </span><span class="n">kHz</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">JTAG</span><span class="w"> </span><span class="nl">tap</span><span class="p">:</span><span class="w"> </span><span class="n">s4ln045x01</span><span class="p">.</span><span class="n">cpu</span><span class="w"> </span><span class="n">tap</span><span class="o">/</span><span class="n">device</span><span class="w"> </span><span class="k">found</span><span class="err">:</span><span class="w"> </span><span class="mh">0x4ba00477</span><span class="w"> </span><span class="p">(</span><span class="nl">mfg</span><span class="p">:</span><span class="w"> </span><span class="mh">0x23b</span><span class="w"> </span><span class="p">(</span><span class="n">ARM</span><span class="w"> </span><span class="n">Ltd</span><span class="p">.),</span><span class="w"> </span><span class="nl">part</span><span class="p">:</span><span class="w"> </span><span class="mh">0xba00</span><span class="p">,</span><span class="w"> </span><span class="nl">ver</span><span class="p">:</span><span class="w"> </span><span class="mh">0x4</span><span class="p">)</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">Listening</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="mi">6666</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">tcl</span><span class="w"> </span><span class="n">connections</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">Listening</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="mi">4444</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">telnet</span><span class="w"> </span><span class="n">connections</span>
+<span class="n">Info</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">JTAG</span><span class="w"> </span><span class="nl">tap</span><span class="p">:</span><span class="w"> </span><span class="n">s4ln045x01</span><span class="p">.</span><span class="n">cpu</span><span class="w"> </span><span class="n">tap</span><span class="o">/</span><span class="n">device</span><span class="w"> </span><span class="k">found</span><span class="err">:</span><span class="w"> </span><span class="mh">0x4ba00477</span><span class="w"> </span><span class="p">(</span><span class="nl">mfg</span><span class="p">:</span><span class="w"> </span><span class="mh">0x23b</span><span class="w"> </span><span class="p">(</span><span class="n">ARM</span><span class="w"> </span><span class="n">Ltd</span><span class="p">.),</span><span class="w"> </span><span class="nl">part</span><span class="p">:</span><span class="w"> </span><span class="mh">0xba00</span><span class="p">,</span><span class="w"> </span><span class="nl">ver</span><span class="p">:</span><span class="w"> </span><span class="mh">0x4</span><span class="p">)</span>
+<span class="n">Warn</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">gdb</span><span class="w"> </span><span class="n">services</span><span class="w"> </span><span class="n">need</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">more</span><span class="w"> </span><span class="n">targets</span><span class="w"> </span><span class="n">defined</span>
+</code></pre></div>
+
+<p>Now let's have a look at the DAP, and see if there is any more relevant information in there:</p>
+<div class="highlight"><pre><span></span><code><span class="p">&gt;</span><span class="w"> </span><span class="nx">dap</span><span class="w"> </span><span class="nx">info</span><span class="w"> </span><span class="mi">0</span>
+<span class="nx">DAP</span><span class="w"> </span><span class="nx">transaction</span><span class="w"> </span><span class="nx">stalled</span><span class="w"> </span><span class="p">(</span><span class="nx">WAIT</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">slowing</span><span class="w"> </span><span class="nx">down</span>
+<span class="nx">DAP</span><span class="w"> </span><span class="nx">transaction</span><span class="w"> </span><span class="nx">stalled</span><span class="w"> </span><span class="p">(</span><span class="nx">WAIT</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">slowing</span><span class="w"> </span><span class="nx">down</span>
+<span class="nx">AP</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="nx">register</span><span class="w"> </span><span class="mh">0x24770002</span>
+<span class="w">        </span><span class="nx">Type</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">MEM</span><span class="o">-</span><span class="nx">AP</span><span class="w"> </span><span class="nx">APB</span>
+<span class="nx">MEM</span><span class="o">-</span><span class="nx">AP</span><span class="w"> </span><span class="nx">BASE</span><span class="w"> </span><span class="mh">0x80000000</span>
+<span class="w">        </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="nx">legacy</span><span class="w"> </span><span class="nx">format</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80000000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x0000080000</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x080</span><span class="p">,</span><span class="w"> </span><span class="p">&lt;</span><span class="nx">invalid</span><span class="p">&gt;</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x0</span><span class="p">,</span><span class="w"> </span><span class="nx">Unrecognized</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x1</span><span class="p">,</span><span class="w"> </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span>
+<span class="w">                </span><span class="nx">MEMTYPE</span><span class="w"> </span><span class="nx">system</span><span class="w"> </span><span class="nx">memory</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="nx">present</span><span class="p">:</span><span class="w"> </span><span class="nx">dedicated</span><span class="w"> </span><span class="nx">debug</span><span class="w"> </span><span class="nx">bus</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x0</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x1003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80001000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04008bbc14</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0xc14</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">R4</span><span class="w"> </span><span class="nx">Debug</span><span class="w"> </span><span class="p">(</span><span class="nx">Debug</span><span class="w"> </span><span class="nx">Unit</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x9</span><span class="p">,</span><span class="w"> </span><span class="nx">CoreSight</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">                </span><span class="nx">Type</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x15</span><span class="p">,</span><span class="w"> </span><span class="nx">Debug</span><span class="w"> </span><span class="nx">Logic</span><span class="p">,</span><span class="w"> </span><span class="nx">Processor</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x4</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x2003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80002000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04008bbc14</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0xc14</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">R4</span><span class="w"> </span><span class="nx">Debug</span><span class="w"> </span><span class="p">(</span><span class="nx">Debug</span><span class="w"> </span><span class="nx">Unit</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x9</span><span class="p">,</span><span class="w"> </span><span class="nx">CoreSight</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">                </span><span class="nx">Type</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x15</span><span class="p">,</span><span class="w"> </span><span class="nx">Debug</span><span class="w"> </span><span class="nx">Logic</span><span class="p">,</span><span class="w"> </span><span class="nx">Processor</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x8</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x3003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80003000</span>
+<span class="w">                </span><span class="nx">Peripheral</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="mh">0x04008bbc14</span>
+<span class="w">                </span><span class="nx">Designer</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x4bb</span><span class="p">,</span><span class="w"> </span><span class="nx">ARM</span><span class="w"> </span><span class="nx">Ltd</span><span class="p">.</span>
+<span class="w">                </span><span class="nx">Part</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0xc14</span><span class="p">,</span><span class="w"> </span><span class="nx">Cortex</span><span class="o">-</span><span class="nx">R4</span><span class="w"> </span><span class="nx">Debug</span><span class="w"> </span><span class="p">(</span><span class="nx">Debug</span><span class="w"> </span><span class="nx">Unit</span><span class="p">)</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x9</span><span class="p">,</span><span class="w"> </span><span class="nx">CoreSight</span><span class="w"> </span><span class="nx">component</span>
+<span class="w">                </span><span class="nx">Type</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="mh">0x15</span><span class="p">,</span><span class="w"> </span><span class="nx">Debug</span><span class="w"> </span><span class="nx">Logic</span><span class="p">,</span><span class="w"> </span><span class="nx">Processor</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0xc</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x4003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80004000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x10</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x5003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80005000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x14</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x6003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80006000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x18</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x7003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80007000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x1c</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x8003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80008000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x20</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x9003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x80009000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x24</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xa003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x8000a000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x28</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xb003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x8000b000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x2c</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xc003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x8000c000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x30</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xd003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x8000d000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x34</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xe003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x8000e000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x38</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xf003</span>
+<span class="w">                </span><span class="nx">Component</span><span class="w"> </span><span class="kd">base</span><span class="w"> </span><span class="nx">address</span><span class="w"> </span><span class="mh">0x8000f000</span>
+<span class="w">                </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">CID</span><span class="w"> </span><span class="mh">0x00000000</span>
+<span class="w">        </span><span class="nx">ROMTABLE</span><span class="p">[</span><span class="mh">0x3c</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x0</span>
+<span class="w">                </span><span class="nx">End</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">ROM</span><span class="w"> </span><span class="nx">table</span>
+</code></pre></div>
+
+<p>The first thing that sticks out is that this is a Cortex R4, with this additional information we can create a target in the config file, which <em>should</em> grant access to the MEM-AP allowing for debugging. This can be done by adding the following line:</p>
+<div class="highlight"><pre><span></span><code><span class="n">target</span> <span class="n">create</span> <span class="o">$</span><span class="n">_TARGETNAME</span><span class="p">.</span><span class="mi">1</span> <span class="n">cortex_r4</span> <span class="o">-</span><span class="n">endian</span> <span class="o">$</span><span class="n">_ENDIAN</span> <span class="o">-</span><span class="n">dap</span> <span class="o">$</span><span class="n">_CHIPNAME</span><span class="p">.</span><span class="n">dap</span>
+</code></pre></div>
+
+<p>With this additional line, we can try to halt the target via the <code>halt</code> command and read memory via <code>mdw</code> from the OpenOCD prompt:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="nv">halt</span>
+<span class="nv">MPIDR</span><span class="w"> </span><span class="nv">not</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">multiprocessor</span><span class="w"> </span><span class="nv">format</span>
+<span class="nv">target</span><span class="w"> </span><span class="nv">halted</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">Thumb</span><span class="w"> </span><span class="nv">state</span><span class="w"> </span><span class="nv">due</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">debug</span><span class="o">-</span><span class="nv">request</span>,<span class="w"> </span><span class="nv">current</span><span class="w"> </span><span class="nv">mode</span>:<span class="w"> </span><span class="nv">Supervisor</span>
+<span class="nv">cpsr</span>:<span class="w"> </span><span class="mi">0</span><span class="nv">x80000133</span><span class="w"> </span><span class="nv">pc</span>:<span class="w"> </span><span class="mi">0</span><span class="nv">x0001abfc</span>
+<span class="nv">D</span><span class="o">-</span><span class="nv">Cache</span>:<span class="w"> </span><span class="nv">disabled</span>,<span class="w"> </span><span class="nv">I</span><span class="o">-</span><span class="nv">Cache</span>:<span class="w"> </span><span class="nv">disabled</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="nv">mdw</span><span class="w"> </span><span class="mi">0</span><span class="nv">x800000000</span><span class="w"> </span><span class="mi">10</span>
+<span class="nv">DAP</span><span class="w"> </span><span class="nv">transaction</span><span class="w"> </span><span class="nv">stalled</span><span class="w"> </span><span class="ss">(</span><span class="k">WAIT</span><span class="ss">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">slowing</span><span class="w"> </span><span class="nv">down</span>
+<span class="mi">0</span><span class="nv">x800000000</span>:<span class="w"> </span><span class="nv">eafffffe</span><span class="w"> </span><span class="nv">ea000005</span><span class="w"> </span><span class="nv">ea000006</span><span class="w"> </span><span class="nv">ea000006</span><span class="w"> </span><span class="nv">ea00000b</span><span class="w"> </span><span class="nv">e320f000</span><span class="w"> </span><span class="nv">ea00000e</span><span class="w"> </span><span class="nv">eafffffe</span>
+<span class="mi">0</span><span class="nv">x800000020</span>:<span class="w"> </span><span class="nv">ea0000e3</span><span class="w"> </span><span class="nv">eafffffe</span>
+</code></pre></div>
+
+<p>Here we test stepping through the running firmware:</p>
+<div class="highlight"><pre><span></span><code>&gt; halt
+MPIDR not in multiprocessor format
+target halted in ARM state due to debug-request, current mode: Supervisor
+cpsr: 0x80000113 pc: 0x0000e10c
+D-Cache: disabled, I-Cache: disabled
+&gt; step
+target halted in ARM state due to breakpoint, current mode: Supervisor
+cpsr: 0x80000113 pc: 0x0000e110
+D-Cache: disabled, I-Cache: disabled
+</code></pre></div>
+
+<p>Success! It appears to be working, and we can single-step through the firmware. Next, let's use this capability to get some RAM dumps, <a href="http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0182n/CHDHAJCH.html">this page gives an overview of the memory model</a>, so we can use that as a reference. Memory can be dumped to a file with OpenOCD via the <code>dump_image</code> command. </p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="n">halt</span>
+<span class="n">MPIDR</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="n">in</span><span class="w"> </span><span class="n">multiprocessor</span><span class="w"> </span><span class="n">format</span>
+<span class="n">target</span><span class="w"> </span><span class="n">halted</span><span class="w"> </span><span class="n">in</span><span class="w"> </span><span class="n">ARM</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="n">due</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">debug</span><span class="o">-</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">current</span><span class="w"> </span><span class="nl">mode:</span><span class="w"> </span><span class="n">Abort</span>
+<span class="nl">cpsr:</span><span class="w"> </span><span class="mh">0</span><span class="n">x200001d7</span><span class="w"> </span><span class="nl">pc:</span><span class="w"> </span><span class="mh">0</span><span class="n">x00000048</span>
+<span class="n">D</span><span class="o">-</span><span class="nl">Cache:</span><span class="w"> </span><span class="n">disabled</span><span class="p">,</span><span class="w"> </span><span class="n">I</span><span class="o">-</span><span class="nl">Cache:</span><span class="w"> </span><span class="n">disabled</span>
+<span class="n">Data</span><span class="w"> </span><span class="n">fault</span><span class="w"> </span><span class="n">registers</span><span class="w">        </span><span class="nl">DFSR:</span><span class="w"> </span><span class="mh">00000008</span><span class="p">,</span><span class="w"> </span><span class="nl">DFAR:</span><span class="w"> </span><span class="mf">9f7e3000</span>
+<span class="n">Instruction</span><span class="w"> </span><span class="n">fault</span><span class="w"> </span><span class="n">registers</span><span class="w"> </span><span class="nl">IFSR:</span><span class="w"> </span><span class="mh">00000000</span><span class="p">,</span><span class="w"> </span><span class="nl">IFAR:</span><span class="w"> </span><span class="mh">00000000</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dump_image</span><span class="w"> </span><span class="n">SDRAM</span><span class="p">.</span><span class="n">bin</span><span class="w"> </span><span class="mh">0</span><span class="n">x20000000</span><span class="w"> </span><span class="mh">0</span><span class="n">xA0000000</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dump_image</span><span class="w"> </span><span class="n">RAM</span><span class="p">.</span><span class="n">bin</span><span class="w"> </span><span class="mh">0</span><span class="w"> </span><span class="mh">0</span><span class="n">xFFFFFFF</span>
+</code></pre></div>
+
+<p>Finally, let's take these RAM dumps and load them into GHIDRA to see if they make sense:</p>
+<p><img alt="Ghidra Refs" src="https://wrongbaud.github.io/assets/img/jtag-ssd/debug-xrefs.png"></p>
+<p>Excellent, we have some xrefs and the init code looks fairly sane. It also looks like there is some sort of debug menu that is presented over the UART, these are likely pins 8/9 on our pinout! Safe to say that this is a valid RAM dump, and with this, I will finish up this post.</p>
+<h2>Conclusion</h2>
+<p>This was quite a long post - realistically it probably should have been broken up into 2-3 parts. With this post, we learned how JTAG functions at a low level, as well as how to approach JTAG as a reverse engineer. We were also able to get JTAG access to an undocumented target, extract memory, and single-step through the running firmware. There are lots of things left to do here, like determine if the flash chips themselves can be dumped via JTAG, RE the firmware to look for interesting ways to recover data from the drive (<a href="http://www2.futureware.at/~philipp/ssd/TheMissingManual.pdf">I recently discovered that lots of cool work has been done here already!</a>). As always, if you have any questions or comments, please feel free to reach out on <a href="https://twitter.com/wrongbaud">twitter</a>.</p>
+<p>If you're interested in <a href="https://voidstarsec.com/hhb.html">hardware security training</a> at your organization, please don't hesitate to <a href="https://voidstarsec.com/#contact">contact us</a>. We also have a self-paced training available <a href="https://voidstarsecurity.thinkific.com/">here</a></p>
+<p>If you want to stay informed about official releases, new courses, and blog posts, sign up for our mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
+<h2>Refs</h2>
+<p>I wanted to mention some awesome work that I found after going through all of this, both of these have already done a lot of what we did in this post today, albeit on slightly different drives. I'm sure that someone on twitter will let me know this so I wanted to link to some excellent previous work that was pointed out to me by some members of the OpenOCD community!</p>
+<ul>
+<li>https://github.com/thesourcerer8/SSDdiag</li>
+<li>http://www2.futureware.at/~philipp/ssd/TheMissingManual.pdf</li>
+</ul>
+  <footer>
+    <p>Published: <time datetime="2020-03-23T00:00:00-06:00">
+      Mon 23 March 2020
+    </time></p>
+    <address>
+      By           <a href="https://voidstarsec.com/blog/author/matthew-alt.html">"Matthew Alt"</a>
+    </address>
+    <p>
+        Category: <a href="https://voidstarsec.com/blog/category/hardware.html">Hardware</a>
+    </p>
+    <p>
+        Tags:
+            <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
+            <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+    </p>
+  </footer>
+  </article>
+        </main>
+        <footer>
+                <address>
+                Proudly powered by <a rel="nofollow" href="https://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a rel="nofollow" href="https://www.python.org/">Python</a>.
+                </address>
+        </footer>
+</body>
+</html>

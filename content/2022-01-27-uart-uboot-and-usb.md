@@ -3,7 +3,7 @@ layout: post
 title: Intro to Embedded RE: UART Discovery and Firmware Extraction via UBoot
 description: Extracting firmware via UART and UBoot
 summary:  This blog entry aims to familiarize readers with locating an active UART on a target system, how to approach a UBoot console, and ultimately how to leverage both of these components to extract the flash memory from our target. After reading this, readers will be familiar with the screen utility the depthcharge python3 libraries.
-tags: hardware,uart,uboot
+tags: hardware,uart,uboot,spi
 category: Hardware
 author: "Matthew Alt"
 slug: uart-uboot-and-usb
@@ -597,15 +597,10 @@ Environment size: 3477/32764 bytes
 
 There are a few variables of interest that I'd like to point out in the table below:
 
-{:class="table table-bordered"}
-|----------+-----------|
 | Variable | Significance |  
-| :-------: | :------------: |  
-|----------+-----------|
+| ------- | ------------ |  
 | ```bootcmd``` | This command is used to define the default boot behavior | 
-|----------+-----------|
 | ```board=evb_rk3128``` | This identifies the CPU / development board in use | 
-|----------+-----------|
 | ```devtype=spinand``` | This defines the flash device type in use | 
 
 At this point, if we cross-reference the information that we gathered during our hardware review, we see consistent results. We assumed after our hardware review that the SPI flash was the main method of storage, and this assumption is being validated in the UBoot environment variables and the available commands. 
@@ -1101,4 +1096,4 @@ All of the scripts and tools used can be found on [github](https://github.com/wr
 
 Thank you for taking the time to read this; if you have any questions or comments, please feel to reach out to me [on Twitter](https://twitter.com/wrongbaud)!
 
-If this kind of work is interesting to you and you would like to learn more, consider [our hardware hacking bootcamp](https://voidstarsec.com/training.html). This is a five-day course that is offered remotely and on-site; all hardware is shipped to your door and is yours to keep after the course! See our [training page](https://voidstarsec.com/training.html) for more details. [Our newsletter](http://eepurl.com/hSl31f) is also a great way to stay informed on new courses, tools that we are using, blog posts, and upcoming course offerings. 
+If this kind of work is interesting to you and you would like to learn more, consider [our hardware hacking bootcamp](https://voidstarsec.com/#training). This is a five-day course that is offered remotely and on-site; all hardware is shipped to your door and is yours to keep after the course! See our [training page](https://voidstarsec.com/#training) for more details. [Our newsletter](http://eepurl.com/hSl31f) is also a great way to stay informed on new courses, tools that we are using, blog posts, and upcoming course offerings. 
