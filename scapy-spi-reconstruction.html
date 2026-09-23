@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Extending Scapy for Hardware Reverse Engineering - VoidStar Security Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://voidstarsec.com/blog/scapy-spi-reconstruction">
+
+        <meta name="author" content=""Matthew Alt"" />
+        <meta name="keywords" content="scapy,spi,qspi,hardware,firmware" />
+        <meta name="description" content="Scapy is best known as a network packet library, but it is also a general-purpose binary protocol framework. In this post, we use Scapy to dissect SPI and QSPI logic analyzer captures, trace flash erase and program operations, and reconstruct a firmware image without removing the flash chip." />
+
+        <meta property="og:site_name" content="VoidStar Security Blog" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Extending Scapy for Hardware Reverse Engineering"/>
+        <meta property="og:url" content="https://voidstarsec.com/blog/scapy-spi-reconstruction"/>
+        <meta property="og:description" content="Scapy is best known as a network packet library, but it is also a general-purpose binary protocol framework. In this post, we use Scapy to dissect SPI and QSPI logic analyzer captures, trace flash erase and program operations, and reconstruct a firmware image without removing the flash chip."/>
+        <meta property="article:published_time" content="2026-09-23" />
+            <meta property="article:section" content="Hardware" />
+            <meta property="article:tag" content="scapy" />
+            <meta property="article:tag" content="spi" />
+            <meta property="article:tag" content="qspi" />
+            <meta property="article:tag" content="hardware" />
+            <meta property="article:tag" content="firmware" />
+            <meta property="article:author" content=""Matthew Alt"" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://voidstarsec.com/blog/theme/css/bootstrap.flatly.min.css" type="text/css"/>
+    <link href="https://voidstarsec.com/blog/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://voidstarsec.com/blog/theme/css/pygments/native.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://voidstarsec.com/blog/theme/css/style.css" type="text/css"/>
+
+        <link href="https://voidstarsec.com/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog ATOM Feed"/>
+
+        <link href="https://voidstarsec.com/blog/feeds/hardware.atom.xml" type="application/atom+xml" rel="alternate"
+              title="VoidStar Security Blog Hardware ATOM Feed"/>
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="https://voidstarsec.com/blog/" class="navbar-brand">
+VoidStar Security Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-sm-push-3">
+            <ol class="breadcrumb">
+                <li><a href="https://voidstarsec.com/blog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
+                <li class="active">Extending Scapy for Hardware Reverse Engineering</li>
+            </ol>
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://voidstarsec.com/blog/scapy-spi-reconstruction"
+                       rel="bookmark"
+                       title="Permalink to Extending Scapy for Hardware Reverse Engineering">
+                        Extending Scapy for Hardware Reverse Engineering
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2026-09-23T00:00:00-06:00"> Wed 23 September 2026</time>
+    </span>
+
+
+            <span class="label label-default">By</span>
+            <a href="https://voidstarsec.com/blog/author/matthew-alt.html"><i class="fa fa-user"></i> "Matthew Alt"</a>
+
+        <span class="label label-default">Category</span>
+        <a href="https://voidstarsec.com/blog/category/hardware.html">Hardware</a>
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://voidstarsec.com/blog/tag/scapy.html">scapy</a>
+        /
+	<a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
+        /
+	<a href="https://voidstarsec.com/blog/tag/qspi.html">qspi</a>
+        /
+	<a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
+        /
+	<a href="https://voidstarsec.com/blog/tag/firmware.html">firmware</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <h1>Overview</h1>
+<p>If you have ever needed to dissect network communications before, there is a good chance you have come across <a href="https://scapy.net/">Scapy</a>. Scapy is a Python networking library that allows for dissecting and crafting packets, sniffing Ethernet traffic, and even has a wide variety of support for various <a href="https://scapy.readthedocs.io/en/latest/layers/automotive.html">automotive protocols</a>.</p>
+<p>(<strong>Author's Note:</strong> Definitely check out their automotive documentation if you want to learn more about diagnostic protocols; it is an excellent resource.)</p>
+<p>What a lot of us (myself included) don't remember when working with Scapy is that it is also a general-purpose binary protocol framework. Its detailed system for structuring, crafting, and dissecting packets does not care whether the bytes came via Ethernet, CAN or some other network protocol. In this blog post, we'll demonstrate how to use Scapy to dissect SPI traffic from a logic analyzer and reconstruct a firmware image from nothing but those captures.</p>
+<h1>Background Information</h1>
+<p>A few weeks ago, we were tasked with looking at an embedded device that we were only able to acquire one of. If you have been working in this space for a while, you know that this can be a challenge. With only one device, we don't want to risk damaging it by removing ICs, or even worse, triggering some sort of tamper protection. While tamper protection was not an identified concern on the device, we still thought that this would be a good excuse to develop some new tooling. Due to the nature of the exercise, we are not able to share a teardown of the device, but we can share the type of SPI flash that this device was using:</p>
+<table class="tb tr tc table table-hover">
+<thead>
+<tr>
+<th>#</th>
+<th>Part</th>
+<th>Type / Role</th>
+<th>Datasheet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Winbond <code>W25Q128JV</code></td>
+<td>SPI NOR flash, 16 MiB</td>
+<td><a href="https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&amp;partNo=W25Q128JV">Datasheet</a></td>
+</tr>
+</tbody>
+</table>
+<p>As is tradition when doing any embedded assessment, our first attempts at identifying UART and debug interfaces came up empty. The developers did a reasonable job of disabling diagnostic output and removing debug interfaces, and our attempts to read the flash in-circuit ran into some of the classic issues that we've covered <a href="https://voidstarsec.com/blog/brushing-up-part-2">before</a>.</p>
+<p>This was a black-box analysis, and we were not provided firmware for this target, which is pretty standard for a lot of our clients. While we've written a number of one-off scripts for reconstructing firmware from SPI captures, we wanted to take some time and develop some reusable tooling that we can share and improve upon in the future.</p>
+<p>Before we go any further, let's do a quick refresher on how SPI works as a protocol, and how that protocol is leveraged to talk to SPI flash devices.</p>
+<h1>SPI: A Quick Refresher</h1>
+<p>SPI is a four-wire, full-duplex bus that shows up all over embedded systems. For a flash chip, the four core signals we care about are:</p>
+<table class="tb tr tc table table-hover">
+<thead>
+<tr>
+<th>Signal</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CLK</code></td>
+<td>Clock, driven by the host (controller)</td>
+</tr>
+<tr>
+<td><code>CS</code> / <code>CS#</code></td>
+<td>Chip select, active low - frames a single transaction</td>
+</tr>
+<tr>
+<td><code>MOSI</code> (<code>DI</code>)</td>
+<td>Controller → flash (commands, addresses, write data)</td>
+</tr>
+<tr>
+<td><code>MISO</code> (<code>DO</code>)</td>
+<td>Flash → controller (read data, status)</td>
+</tr>
+</tbody>
+</table>
+<p>An important thing to remember as we go through this blog post is that chip select frames a transaction. Every time <code>CS#</code> goes low, a new command begins; when it goes high again, that command is done. Within that window the host clocks out an opcode, optionally an address, optionally some dummy cycles, and then either sends or receives data. Because SPI is full-duplex, MOSI and MISO are clocked at the same time - so during a <em>read</em>, the host is shifting out don't-care bytes on MOSI while the flash shifts out real data on MISO.</p>
+<p>If you want the ground-up version of how SPI works on real hardware, we covered that in a <a href="https://voidstarsec.com/blog/brushing-up-part-2">previous post</a>. It is also important to remember that SPI isn't only for flash; the same bus carries TPM traffic, sensor data, display commands, and plenty of proprietary protocols. By using Scapy to analyze this traffic, it is easy to add application-layer parsing in Python.</p>
+<p>In the next section, we'll review some of the data that we captured on boot, and some of the interesting setbacks that we saw with this specific device.</p>
+<h1>SPI Traffic in Practice</h1>
+<p>The part that we are interested in for this exercise uses a SOIC8 footprint which can be seen in the image below (the figure is from the W25Q32JV datasheet, but the SOIC8 pinout is shared across the W25Q family, including our W25Q128JV):</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="W25Q-family SOIC8 pinout" src="https://voidstarsec.com/blog/assets/images/scapy-spi/w25q-soic8-pinout.png"></p>
+<p>Using a SOIC8 clip and the Saleae Logic software, we can capture the signals sent to and from this chip on startup. Let's take a look at an initial capture together. This was collected by placing the clip and powering on the device:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Initial logic analyzer capture of the SPI flash during boot" src="https://voidstarsec.com/blog/assets/images/scapy-spi/capture-overview.png"></p>
+<p><strong>Note:</strong> This will not always work; oftentimes adding a clip and additional jumper wires will cause signal integrity issues at high speeds. Keep this in mind if you attempt this technique.</p>
+<p>So we have some traffic, which is great. In this scenario, we know the exact pinout of the device, so we can map the <code>Dx</code> channels to their relevant signals, but what if we didn't have a pinout and we were just looking at a random debug header?</p>
+<p>If we zoom in a little closer on the signals, we can see the following:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Zoomed view of a single SPI transaction" src="https://voidstarsec.com/blog/assets/images/scapy-spi/capture-zoomed.png"></p>
+<p>We know that SPI has four main signals, <code>CS</code>, <code>CLK</code>, <code>DI</code> and <code>DO</code>. Looking at this capture, we can see that the line connected to <code>D1</code> is periodic, and measuring it gives us a frequency of 16 MHz. It is safe to assume that it's our clock line!</p>
+<p>Moving down the line, notice that <em>all</em> activity starts when <code>D2</code> goes low. If you recall from our refresher earlier, the <code>CS</code> line is used to determine the beginning of a SPI transaction. <code>D2</code> goes low, then we see a clock signal generated. Note that <code>D3</code> and <code>D4</code> also go low around the same time, and shortly after that we start to see activity on both of them. Most importantly, all traffic stops when <code>D2</code> goes high:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Annotated SPI transaction showing chip select, command and response" src="https://voidstarsec.com/blog/assets/images/scapy-spi/capture-annotated.png"></p>
+<p>In the annotated image above, we can see that <code>D3</code> is the first to transmit anything over the wire. Then shortly after that we see some data sent on <code>D4</code>. Note that we also have what appears to be some sort of noise on <code>D3</code> when <code>D4</code> becomes active. How do we know this is noise? Let's zoom in on the noisy region and take a look:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Zoomed view of the noisy region on D3" src="https://voidstarsec.com/blog/assets/images/scapy-spi/noise-zoomed.png"></p>
+<p>A few things immediately stand out when we zoom in on this region. First of all, it appears to be somewhat periodic, almost aligning with the presumed clock line in some places. More importantly, we have small pulses that are narrower than a single period of our clock! If these pulses were genuine, there is no way that they could be sampled at the examined clock speed!</p>
+<p>Let's put the Saleae SPI analyzer on these signals and see what the results are:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Saleae SPI analyzer settings" src="https://voidstarsec.com/blog/assets/images/scapy-spi/saleae-spi-analyzer-settings.png"></p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="SPI traffic decoded by the Saleae analyzer" src="https://voidstarsec.com/blog/assets/images/scapy-spi/spi-decoded.png"></p>
+<p>We can see in the above image that the traffic has been decoded, but what exactly does this mean? Does this noisy region present anything of value, or did we just cheap out on the jumper wires? To answer these questions we can take a look at the commands listed in the datasheet for our target SPI device; the core ones have been listed below:</p>
+<table class="tb tr tc table table-hover">
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0x9F</code></td>
+<td><code>JEDEC_ID</code> (Read ID)</td>
+</tr>
+<tr>
+<td><code>0x03</code></td>
+<td><code>READ</code></td>
+</tr>
+<tr>
+<td><code>0x0B</code></td>
+<td><code>FAST_READ</code></td>
+</tr>
+<tr>
+<td><code>0x6B</code></td>
+<td><code>FAST_READ_QUAD_OUT</code></td>
+</tr>
+<tr>
+<td><code>0x05</code></td>
+<td><code>RDSR1</code> (Read Status Register-1)</td>
+</tr>
+<tr>
+<td><code>0x06</code> / <code>0x02</code></td>
+<td><code>WREN</code> / <code>PAGE_PROGRAM</code></td>
+</tr>
+<tr>
+<td><code>0x20</code></td>
+<td><code>SECTOR_ERASE</code> (4 KiB)</td>
+</tr>
+<tr>
+<td><code>0xD8</code></td>
+<td><code>BLOCK_ERASE</code> (64 KiB)</td>
+</tr>
+</tbody>
+</table>
+<p>The first byte on <code>D3</code> is <code>0x03</code>, so it <em>looks</em> like this might be a read command. We can look in the datasheet to learn more about how this command is structured:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Read Data (03h) instruction timing from the datasheet" src="https://voidstarsec.com/blog/assets/images/scapy-spi/datasheet-read-instruction.png"></p>
+<p>The WaveDrom diagram below shows the structure of a <code>READ</code> transaction:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="WaveDrom diagram of a single-lane 0x03 READ" src="https://voidstarsec.com/blog/assets/images/scapy-spi/spi-read-wavedrom.png"></p>
+<p>Armed with this information, if we look at our capture it starts to make a little more sense:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Annotated READ at address 0 with command, address and response" src="https://voidstarsec.com/blog/assets/images/scapy-spi/read-annotated.png"></p>
+<p>We can see that we have a read at address 0, and the response bytes are <code>03 00 00 08</code> (or <code>0x08000003</code> if you read them as a little-endian 32-bit word). Note that the <code>0x1F</code> and <code>0xFF</code> values that we see on <code>D3</code> are during a time period where we "don't care" what comes over that line, indicated by the hatched regions in the timing diagram.</p>
+<p>So within this transaction we have the target address, and the data at that address. We also have the length of the read, which is delimited by the CS line going high.</p>
+<p>Now that we know how to interpret a single transaction, we can export all of the decoded bytes in the capture to a CSV file. This gives us every byte sent on DI/DO, which we can then parse.</p>
+<p>The exported results look like this:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">name</span><span class="p">,</span><span class="k">type</span><span class="p">,</span><span class="nx">start_time</span><span class="p">,</span><span class="nx">duration</span><span class="p">,</span><span class="s">&quot;mosi&quot;</span><span class="p">,</span><span class="s">&quot;miso&quot;</span>
+<span class="o">...</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;enable&quot;</span><span class="p">,</span><span class="m m-Double">0.849574428</span><span class="p">,</span><span class="m m-Double">0.000000004</span><span class="p">,,</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;result&quot;</span><span class="p">,</span><span class="m m-Double">0.84957446</span><span class="p">,</span><span class="m m-Double">0.000000452</span><span class="p">,</span><span class="mh">0x03</span><span class="p">,</span><span class="mh">0x00</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;result&quot;</span><span class="p">,</span><span class="m m-Double">0.84957494</span><span class="p">,</span><span class="m m-Double">0.000000452</span><span class="p">,</span><span class="mh">0x00</span><span class="p">,</span><span class="mh">0x00</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;result&quot;</span><span class="p">,</span><span class="m m-Double">0.84957542</span><span class="p">,</span><span class="m m-Double">0.000000452</span><span class="p">,</span><span class="mh">0x01</span><span class="p">,</span><span class="mh">0x00</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;result&quot;</span><span class="p">,</span><span class="m m-Double">0.8495759</span><span class="p">,</span><span class="m m-Double">0.000000452</span><span class="p">,</span><span class="mh">0x3C</span><span class="p">,</span><span class="mh">0x00</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;result&quot;</span><span class="p">,</span><span class="m m-Double">0.84957638</span><span class="p">,</span><span class="m m-Double">0.000000452</span><span class="p">,</span><span class="mh">0x00</span><span class="p">,</span><span class="mh">0x04</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;result&quot;</span><span class="p">,</span><span class="m m-Double">0.84957686</span><span class="p">,</span><span class="m m-Double">0.000000452</span><span class="p">,</span><span class="mh">0x00</span><span class="p">,</span><span class="mh">0x00</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;result&quot;</span><span class="p">,</span><span class="m m-Double">0.84957734</span><span class="p">,</span><span class="m m-Double">0.000000452</span><span class="p">,</span><span class="mh">0xFF</span><span class="p">,</span><span class="mh">0x29</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;result&quot;</span><span class="p">,</span><span class="m m-Double">0.84957782</span><span class="p">,</span><span class="m m-Double">0.000000452</span><span class="p">,</span><span class="mh">0xFF</span><span class="p">,</span><span class="mh">0x25</span>
+<span class="s">&quot;SPI&quot;</span><span class="p">,</span><span class="s">&quot;disable&quot;</span><span class="p">,</span><span class="m m-Double">0.849578332</span><span class="p">,</span><span class="m m-Double">0.000000004</span><span class="p">,,</span>
+</code></pre></div>
+
+<p>Notice that the exporter denotes <code>enable</code>, <code>disable</code> and <code>result</code> rows. This is extremely useful, as we can use these to split up individual SPI transactions!</p>
+<p>In the next section, we'll talk about extending Scapy to parse and understand these packet structures.</p>
+<h1>A Quick Scapy Primer</h1>
+<p>Scapy describes a protocol as a <code>Packet</code> subclass with a <code>fields_desc</code> list. Each entry is a <em>field</em> - a typed, named slice of bytes that knows how to dissect itself from a buffer and build itself back into one. Packets stack into <em>layers</em> with the <code>/</code> operator, and <code>bind_layers()</code> tells Scapy how to pick the next layer automatically during dissection. Layers are an extremely powerful feature in Scapy, and the automotive protocols that they have developed demonstrate how these work very well!</p>
+<p>For our initial analysis, we'll use the following fields for decoding our SPI traffic:</p>
+<ul>
+<li><code>ByteEnumField</code> - a one-byte field with a value-to-name dictionary, so <code>0x03</code> shows up as <code>READ</code> when you print it.</li>
+<li><code>ThreeBytesField</code> - a 24-bit integer, the width of a SPI flash address.</li>
+<li><code>ConditionalField</code> - wraps another field and only includes it when a predicate is true. This is helpful for commands that take an address or require additional parsing.</li>
+<li><code>FieldLenField</code> / <code>StrLenField</code> - a length field paired with a variable-length byte field, for payloads whose size we know.</li>
+<li><code>FlagsField</code> - a bitfield with named bits, very helpful for something like a status register.</li>
+</ul>
+<h2>Modeling SPI Flash in Scapy</h2>
+<p>We'll define three layers:</p>
+<ol>
+<li>A thin <code>SPI</code> base layer that just records which chip-select line a transaction belongs to (handy if you ever capture a bus with multiple devices on it).</li>
+<li>An <code>SPIFlashCmd</code> layer for the request - opcode, optional address, optional dummy byte.</li>
+<li>Response layers for the data that comes back - plain read data, and a decoded status register.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scapy.packet</span><span class="w"> </span><span class="kn">import</span> <span class="n">Packet</span><span class="p">,</span> <span class="n">bind_layers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scapy.fields</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ByteEnumField</span><span class="p">,</span> <span class="n">ByteField</span><span class="p">,</span> <span class="n">ThreeBytesField</span><span class="p">,</span>
+    <span class="n">ConditionalField</span><span class="p">,</span> <span class="n">FieldLenField</span><span class="p">,</span> <span class="n">StrLenField</span><span class="p">,</span> <span class="n">FlagsField</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SPI</span><span class="p">(</span><span class="n">Packet</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base layer — which chip-select line did this transaction belong to.&quot;&quot;&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;SPI&quot;</span>
+    <span class="n">fields_desc</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">ByteEnumField</span><span class="p">(</span><span class="s2">&quot;cs&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;flash&quot;</span><span class="p">}),</span>   <span class="c1"># add more CS lines as needed</span>
+    <span class="p">]</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SPIFlashCmd</span><span class="p">(</span><span class="n">Packet</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A single SPI NOR flash command (the MOSI side of a transaction).&quot;&quot;&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;SPIFlashCmd&quot;</span>
+
+    <span class="n">COMMANDS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mh">0x03</span><span class="p">:</span> <span class="s2">&quot;READ&quot;</span><span class="p">,</span>
+        <span class="mh">0x0B</span><span class="p">:</span> <span class="s2">&quot;FAST_READ&quot;</span><span class="p">,</span>
+        <span class="mh">0x6B</span><span class="p">:</span> <span class="s2">&quot;FAST_READ_QUAD_OUT&quot;</span><span class="p">,</span>   <span class="c1"># 1-1-4: opcode + addr on IO0, data on IO0-IO3</span>
+        <span class="mh">0x02</span><span class="p">:</span> <span class="s2">&quot;PAGE_PROGRAM&quot;</span><span class="p">,</span>
+        <span class="mh">0x05</span><span class="p">:</span> <span class="s2">&quot;RDSR1&quot;</span><span class="p">,</span>
+        <span class="mh">0x35</span><span class="p">:</span> <span class="s2">&quot;RDSR2&quot;</span><span class="p">,</span>
+        <span class="mh">0x06</span><span class="p">:</span> <span class="s2">&quot;WREN&quot;</span><span class="p">,</span>
+        <span class="mh">0x04</span><span class="p">:</span> <span class="s2">&quot;WRDI&quot;</span><span class="p">,</span>
+        <span class="mh">0x20</span><span class="p">:</span> <span class="s2">&quot;SECTOR_ERASE&quot;</span><span class="p">,</span>
+        <span class="mh">0xD8</span><span class="p">:</span> <span class="s2">&quot;BLOCK_ERASE&quot;</span><span class="p">,</span>
+        <span class="mh">0x9F</span><span class="p">:</span> <span class="s2">&quot;JEDEC_ID&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">CMD_READ</span>      <span class="o">=</span> <span class="mh">0x03</span>
+    <span class="n">CMD_FAST_READ</span> <span class="o">=</span> <span class="mh">0x0B</span>
+    <span class="n">CMD_RDSR1</span>     <span class="o">=</span> <span class="mh">0x05</span>
+
+    <span class="c1"># Commands that clock out a 24-bit address after the opcode</span>
+    <span class="n">CMD_HAS_ADDR</span>  <span class="o">=</span> <span class="p">{</span><span class="mh">0x03</span><span class="p">,</span> <span class="mh">0x0B</span><span class="p">,</span> <span class="mh">0x6B</span><span class="p">,</span> <span class="mh">0x02</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0xD8</span><span class="p">}</span>
+    <span class="c1"># ...and of those, only the FAST_READ variants insert dummy cycles before data</span>
+    <span class="n">CMD_HAS_DUMMY</span> <span class="o">=</span> <span class="p">{</span><span class="mh">0x0B</span><span class="p">,</span> <span class="mh">0x6B</span><span class="p">}</span>
+
+    <span class="n">fields_desc</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">ByteEnumField</span><span class="p">(</span><span class="s2">&quot;cmd&quot;</span><span class="p">,</span> <span class="n">CMD_READ</span><span class="p">,</span> <span class="n">COMMANDS</span><span class="p">),</span>
+        <span class="n">ConditionalField</span><span class="p">(</span>
+            <span class="n">ThreeBytesField</span><span class="p">(</span><span class="s2">&quot;addr&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">cmd</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">CMD_HAS_ADDR</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">ConditionalField</span><span class="p">(</span>
+            <span class="n">ByteField</span><span class="p">(</span><span class="s2">&quot;dummy&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">cmd</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">CMD_HAS_DUMMY</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">]</span>
+
+
+<span class="n">bind_layers</span><span class="p">(</span><span class="n">SPI</span><span class="p">,</span> <span class="n">SPIFlashCmd</span><span class="p">,</span> <span class="n">cs</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Notice how the <code>READ</code> vs <code>FAST_READ</code> distinction collapses into two small sets and a <code>ConditionalField</code>. The address is present for <code>{0x03, 0x0B, 0x6B, 0x02, 0x20, 0xD8}</code>; the dummy byte is present <em>only</em> for the fast reads (<code>0x0B</code>, <code>0x6B</code>). Scapy now builds <em>and dissects</em> the right header for any of these commands with no special-casing in our parsing code.</p>
+<p>The full <a href="https://github.com/wrongbaud/spidump"><code>spidump</code></a> model goes one step further and uses a <code>MultipleTypeField</code> to switch the address between 24 and 32 bits for the 4-byte-address read opcodes, but the 24-bit version above is all we need for this chip.</p>
+<p>For the data that comes back, a read response is just a length-prefixed blob:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SPIFlashReadResp</span><span class="p">(</span><span class="n">Packet</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;SPIFlashReadResp&quot;</span>
+    <span class="n">fields_desc</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">FieldLenField</span><span class="p">(</span><span class="s2">&quot;dlen&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">length_of</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;I&quot;</span><span class="p">),</span>
+        <span class="n">StrLenField</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">length_from</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">dlen</span><span class="p">),</span>
+    <span class="p">]</span>
+</code></pre></div>
+
+<p><strong>Quick Detour</strong>: We've mostly been focusing on SPI flash reads for obvious reasons, but we can extend Scapy to help us analyze other commands, like the <code>0x05</code> read status register (RDSR1) command. When this command is issued, the flash chip responds with its current status. It is often used during erase and reprogramming operations to determine when the chip is done writing or erasing a page. As an example of how to use the <code>FlagsField</code>, we can parse out the individual bits of the status register whenever it is seen on the bus:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SPIFlashStatusResp</span><span class="p">(</span><span class="n">Packet</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;SPIFlashStatusResp&quot;</span>
+    <span class="n">fields_desc</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">FlagsField</span><span class="p">(</span><span class="s2">&quot;sr&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="p">{</span>
+            <span class="mh">0x01</span><span class="p">:</span> <span class="s2">&quot;BUSY&quot;</span><span class="p">,</span>   <span class="c1"># erase/write in progress</span>
+            <span class="mh">0x02</span><span class="p">:</span> <span class="s2">&quot;WEL&quot;</span><span class="p">,</span>    <span class="c1"># write enable latch</span>
+            <span class="mh">0x04</span><span class="p">:</span> <span class="s2">&quot;BP0&quot;</span><span class="p">,</span>
+            <span class="mh">0x08</span><span class="p">:</span> <span class="s2">&quot;BP1&quot;</span><span class="p">,</span>
+            <span class="mh">0x10</span><span class="p">:</span> <span class="s2">&quot;BP2&quot;</span><span class="p">,</span>
+            <span class="mh">0x20</span><span class="p">:</span> <span class="s2">&quot;TB&quot;</span><span class="p">,</span>     <span class="c1"># top/bottom protect</span>
+            <span class="mh">0x40</span><span class="p">:</span> <span class="s2">&quot;SEC&quot;</span><span class="p">,</span>    <span class="c1"># sector protect</span>
+            <span class="mh">0x80</span><span class="p">:</span> <span class="s2">&quot;SRP0&quot;</span><span class="p">,</span>   <span class="c1"># status register protect 0</span>
+        <span class="p">})</span>
+    <span class="p">]</span>
+</code></pre></div>
+
+<p>Now a status byte of <code>0x02</code> dissects to <code>&lt;SPIFlashStatusResp sr=WEL&gt;</code> instead of a magic number. That readability is the whole point of pushing the protocol into Scapy.</p>
+<h2>Capture to Bytes</h2>
+<p>In the CSV that we exported from Saleae, there are three row <code>type</code>s:</p>
+<ul>
+<li><code>enable</code> → <code>CS#</code> went low; a transaction is starting.</li>
+<li><code>result</code> → one byte was clocked; the <code>mosi</code> and <code>miso</code> columns hold the two sides.</li>
+<li><code>disable</code> → <code>CS#</code> went high; the transaction is complete.</li>
+</ul>
+<p>So a transaction is everything between an <code>enable</code> and the next <code>disable</code>. Our first step is to parse out these individual transactions; once we have the raw bytes, we can apply our decoder:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_transactions</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Yield {&#39;mosi&#39;: bytes, &#39;miso&#39;: bytes} for each CS-framed transaction.&quot;&quot;&quot;</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">ttype</span> <span class="o">=</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">ttype</span> <span class="o">==</span> <span class="s2">&quot;enable&quot;</span><span class="p">:</span>
+                <span class="n">current</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;mosi&quot;</span><span class="p">:</span> <span class="nb">bytearray</span><span class="p">(),</span> <span class="s2">&quot;miso&quot;</span><span class="p">:</span> <span class="nb">bytearray</span><span class="p">()}</span>
+
+            <span class="k">elif</span> <span class="n">ttype</span> <span class="o">==</span> <span class="s2">&quot;result&quot;</span> <span class="ow">and</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">mosi</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;mosi&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+                <span class="n">miso</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;miso&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+                <span class="n">current</span><span class="p">[</span><span class="s2">&quot;mosi&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">mosi</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span> <span class="k">if</span> <span class="n">mosi</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;0x&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">current</span><span class="p">[</span><span class="s2">&quot;miso&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">miso</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span> <span class="k">if</span> <span class="n">miso</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;0x&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">ttype</span> <span class="o">==</span> <span class="s2">&quot;disable&quot;</span> <span class="ow">and</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">current</span><span class="p">[</span><span class="s2">&quot;mosi&quot;</span><span class="p">]:</span>
+                    <span class="k">yield</span> <span class="p">{</span><span class="s2">&quot;mosi&quot;</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="s2">&quot;mosi&quot;</span><span class="p">]),</span>
+                           <span class="s2">&quot;miso&quot;</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="s2">&quot;miso&quot;</span><span class="p">])}</span>
+                <span class="n">current</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+<p>This is where our Scapy model starts to pay off. We don't need to pick the MOSI bytes apart by hand; we can hand them straight to <code>SPIFlashCmd</code> and let the <code>ConditionalField</code>s decide whether an address and dummy byte are present. Here is the first <code>READ</code> from our capture, the same transaction we annotated earlier:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">SPIFlashCmd</span><span class="p">(</span><span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s2">&quot;03000000001fffff&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="c1">###[ SPIFlashCmd ]###</span>
+  <span class="n">cmd</span>       <span class="o">=</span> <span class="n">READ</span>
+  <span class="n">addr</span>      <span class="o">=</span> <span class="mi">0</span>
+<span class="c1">###[ Raw ]###</span>
+     <span class="n">load</span>      <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00\x1f\xff\xff</span><span class="s1">&#39;</span>
+</code></pre></div>
+
+<p>Scapy pulled out the opcode and the 24-bit address, and everything the controller clocked out after the header - the "don't care" bytes, including the <code>0x1F</code> and <code>0xFF</code> values we saw on <code>D3</code> - landed in a <code>Raw</code> payload. The length of the dissected header tells us exactly where the read data starts on MISO:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">transaction_to_packets</span><span class="p">(</span><span class="n">tx</span><span class="p">):</span>
+    <span class="n">mosi</span><span class="p">,</span> <span class="n">miso</span> <span class="o">=</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;mosi&quot;</span><span class="p">],</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;miso&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Let Scapy split the MOSI bytes into opcode / address / dummy.</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">SPIFlashCmd</span><span class="p">(</span><span class="n">mosi</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">struct</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>                <span class="c1"># CS# went high mid-header</span>
+    <span class="n">hdr_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">self_build</span><span class="p">())</span>      <span class="c1"># opcode + addr + dummy, per the model</span>
+
+    <span class="n">pkt</span> <span class="o">=</span> <span class="n">SPI</span><span class="p">(</span><span class="n">cs</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">req</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">req</span><span class="o">.</span><span class="n">cmd</span> <span class="ow">in</span> <span class="p">(</span><span class="n">SPIFlashCmd</span><span class="o">.</span><span class="n">CMD_READ</span><span class="p">,</span> <span class="n">SPIFlashCmd</span><span class="o">.</span><span class="n">CMD_FAST_READ</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">miso</span><span class="p">[</span><span class="n">hdr_len</span><span class="p">:]</span>            <span class="c1"># flash data lives on MISO</span>
+        <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">resp</span> <span class="o">=</span> <span class="n">SPIFlashReadResp</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">req</span><span class="o">.</span><span class="n">cmd</span> <span class="o">==</span> <span class="n">SPIFlashCmd</span><span class="o">.</span><span class="n">CMD_RDSR1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">miso</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">hdr_len</span><span class="p">:</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">SPIFlashStatusResp</span><span class="p">(</span><span class="n">sr</span><span class="o">=</span><span class="n">miso</span><span class="p">[</span><span class="n">hdr_len</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">pkt</span><span class="p">,</span> <span class="n">resp</span>
+</code></pre></div>
+
+<p>In the above example, we handle the <code>READ</code>, <code>FAST_READ</code> and <code>RDSR1</code> commands. If we provide the exported CSV and parse some of the packets, we see the following:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">tx</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">parse_transactions</span><span class="p">(</span><span class="s2">&quot;bigger-boot.csv&quot;</span><span class="p">)</span>
+<span class="o">...</span>           <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;mosi&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0x05</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">pkt</span><span class="p">,</span> <span class="n">resp</span> <span class="o">=</span> <span class="n">transaction_to_packets</span><span class="p">(</span><span class="n">tx</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">pkt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="c1">###[ SPI ]###</span>
+  <span class="n">cs</span>        <span class="o">=</span> <span class="n">flash</span>
+<span class="c1">###[ SPIFlashCmd ]###</span>
+     <span class="n">cmd</span>       <span class="o">=</span> <span class="n">RDSR1</span>
+<span class="c1">###[ Raw ]###</span>
+        <span class="n">load</span>      <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\xff</span><span class="s1">&#39;</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">resp</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="c1">###[ SPIFlashStatusResp ]###</span>
+  <span class="n">sr</span>        <span class="o">=</span> <span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>
+</code></pre></div>
+
+<p>Here we are just looking for status register requests via the <code>RDSR1</code> command. We found one in the capture, and Scapy turns that bitfield into human-readable output! This is really helpful when reverse engineering a reflash sequence or an update protocol - and as it turns out, our capture contains one!</p>
+<h2>Catching the Device Writing to Flash</h2>
+<p>While going through the capture, we noticed that it wasn't just reads: there were over 2,000 <code>PAGE_PROGRAM</code> commands and a <code>BLOCK_ERASE</code> (<code>0xD8</code>, which we added to our model above) in the middle of the boot process. To make sense of these, we can write a small helper that turns each transaction into a one-line description and collapses repeated lines, since a flash chip gets polled a <em>lot</em> while it's busy:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">groupby</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">describe</span><span class="p">(</span><span class="n">pkt</span><span class="p">,</span> <span class="n">resp</span><span class="p">):</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">pkt</span><span class="p">[</span><span class="n">SPIFlashCmd</span><span class="p">]</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">sprintf</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%c</span><span class="s2">md%&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span> <span class="ow">in</span> <span class="n">SPIFlashCmd</span><span class="o">.</span><span class="n">CMD_HAS_ADDR</span><span class="p">:</span>
+        <span class="n">line</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; addr=0x</span><span class="si">{</span><span class="n">cmd</span><span class="o">.</span><span class="n">addr</span><span class="si">:</span><span class="s2">06x</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span> <span class="o">==</span> <span class="mh">0x02</span><span class="p">:</span>                  <span class="c1"># PAGE_PROGRAM: write data rides on MOSI</span>
+        <span class="n">line</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes)&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="n">SPIFlashStatusResp</span><span class="p">):</span>
+        <span class="n">line</span> <span class="o">+=</span> <span class="s2">&quot; sr=&quot;</span> <span class="o">+</span> <span class="n">resp</span><span class="o">.</span><span class="n">sprintf</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">r%&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">line</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">trace</span><span class="p">(</span><span class="n">txs</span><span class="p">):</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">(</span><span class="n">describe</span><span class="p">(</span><span class="o">*</span><span class="n">transaction_to_packets</span><span class="p">(</span><span class="n">tx</span><span class="p">))</span> <span class="k">for</span> <span class="n">tx</span> <span class="ow">in</span> <span class="n">txs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">line</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groupby</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">group</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">line</span> <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2">  (x</span><span class="si">{</span><span class="n">n</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Scapy's <code>sprintf</code> does most of the formatting work here: <code>%cmd%</code> renders the opcode through our <code>ByteEnumField</code> dictionary, and <code>%sr%</code> renders the status byte through the <code>FlagsField</code> bit names. For a page program, the data being written is clocked out on MOSI right after the address, so it ends up in the <code>Raw</code> payload of our <code>SPIFlashCmd</code> layer - here we just print its length.</p>
+<p>Let's find the erase and trace from just before it up to the first page program:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">txs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">parse_transactions</span><span class="p">(</span><span class="s2">&quot;bigger-boot.csv&quot;</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">erase</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">tx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">txs</span><span class="p">)</span> <span class="k">if</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;mosi&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0xD8</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">pp</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">tx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">txs</span><span class="p">)</span> <span class="k">if</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;mosi&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0x02</span><span class="p">]</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">trace</span><span class="p">(</span><span class="n">txs</span><span class="p">[</span><span class="n">erase</span> <span class="o">-</span> <span class="mi">3</span> <span class="p">:</span> <span class="n">pp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>
+<span class="n">WREN</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">WEL</span><span class="o">+</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>
+<span class="n">BLOCK_ERASE</span> <span class="n">addr</span><span class="o">=</span><span class="mh">0x730000</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">BUSY</span><span class="o">+</span><span class="n">WEL</span><span class="o">+</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>  <span class="p">(</span><span class="n">x210</span><span class="p">,</span><span class="mi">836</span><span class="p">)</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">BUSY</span><span class="o">+</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>  <span class="p">(</span><span class="n">x2</span><span class="p">)</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>  <span class="p">(</span><span class="n">x2</span><span class="p">)</span>
+<span class="n">WREN</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">WEL</span><span class="o">+</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>
+<span class="n">PAGE_PROGRAM</span> <span class="n">addr</span><span class="o">=</span><span class="mh">0x730000</span> <span class="p">(</span><span class="mi">32</span> <span class="nb">bytes</span><span class="p">)</span>
+</code></pre></div>
+
+<p>This is an erase and program sequence, with the order of operations taken straight from the datasheet!</p>
+<ol>
+<li><code>RDSR1</code> returns <code>BP0+TB</code> - the chip is idle. The block protect bits are set, but with <code>TB</code> set they only protect the bottom 256 KiB of the flash, not the region being erased.</li>
+<li><code>WREN</code> sets the Write Enable Latch, and the next poll shows <code>WEL</code>.</li>
+<li><code>BLOCK_ERASE</code> wipes the 64 KiB block at <code>0x730000</code>, and <code>BUSY</code> goes high.</li>
+<li>The controller polls the status register over 210,000 times until <code>BUSY</code> clears</li>
+<li><code>WEL</code> clears automatically once the erase finishes, so the controller issues another <code>WREN</code> before it can program.</li>
+</ol>
+<p>Each page program then follows the same pattern:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">trace</span><span class="p">(</span><span class="n">txs</span><span class="p">[</span><span class="n">pp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="p">:</span> <span class="n">pp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span><span class="p">])</span>
+<span class="n">WREN</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">WEL</span><span class="o">+</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>
+<span class="n">PAGE_PROGRAM</span> <span class="n">addr</span><span class="o">=</span><span class="mh">0x730000</span> <span class="p">(</span><span class="mi">32</span> <span class="nb">bytes</span><span class="p">)</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">BUSY</span><span class="o">+</span><span class="n">WEL</span><span class="o">+</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>  <span class="p">(</span><span class="n">x47</span><span class="p">)</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">BUSY</span><span class="o">+</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>  <span class="p">(</span><span class="n">x2</span><span class="p">)</span>
+<span class="n">RDSR1</span> <span class="n">sr</span><span class="o">=</span><span class="n">BP0</span><span class="o">+</span><span class="n">TB</span>
+</code></pre></div>
+
+<p>The device repeats this 2,048 times, 32 bytes at a time, from <code>0x730000</code> to <code>0x73ffe0</code> - rewriting the entire 64 KiB block that it just erased, and taking a little over 400 ms of the boot to do it. On this device, that block holds the device's configuration, which is exactly the kind of thing you want to take note of during an assessment.,</p>
+<p><strong>Note:</strong> Our <code>reconstruct</code> function below only replays reads, so data written with <code>PAGE_PROGRAM</code> does not show up in the recovered image. If you want to see what the device wrote, those bytes are sitting in the <code>Raw</code> payload of each <code>PAGE_PROGRAM</code> packet.</p>
+<p>Next, let's move on to what we really want to do: reconstructing the flash image.</p>
+<h2>Reconstructing the Flash Image</h2>
+<p>With our Scapy definitions, every <code>READ</code> transaction tells us that, at some address, the flash held these bytes. By collecting all of these reads, we can reconstruct a flash image based on what the CPU requested during boot.</p>
+<p><strong>Note:</strong> The default state of an erased NOR flash is <code>0xFF</code>, so we will initialize our image with all <code>0xFF</code>s and then fill in the captured offsets with the data captured at that address.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">reconstruct</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">flash_size</span><span class="o">=</span><span class="mh">0x1000000</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="mh">0xFF</span><span class="p">):</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">([</span><span class="n">fill</span><span class="p">])</span> <span class="o">*</span> <span class="n">flash_size</span>
+    <span class="n">coverage</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="n">flash_size</span><span class="p">)</span>          <span class="c1"># 1 where we have real data</span>
+
+    <span class="k">for</span> <span class="n">tx</span> <span class="ow">in</span> <span class="n">parse_transactions</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">pkt</span><span class="p">,</span> <span class="n">resp</span> <span class="o">=</span> <span class="n">transaction_to_packets</span><span class="p">(</span><span class="n">tx</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="n">SPIFlashReadResp</span><span class="p">):</span>
+            <span class="k">continue</span>
+
+        <span class="n">addr</span> <span class="o">=</span> <span class="n">pkt</span><span class="p">[</span><span class="n">SPIFlashCmd</span><span class="p">]</span><span class="o">.</span><span class="n">addr</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">addr</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">flash_size</span><span class="p">)</span>
+
+        <span class="n">image</span><span class="p">[</span><span class="n">addr</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:</span><span class="n">end</span> <span class="o">-</span> <span class="n">addr</span><span class="p">]</span>
+        <span class="n">coverage</span><span class="p">[</span><span class="n">addr</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x01</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">addr</span><span class="p">)</span>
+
+    <span class="n">covered</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">coverage</span><span class="p">)</span>
+    <span class="n">pct</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">covered</span> <span class="o">/</span> <span class="n">flash_size</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;reconstructed </span><span class="si">{</span><span class="n">covered</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">flash_size</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> bytes (</span><span class="si">{</span><span class="n">pct</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%)&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">image</span><span class="p">),</span> <span class="n">coverage</span>
+
+
+<span class="n">image</span><span class="p">,</span> <span class="n">coverage</span> <span class="o">=</span> <span class="n">reconstruct</span><span class="p">(</span><span class="s2">&quot;bigger-boot.csv&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;recovered_flash.bin&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+</code></pre></div>
+
+<h1>Reconstruction in Practice</h1>
+<p>After running this script on our capture, we were able to reconstruct the bootloader and kernel image; however, there was no root filesystem!</p>
+<div class="highlight"><pre><span></span><code><span class="k">[</span><span class="c">wrongbaud@mechanicus extractions</span><span class="k">]</span><span class="c">$ binwalk recovered_flash</span><span class="nt">.</span><span class="c">bin</span>
+<span class="nb">--------------------------------------------------------------------------------------------------------------------------------</span>
+<span class="c">DECIMAL                            HEXADECIMAL                        DESCRIPTION</span>
+<span class="nb">--------------------------------------------------------------------------------------------------------------------------------</span>
+<span class="c">39192                              0x9918                             CRC32 polynomial table</span><span class="nt">,</span><span class="c"> little endian</span>
+<span class="c">40288                              0x9D60                             gzip compressed data</span><span class="nt">,</span><span class="c"> operating system: Unix</span><span class="nt">,</span><span class="c"> timestamp: 2021</span><span class="nb">-</span><span class="c">04</span><span class="nb">-</span><span class="c">28 08:49:30</span><span class="nt">,</span><span class="c"> total size: 47275 bytes</span>
+<span class="c">337944                             0x52818                            LZMA compressed data</span><span class="nt">,</span><span class="c"> properties: 0x5D</span><span class="nt">,</span><span class="c"> dictionary size: 8388608 bytes</span><span class="nt">,</span><span class="c"> compressed size: 2325913 bytes</span><span class="nt">,</span><span class="c"> uncompressed size: 7676180 bytes</span>
+</code></pre></div>
+
+<p>If you've looked at embedded firmware before, this likely looks very familiar. Reviewing the strings shows us the following:</p>
+<div class="highlight"><pre><span></span><code><span class="n">Booting</span><span class="p">...</span>
+<span class="n">init_ram</span>
+<span class="n">init</span><span class="w"> </span><span class="n">ddr</span><span class="w"> </span><span class="n">ok</span>
+<span class="n">DRAM</span><span class="w"> </span><span class="n">Type</span><span class="o">:</span><span class="w"> </span><span class="n">DDR2</span>
+<span class="w">        </span><span class="n">DRAM</span><span class="w"> </span><span class="n">frequency</span><span class="o">:</span><span class="w"> </span><span class="nf">%d</span><span class="n">MHz</span>
+<span class="w">        </span><span class="n">DRAM</span><span class="w"> </span><span class="n">Size</span><span class="o">:</span><span class="w"> </span><span class="nf">%d</span><span class="n">MB</span>
+<span class="mi">333333333333</span>
+<span class="n">ffffffffDT</span>
+<span class="n">DDDDDDDDD</span>
+<span class="n">Detect</span><span class="w"> </span><span class="n">page_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="n">KB</span><span class="w"> </span><span class="p">(</span><span class="nf">%d</span><span class="p">)</span>
+<span class="n">Detect</span><span class="w"> </span><span class="n">bank_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="w"> </span><span class="n">banks</span><span class="p">(</span><span class="mi">0</span><span class="n">x</span><span class="nf">%x</span><span class="p">)</span>
+<span class="n">Detect</span><span class="w"> </span><span class="n">dram</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">128</span><span class="n">MB</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="n">x</span><span class="nf">%x</span><span class="p">)</span>
+<span class="nl">bond</span><span class="p">:</span><span class="mi">0</span><span class="n">x</span><span class="nf">%x</span>
+<span class="n">MCM</span><span class="w"> </span><span class="mi">128</span><span class="n">MB</span>
+<span class="n">DDR</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="n">OK</span>
+<span class="w"> </span><span class="nf">%s</span><span class="w"> </span><span class="p">,</span><span class="n">ddr_freq</span><span class="o">=</span><span class="nf">%d</span><span class="w"> </span><span class="p">(</span><span class="n">Mbps</span><span class="p">),</span><span class="w"> </span><span class="nf">%d</span><span class="w"> </span><span class="p">(</span><span class="n">MHZ</span><span class="p">)</span>
+<span class="n">DRAM</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="n">disable</span>
+<span class="n">DRAM</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="n">enable</span>
+<span class="n">DRAM</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="n">done</span><span class="w"> </span><span class="p">,</span><span class="w"> </span><span class="n">jump</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">DRAM</span>
+<span class="n">enable</span><span class="w"> </span><span class="n">DRAM</span><span class="w"> </span><span class="n">ODT</span>
+<span class="n">SDR</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="n">done</span><span class="w"> </span><span class="n">dev_map</span><span class="o">=</span><span class="mi">0</span><span class="n">x</span><span class="nf">%x</span>
+<span class="n">dram_init_clk_frequency</span>
+</code></pre></div>
+
+<p>This looks like early bootloader code (DRAM initialization), which makes sense given that we were capturing on boot. This still leaves one question - where is our root filesystem?</p>
+<p>There are two likely explanations:</p>
+<ol>
+<li>We didn't capture a full boot sequence.</li>
+<li>The SPI flash is being re-enumerated in QSPI mode.</li>
+</ol>
+<p>Let's talk a bit more about QSPI before we dig into these captures.</p>
+<h2>QSPI Analysis</h2>
+<p>While we've covered standard single-lane SPI in our write-ups before, we've not had the chance to talk about Quad-SPI, or QSPI. Quad SPI (as the name implies) allows for faster data read speeds by outputting data in parallel across <code>IO0</code>-<code>IO3</code>. Let's review our pinout one more time:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="W25Q-family SOIC8 pinout" src="https://voidstarsec.com/blog/assets/images/scapy-spi/w25q-soic8-pinout.png"></p>
+<p>In single-lane mode, only two pins move data: <code>DI (IO0)</code> and <code>DO (IO1)</code>. The other two - <code>/WP (IO2)</code> and <code>/HOLD or /RESET (IO3)</code> - are static control lines. In quad mode, all four become bidirectional data lines, so the opcode, address, and/or data get clocked out a nibble at a time across <code>IO0–IO3</code> instead of one bit on a single line. The definitive tell that you're in quad mode isn't just a faster clock, it's that the former <code>/WP</code> and <code>/HOLD</code> pins suddenly start carrying traffic.</p>
+<p>An example of what a QSPI flash read looks like can be seen in the WaveDrom diagram below:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="WaveDrom diagram of a quad 0x6B FAST_READ_QUAD_OUT" src="https://voidstarsec.com/blog/assets/images/scapy-spi/qspi-read-wavedrom.png"></p>
+<p>To check for this, we can take a longer capture and examine the state of the data lines. If activity suddenly appears on <code>/WP</code> and <code>/HOLD</code>, then we know that the device is transitioning to QSPI mode. Sure enough, after taking a longer capture we saw those lines become active, along with another tell. Let's look at our clock line at the beginning and end of the capture:</p>
+<p>Standard SPI, ~16 MHz:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="SPI clock at about 16 MHz in standard mode" src="https://voidstarsec.com/blog/assets/images/scapy-spi/spi-clk-standard-16mhz.png"></p>
+<p>After the switch, ~50 MHz:</p>
+<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="SPI clock at about 50 MHz after switching to quad mode" src="https://voidstarsec.com/blog/assets/images/scapy-spi/spi-clk-qspi-50mhz.png"></p>
+<p>At the same time scale, there are roughly three times as many clock edges - and with four data lanes instead of one, read throughput goes up by about 12x. The kernel has reconfigured the flash controller and switched into Quad SPI (QSPI) mode, cranking the clock and widening the data path.</p>
+<p>The read command used after the switch is <code>0x6B</code> (Fast Read Quad Output), which is a <code>1-1-4</code> command: the opcode and address are still clocked out on <code>IO0</code> alone, then 8 dummy clocks, and only the <em>data</em> phase uses all four lanes. You can see this in the <code>Lines Used</code> column of the export below.</p>
+<p>This switch is a problem for us! The default SPI analyzer in Saleae does not support QSPI mode, so we will need to use an additional analyzer and break up this capture into two sessions: one for single-lane SPI, and one for QSPI. Luckily for us, the <a href="https://github.com/AddioElectronics/QSPI-Analyzer">QSPI-Analyzer</a> plugin for Saleae Logic / KingstVIS does exactly that. We point it at all four <code>IO</code> channels plus <code>CLK</code> and <code>CS</code>, tell it the lane widths and dummy-cycle count for the command in use, and let it decode each transaction.</p>
+<p>There is only one small issue, though: when we export the QSPI capture, we now have this table:</p>
+<div class="highlight"><pre><span></span><code><span class="nc">Time</span><span class="w"> </span><span class="o">[</span><span class="n">s</span><span class="o">]</span><span class="p">,</span><span class="n">Packet</span><span class="w"> </span><span class="n">ID</span><span class="p">,</span><span class="w"> </span><span class="k">Transaction</span><span class="w"> </span><span class="k">State</span><span class="p">,</span><span class="w"> </span><span class="k">DATA</span><span class="p">,</span><span class="w"> </span><span class="n">Lines</span><span class="w"> </span><span class="n">Used</span>
+<span class="mf">8.196254324</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mh">0x6B</span><span class="p">,</span><span class="mi">1</span><span class="w">        </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">state</span><span class="w"> </span><span class="mi">1</span><span class="err">:</span><span class="w"> </span><span class="n">command</span><span class="w">  </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="n">line</span><span class="p">)</span>
+<span class="mf">8.196254486</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mh">0x380000</span><span class="p">,</span><span class="mi">1</span><span class="w">    </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">state</span><span class="w"> </span><span class="mi">2</span><span class="err">:</span><span class="w"> </span><span class="n">address</span><span class="w">  </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="n">line</span><span class="p">)</span>
+<span class="mf">8.196254970</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="n">Dummy</span><span class="p">,</span><span class="mi">1</span><span class="w">       </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">state</span><span class="w"> </span><span class="mi">3</span><span class="err">:</span><span class="w"> </span><span class="n">dummy</span><span class="w"> </span><span class="n">cycles</span>
+<span class="mf">8.196255131</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mh">0x85</span><span class="p">,</span><span class="mi">4</span><span class="w">        </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">state</span><span class="w"> </span><span class="mi">4</span><span class="err">:</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">byte</span><span class="w"> </span><span class="p">(</span><span class="mi">4</span><span class="w"> </span><span class="n">lines</span><span class="p">)</span>
+<span class="mf">8.196255172</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mh">0x19</span><span class="p">,</span><span class="mi">4</span>
+<span class="p">...</span>
+</code></pre></div>
+
+<p>That's a different shape from the single-lane <code>enable</code>/<code>result</code>/<code>disable</code> table - the analyzer has already split each transaction into command / address / dummy / data states, with a <code>Lines Used</code> column recording the lane width. Our tool, <a href="https://github.com/wrongbaud/spidump"><code>spidump</code></a>, auto-detects this header and walks the state machine, but everything downstream is unchanged: each transaction still becomes a <code>SPIFlashCmd</code> (<code>0x6B</code> is just another read opcode in the model) and feeds the same <code>reconstruct</code> routine - because Scapy models the logical transaction, not the number of wires it came in on.</p>
+<p>Pointing the extended tool at the quad capture rebuilds everything the device read after the switch:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>python<span class="w"> </span>main.py<span class="w"> </span>big-quad-spi-analyzed-dump.txt<span class="w"> </span>-o<span class="w"> </span>quad.bin<span class="w"> </span>-v
+<span class="go">detected capture format: qspi-analyzer</span>
+<span class="go">commands seen: {&#39;FAST_READ_QUAD_OUT&#39;: 36839, &#39;RDSR1&#39;: 25674}</span>
+<span class="go">flash_size=0x1000000  read_txns=36839  covered=11288528 (67.3%)</span>
+<span class="go">wrote 16777216 bytes -&gt; quad.bin</span>
+
+<span class="gp">$ </span>binwalk<span class="w"> </span>quad.bin
+<span class="go">DECIMAL     HEXADECIMAL   DESCRIPTION</span>
+<span class="go">--------------------------------------------------------------------------</span>
+<span class="go">2949120     0x2D0000                           SquashFS file system, little endian, version: 4.0, compression: xz, inode count: 734, block size: 131072, image size: 3157356 bytes, created: 2038-02-22 09:50:56</span>
+<span class="go">14548992    0xDE0000                           JFFS2 filesystem, little endian, nodes: 523, total size: 2031628</span>
+</code></pre></div>
+
+<p>But notice what's missing: binwalk finds nothing below <code>0x2D0000</code>, because everything in that region is <code>0xFF</code>. That's not empty flash - it's the bootloader and kernel, which the device read in single-lane mode before it ever switched to quad. The quad capture starts after the switch, so they aren't in it. This time we have the rootfs, but we're missing the bootloader and kernel. Since our single-lane capture already gave us those, we can merge the two images together to get a very decent-looking firmware image! A quick way to do this is with <code>dd</code>, copying everything from <code>0x2D0000</code> up out of the quad image and into the single-lane image:</p>
+<div class="highlight"><pre><span></span><code>dd<span class="w"> </span><span class="k">if</span><span class="o">=</span>quad.bin<span class="w"> </span><span class="nv">of</span><span class="o">=</span>recovered_flash.bin<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>64K<span class="w"> </span><span class="nv">iflag</span><span class="o">=</span>skip_bytes<span class="w"> </span><span class="nv">oflag</span><span class="o">=</span>seek_bytes<span class="w"> </span><span class="se">\</span>
+<span class="w">   </span><span class="nv">skip</span><span class="o">=</span><span class="k">$((</span><span class="m">0x2D0000</span><span class="k">))</span><span class="w"> </span><span class="nv">seek</span><span class="o">=</span><span class="k">$((</span><span class="m">0x2D0000</span><span class="k">))</span><span class="w"> </span><span class="nv">conv</span><span class="o">=</span>notrunc
+</code></pre></div>
+
+<p><code>spidump</code> can also do this for you with <code>--merge</code>, which layers the reads from multiple captures on top of each other and drops any reads that were decoded at the wrong lane width (for example, quad reads that the single-lane analyzer mis-decoded):</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>main.py<span class="w"> </span>bigger-boot.csv<span class="w"> </span>--merge<span class="w"> </span>big-quad-spi-analyzed-dump.txt<span class="w"> </span>-o<span class="w"> </span>recovered_flash.bin<span class="w"> </span>-v
+</code></pre></div>
+
+<p>Either way, binwalk now shows the full picture:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[</span><span class="c">wrongbaud@mechanicus extractions</span><span class="k">]</span><span class="c">$ binwalk recovered_flash</span><span class="nt">.</span><span class="c">bin</span>
+<span class="nb">-------------------------------------------------------------------------------------------------------------------------------------------</span>
+<span class="c">DECIMAL                            HEXADECIMAL                        DESCRIPTION</span>
+<span class="nb">-------------------------------------------------------------------------------------------------------------------------------------------</span>
+<span class="c">39192                              0x9918                             CRC32 polynomial table</span><span class="nt">,</span><span class="c"> little endian</span>
+<span class="c">40288                              0x9D60                             gzip compressed data</span><span class="nt">,</span><span class="c"> operating system: Unix</span><span class="nt">,</span><span class="c"> timestamp: 2021</span><span class="nb">-</span><span class="c">04</span><span class="nb">-</span><span class="c">28 08:49:30</span><span class="nt">,</span><span class="c"> total size: 47275 bytes</span>
+<span class="c">337944                             0x52818                            LZMA compressed data</span><span class="nt">,</span><span class="c"> properties: 0x5D</span><span class="nt">,</span><span class="c"> dictionary size: 8388608 bytes</span><span class="nt">,</span><span class="c"> compressed size: 2325913 bytes</span><span class="nt">,</span><span class="c"> uncompressed size: 7676180 bytes</span>
+<span class="c">2949120                            0x2D0000                           SquashFS file system</span><span class="nt">,</span><span class="c"> little endian</span><span class="nt">,</span><span class="c"> version: 4</span><span class="nt">.</span><span class="c">0</span><span class="nt">,</span><span class="c"> compression: xz</span><span class="nt">,</span><span class="c"> inode count: 734</span><span class="nt">,</span><span class="c"> block size: 131072</span><span class="nt">,</span><span class="c"> image size: 3157356 bytes</span><span class="nt">,</span><span class="c"> created: 2038</span><span class="nb">-</span><span class="c">02</span><span class="nb">-</span><span class="c">22 09:50:56</span>
+<span class="c">14548992                           0xDE0000                           JFFS2 filesystem</span><span class="nt">,</span><span class="c"> little endian</span><span class="nt">,</span><span class="c"> nodes: 523</span><span class="nt">,</span><span class="c"> total size: 2031628 bytes</span>
+<span class="nb">-------------------------------------------------------------------------------------------------------------------------------------------</span>
+</code></pre></div>
+
+<p>Now for the final test: can we extract this SquashFS image and find any reasonable data?</p>
+<div class="highlight"><pre><span></span><code><span class="o">[</span><span class="n">wrongbaud@mechanicus results</span><span class="o">]</span><span class="err">$</span><span class="w"> </span><span class="n">dd</span><span class="w"> </span><span class="k">if</span><span class="o">=</span><span class="n">recovered_flash</span><span class="p">.</span><span class="n">bin</span><span class="w"> </span><span class="k">of</span><span class="o">=</span><span class="n">squashfs2</span><span class="p">.</span><span class="n">bin</span><span class="w"> </span><span class="n">bs</span><span class="o">=</span><span class="mi">1</span><span class="w"> </span><span class="n">skip</span><span class="o">=</span><span class="err">$</span><span class="p">((</span><span class="mh">0x2D0000</span><span class="p">))</span><span class="w"> </span><span class="nf">count</span><span class="o">=</span><span class="mi">3157356</span>
+<span class="mi">3157356</span><span class="o">+</span><span class="mi">0</span><span class="w"> </span><span class="n">records</span><span class="w"> </span><span class="ow">in</span>
+<span class="mi">3157356</span><span class="o">+</span><span class="mi">0</span><span class="w"> </span><span class="n">records</span><span class="w"> </span><span class="k">out</span>
+<span class="mi">3157356</span><span class="w"> </span><span class="n">bytes</span><span class="w"> </span><span class="p">(</span><span class="mf">3.2</span><span class="w"> </span><span class="n">MB</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="w"> </span><span class="n">MiB</span><span class="p">)</span><span class="w"> </span><span class="n">copied</span><span class="p">,</span><span class="w"> </span><span class="mf">2.1317</span><span class="w"> </span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mf">1.5</span><span class="w"> </span><span class="n">MB</span><span class="o">/</span><span class="n">s</span>
+<span class="o">[</span><span class="n">wrongbaud@mechanicus results</span><span class="o">]</span><span class="err">$</span><span class="w"> </span><span class="k">file</span><span class="w"> </span><span class="n">squashfs2</span><span class="p">.</span><span class="n">bin</span>
+<span class="n">squashfs2</span><span class="p">.</span><span class="nl">bin</span><span class="p">:</span><span class="w"> </span><span class="n">Squashfs</span><span class="w"> </span><span class="n">filesystem</span><span class="p">,</span><span class="w"> </span><span class="n">little</span><span class="w"> </span><span class="n">endian</span><span class="p">,</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="n">xz</span><span class="w"> </span><span class="n">compressed</span><span class="p">,</span><span class="w"> </span><span class="mi">3157356</span><span class="w"> </span><span class="n">bytes</span><span class="p">,</span><span class="w"> </span><span class="mi">734</span><span class="w"> </span><span class="n">inodes</span><span class="p">,</span><span class="w"> </span><span class="nl">blocksize</span><span class="p">:</span><span class="w"> </span><span class="mi">131072</span><span class="w"> </span><span class="n">bytes</span><span class="p">,</span><span class="w"> </span><span class="nl">created</span><span class="p">:</span><span class="w"> </span><span class="n">Mon</span><span class="w"> </span><span class="n">Feb</span><span class="w"> </span><span class="mi">22</span><span class="w"> </span><span class="mi">09</span><span class="err">:</span><span class="mi">50</span><span class="err">:</span><span class="mi">56</span><span class="w"> </span><span class="mi">2038</span>
+<span class="o">[</span><span class="n">wrongbaud@mechanicus results</span><span class="o">]</span><span class="err">$</span><span class="w"> </span><span class="n">unsquashfs</span><span class="w"> </span><span class="n">squashfs2</span><span class="p">.</span><span class="n">bin</span>
+<span class="n">Parallel</span><span class="w"> </span><span class="nl">unsquashfs</span><span class="p">:</span><span class="w"> </span><span class="k">Using</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="n">processors</span>
+<span class="mi">703</span><span class="w"> </span><span class="n">inodes</span><span class="w"> </span><span class="p">(</span><span class="mi">291</span><span class="w"> </span><span class="n">blocks</span><span class="p">)</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">write</span>
+<span class="n">created</span><span class="w"> </span><span class="mi">238</span><span class="w"> </span><span class="n">files</span>
+<span class="n">created</span><span class="w"> </span><span class="mi">31</span><span class="w"> </span><span class="n">directories</span>
+<span class="n">created</span><span class="w"> </span><span class="mi">116</span><span class="w"> </span><span class="n">symlinks</span>
+<span class="n">created</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">devices</span>
+<span class="n">created</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">fifos</span>
+<span class="n">created</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">sockets</span>
+<span class="n">created</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">hardlinks</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="p">[</span><span class="n">wrongbaud</span><span class="err">@</span><span class="n">mechanicus</span><span class="w"> </span><span class="n">squashfs</span><span class="o">-</span><span class="n">root</span><span class="p">]</span><span class="o">$</span><span class="w"> </span><span class="n">ls</span>
+<span class="n">bin</span><span class="w">  </span><span class="n">dev</span><span class="w">  </span><span class="n">etc</span><span class="w">  </span><span class="n">home</span><span class="w">  </span><span class="n">include</span><span class="w">  </span><span class="n">init</span><span class="w">  </span><span class="n">lib</span><span class="w">  </span><span class="n">mnt</span><span class="w">  </span><span class="n">proc</span><span class="w">  </span><span class="n">root</span><span class="w">  </span><span class="n">sbin</span><span class="w">  </span><span class="n">sys</span><span class="w">  </span><span class="n">tmp</span><span class="w">  </span><span class="n">usr</span><span class="w">  </span><span class="k">var</span><span class="w">  </span><span class="n">web</span>
+</code></pre></div>
+
+<p>Nice! We were able to extract the SquashFS from nothing but SPI captures. Now the real work can begin!</p>
+<h1>Conclusion</h1>
+<p>With this post, we've demonstrated how to reconstruct a firmware image from a SPI traffic capture. This tooling supports both standard and quad SPI and allows flash contents to be reconstructed without removing the target flash device. There are, of course, some drawbacks: we can only reconstruct what the device reads while we're watching, but for the purposes of initial reverse engineering and triage, this is a great starting point.</p>
+<p>This tooling can also be used to analyze and review SPI traffic from devices other than NOR flash, allowing for increased introspection when reverse engineering custom protocols.</p>
+<p>Keep an eye out for our next post, where we extend this to I2C and develop another Scapy plugin!</p>
+<p>Happy Hacking!</p>
+<p>Matt (wrongbaud)</p>
+<h1>Contact / Training</h1>
+<p>If you're looking to learn more about hardware reverse engineering, check out our roadmap of free resources <a href="https://voidstarsec.com/roadmap">here</a>. If you're interested in structured training for your team, check out our <a href="https://voidstarsec.com/#training">hardware hacking bootcamp</a>. And if you'd like an in-depth dive into how hardware-level debuggers work and how to reverse engineer them, check out our self-paced course <a href="https://voidstarsec.training/products/hacking-hardware-debuggers">here</a>.</p>
+<p><strong>Note:</strong> We are launching a new variant of the Hacking Hardware Debuggers course in Q4, which will be significantly cheaper and will not come with a pre-configured hardware kit. Students will get access to all of the relevant tools and a list of hardware to purchase if they wish to follow along.</p>
+<p>If you want to stay informed about official releases, new courses, and blog posts, sign up for our mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
+<p>Lastly, if you want to secure your devices/firmware with an audit from us, please don't hesitate to reach out to contact@voidstarsec.com.</p>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3 col-sm-pull-9" id="sidebar">
+            <aside>
+<!-- Sidebar -->
+<section class="well well-sm">
+  <ul class="list-group list-group-flush">
+
+<!-- Sidebar/Social -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+  <ul class="list-group" id="social">
+    <li class="list-group-item"><a href="https://voidstarsec.com"><i class="fa fa-vss-website-square fa-lg"></i> VSS website</a></li>
+    <li class="list-group-item"><a href="https://twitter.com/voidstarsec"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+    <li class="list-group-item"><a href="https://www.linkedin.com/in/voidstarsec"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+    <li class="list-group-item"><a href="https://github.com/voidstarsec"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+  </ul>
+</li>
+<!-- End Sidebar/Social -->
+
+<!-- Sidebar/Categories -->
+<li class="list-group-item">
+  <h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Categories</span></h4>
+  <ul class="list-group" id="categories">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/blog/category/fault-injection.html"><i class="fa fa-folder-open fa-lg"></i>Fault Injection</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/blog/category/ghidra.html"><i class="fa fa-folder-open fa-lg"></i>Ghidra</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/blog/category/hardware.html"><i class="fa fa-folder-open fa-lg"></i>Hardware</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/blog/category/misc.html"><i class="fa fa-folder-open fa-lg"></i>misc</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/blog/category/training.html"><i class="fa fa-folder-open fa-lg"></i>Training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Categories -->
+
+<!-- Sidebar/Tag Cloud -->
+<li class="list-group-item">
+  <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
+  <ul class="list-group " id="tags">
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
+    </li>
+    <li class="list-group-item tag-4">
+      <a href="https://voidstarsec.com/blog/tag/training.html">training</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Tag Cloud -->
+
+<!-- Sidebar/Links -->
+<li class="list-group-item">
+  <h4><i class="fa fa-external-link-square fa-lg"></i><span class="icon-label">Links</span></h4>
+  <ul class="list-group" id="links">
+    <li class="list-group-item">
+      <a href="https://voidstarsec.com/" target="_blank">VoidStar Security Website</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.training/" target="_blank">VoidStar Security Training</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.voidstarsec.wiki/" target="_blank">Build a Hardware Hacking Lab</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://hackaday.io/course/172292-introduction-to-reverse-engineering-with-ghidra" target="_blank">Free Ghidra Course</a>
+    </li>
+    <li class="list-group-item">
+      <a href="https://www.wrongbaud.github.io/" target="_blank">Wrongbauds Blog (fun intro hacks)</a>
+    </li>
+  </ul>
+</li>
+<!-- End Sidebar/Links -->
+  </ul>
+</section>
+<!-- End Sidebar -->            </aside>
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2026 VoidStar Security
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://voidstarsec.com/blog/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://voidstarsec.com/blog/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://voidstarsec.com/blog/theme/js/respond.min.js"></script>
+
+
+
+
+</body>
+</html>
