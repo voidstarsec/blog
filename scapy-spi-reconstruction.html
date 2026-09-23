@@ -237,7 +237,7 @@ VoidStar Security Blog            </a>
 <p>The first byte on <code>D3</code> is <code>0x03</code>, so it <em>looks</em> like this might be a read command. We can look in the datasheet to learn more about how this command is structured:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Read Data (03h) instruction timing from the datasheet" src="https://voidstarsec.com/blog/assets/images/scapy-spi/datasheet-read-instruction.png"></p>
 <p>The WaveDrom diagram below shows the structure of a <code>READ</code> transaction:</p>
-<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="WaveDrom diagram of a single-lane 0x03 READ" src="https://voidstarsec.com/blog/assets/images/scapy-spi/spi-read-wavedrom.png"></p>
+<p><a href="https://voidstarsec.com/blog/assets/images/scapy-spi/spi-read-wavedrom.png"><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="WaveDrom diagram of a single-lane 0x03 READ" src="https://voidstarsec.com/blog/assets/images/scapy-spi/spi-read-wavedrom.png"></a></p>
 <p>Armed with this information, if we look at our capture it starts to make a little more sense:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Annotated READ at address 0 with command, address and response" src="https://voidstarsec.com/blog/assets/images/scapy-spi/read-annotated.png"></p>
 <p>We can see that we have a read at address 0, and the response bytes are <code>03 00 00 08</code> (or <code>0x08000003</code> if you read them as a little-endian 32-bit word). Note that the <code>0x1F</code> and <code>0xFF</code> values that we see on <code>D3</code> are during a time period where we "don't care" what comes over that line, indicated by the hatched regions in the timing diagram.</p>
@@ -589,7 +589,7 @@ VoidStar Security Blog            </a>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="W25Q-family SOIC8 pinout" src="https://voidstarsec.com/blog/assets/images/scapy-spi/w25q-soic8-pinout.png"></p>
 <p>In single-lane mode, only two pins move data: <code>DI (IO0)</code> and <code>DO (IO1)</code>. The other two - <code>/WP (IO2)</code> and <code>/HOLD or /RESET (IO3)</code> - are static control lines. In quad mode, all four become bidirectional data lines, so the opcode, address, and/or data get clocked out a nibble at a time across <code>IO0–IO3</code> instead of one bit on a single line. The definitive tell that you're in quad mode isn't just a faster clock, it's that the former <code>/WP</code> and <code>/HOLD</code> pins suddenly start carrying traffic.</p>
 <p>An example of what a QSPI flash read looks like can be seen in the WaveDrom diagram below:</p>
-<p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="WaveDrom diagram of a quad 0x6B FAST_READ_QUAD_OUT" src="https://voidstarsec.com/blog/assets/images/scapy-spi/qspi-read-wavedrom.png"></p>
+<p><a href="https://voidstarsec.com/blog/assets/images/scapy-spi/qspi-read-wavedrom.png"><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="WaveDrom diagram of a quad 0x6B FAST_READ_QUAD_OUT" src="https://voidstarsec.com/blog/assets/images/scapy-spi/qspi-read-wavedrom.png"></a></p>
 <p>To check for this, we can take a longer capture and examine the state of the data lines. If activity suddenly appears on <code>/WP</code> and <code>/HOLD</code>, then we know that the device is transitioning to QSPI mode. Sure enough, after taking a longer capture we saw those lines become active, along with another tell. Let's look at our clock line at the beginning and end of the capture:</p>
 <p>Standard SPI, ~16 MHz:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="SPI clock at about 16 MHz in standard mode" src="https://voidstarsec.com/blog/assets/images/scapy-spi/spi-clk-standard-16mhz.png"></p>
@@ -676,7 +676,7 @@ VoidStar Security Blog            </a>
 <p>Happy Hacking!</p>
 <p>Matt (wrongbaud)</p>
 <h1>Contact / Training</h1>
-<p>If you're looking to learn more about hardware reverse engineering, check out our roadmap of free resources <a href="https://voidstarsec.com/roadmap">here</a>. If you're interested in structured training for your team, check out our <a href="https://voidstarsec.com/#training">hardware hacking bootcamp</a>. And if you'd like an in-depth dive into how hardware-level debuggers work and how to reverse engineer them, check out our self-paced course <a href="https://voidstarsec.training/products/hacking-hardware-debuggers">here</a>.</p>
+<p>If you're looking to learn more about hardware reverse engineering, check out our roadmap of free resources <a href="https://voidstarsec.com/roadmap">here</a>. If you're interested in structured training for your team, check out our <a href="https://voidstarsec.com/#training">hardware hacking bootcamp</a>. And if you'd like an in-depth dive into how hardware-level debuggers work and how to reverse engineer them, check out our self-paced course <a href="https://voidstarsecurity.thinkific.com/">here</a>.</p>
 <p><strong>Note:</strong> We are launching a new variant of the Hacking Hardware Debuggers course in Q4, which will be significantly cheaper and will not come with a pre-configured hardware kit. Students will get access to all of the relevant tools and a list of hardware to purchase if they wish to follow along.</p>
 <p>If you want to stay informed about official releases, new courses, and blog posts, sign up for our mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
 <p>Lastly, if you want to secure your devices/firmware with an audit from us, please don't hesitate to reach out to contact@voidstarsec.com.</p>
@@ -732,28 +732,28 @@ VoidStar Security Blog            </a>
   <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
-    </li>
-    <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
-    </li>
-    <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
