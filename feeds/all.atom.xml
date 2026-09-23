@@ -556,6 +556,7 @@
 &lt;h1&gt;Conclusion&lt;/h1&gt;
 &lt;p&gt;With this post, we've demonstrated how to reconstruct a firmware image from a SPI traffic capture. This tooling supports both standard and quad SPI and allows flash contents to be reconstructed without removing the target flash device. There are, of course, some drawbacks: we can only reconstruct what the device reads while we're watching, but for the purposes of initial reverse engineering and triage, this is a great starting point.&lt;/p&gt;
 &lt;p&gt;This tooling can also be used to analyze and review SPI traffic from devices other than NOR flash, allowing for increased introspection when reverse engineering custom protocols.&lt;/p&gt;
+&lt;p&gt;All relevant tooling can be found &lt;a href="https://github.com/wrongbaud/spidump"&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Keep an eye out for our next post, where we extend this to I2C and develop another Scapy plugin!&lt;/p&gt;
 &lt;p&gt;Happy Hacking!&lt;/p&gt;
 &lt;p&gt;Matt (wrongbaud)&lt;/p&gt;
