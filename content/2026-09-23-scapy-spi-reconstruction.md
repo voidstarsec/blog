@@ -626,6 +626,8 @@ With this post, we've demonstrated how to reconstruct a firmware image from a SP
 
 This tooling can also be used to analyze and review SPI traffic from devices other than NOR flash, allowing for increased introspection when reverse engineering custom protocols.
 
+All relevant tooling can be found [here](https://github.com/wrongbaud/spidump).
+
 Keep an eye out for our next post, where we extend this to I2C and develop another Scapy plugin!
 
 Happy Hacking!
