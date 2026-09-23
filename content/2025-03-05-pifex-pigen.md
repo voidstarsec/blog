@@ -155,9 +155,9 @@ The search bar at the top can be used to search for config files used by OpenOCD
 
 Once the desired configuration files are selected, OpenOCD can be launched and interfaced with via telnet and gdb.
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui.png.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/openocd-ui.png)
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/openocd-config-files.png.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/openocd-config-files.png)
 
 With OpenOCD launched, the GDB terminal and telnet interface can be accessed via the web browser:
 
@@ -202,11 +202,11 @@ Mar 02 21:01:57 pifex start_jupyter.sh[538]: [I 2025-03-02 21:01:57.236 LabApp] 
 
 Included in these notebooks are examples of how to interact with the OLED display:
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/luma-oled.png.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/luma-oled.png)
 
 We have also included basic JTAG notebooks, which were used in one of our [previous blog posts](https://voidstarsec.com/blog/jtag-pifex)
 
-![](https://voidstarsec.com/blog/assets/images/brushing-up/jtag-jupyter.png.png)
+![](https://voidstarsec.com/blog/assets/images/brushing-up/jtag-jupyter.png)
 
 Users can also access a terminal window through Jupyter-Lab as well; this can be done via "`File` "-> "`New` "-> "`Terminal` "
 
