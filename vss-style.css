@@ -94,6 +94,11 @@ a, a:hover {
     height: auto;
 }
 
+/* WaveDrom timing diagrams are wide; let them use the full column */
+.entry-content img[src*="wavedrom"] {
+    width: 100%;
+}
+
 .entry-content figcaption, .caption {
     font-size: small;
     margin-bottom: 2px;

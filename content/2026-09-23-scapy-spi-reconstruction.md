@@ -104,7 +104,7 @@ The first byte on `D3` is `0x03`, so it _looks_ like this might be a read comman
 
 The WaveDrom diagram below shows the structure of a `READ` transaction:
 
-![WaveDrom diagram of a single-lane 0x03 READ](https://voidstarsec.com/blog/assets/images/scapy-spi/spi-read-wavedrom.png)
+[![WaveDrom diagram of a single-lane 0x03 READ](https://voidstarsec.com/blog/assets/images/scapy-spi/spi-read-wavedrom.png)](https://voidstarsec.com/blog/assets/images/scapy-spi/spi-read-wavedrom.png)
 
 Armed with this information, if we look at our capture it starts to make a little more sense:
 
@@ -515,7 +515,7 @@ In single-lane mode, only two pins move data: `DI (IO0)` and `DO (IO1)`. The oth
 
 An example of what a QSPI flash read looks like can be seen in the WaveDrom diagram below:
 
-![WaveDrom diagram of a quad 0x6B FAST_READ_QUAD_OUT](https://voidstarsec.com/blog/assets/images/scapy-spi/qspi-read-wavedrom.png)
+[![WaveDrom diagram of a quad 0x6B FAST_READ_QUAD_OUT](https://voidstarsec.com/blog/assets/images/scapy-spi/qspi-read-wavedrom.png)](https://voidstarsec.com/blog/assets/images/scapy-spi/qspi-read-wavedrom.png)
 
 To check for this, we can take a longer capture and examine the state of the data lines. If activity suddenly appears on `/WP` and `/HOLD`, then we know that the device is transitioning to QSPI mode. Sure enough, after taking a longer capture we saw those lines become active, along with another tell. Let's look at our clock line at the beginning and end of the capture:
 
@@ -635,7 +635,7 @@ Matt (wrongbaud)
 
 # Contact / Training
 
-If you're looking to learn more about hardware reverse engineering, check out our roadmap of free resources [here](https://voidstarsec.com/roadmap). If you're interested in structured training for your team, check out our [hardware hacking bootcamp](https://voidstarsec.com/#training). And if you'd like an in-depth dive into how hardware-level debuggers work and how to reverse engineer them, check out our self-paced course [here](https://voidstarsec.training/products/hacking-hardware-debuggers).
+If you're looking to learn more about hardware reverse engineering, check out our roadmap of free resources [here](https://voidstarsec.com/roadmap). If you're interested in structured training for your team, check out our [hardware hacking bootcamp](https://voidstarsec.com/#training). And if you'd like an in-depth dive into how hardware-level debuggers work and how to reverse engineer them, check out our self-paced course [here](https://voidstarsecurity.thinkific.com/).
 
 **Note:** We are launching a new variant of the Hacking Hardware Debuggers course in Q4, which will be significantly cheaper and will not come with a pre-configured hardware kit. Students will get access to all of the relevant tools and a list of hardware to purchase if they wish to follow along.
 
