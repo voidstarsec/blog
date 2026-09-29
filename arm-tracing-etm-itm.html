@@ -152,7 +152,7 @@ In this post, we're going to dive deeper into this target and see if we can enab
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="ARM CoreSight trace architecture overview" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/arm-coresight-overview.png"></p>
 <p>There are four main components that we need to learn about before we attempt to configure the trace peripheral.</p>
 <p><strong>ETM (Embedded Trace Macrocell)</strong> -  The ETM watches the processor's execution and emits an <em>instruction trace</em>: a compressed stream describing which instructions were executed, whether branches were taken, and where the program counter went. Critically, it does not send every instruction byte. Instead it sends a highly compressed stream that only tells you about the things it <em>can't</em> predict (branches, exceptions, and periodic synchronization points). To reconstruct the full execution path, you replay that stream against a copy of the firmware. </p>
-<p><strong>ITM (Instrumentation Trace Macrocell)</strong> - The ITM is a low-horsepower version of  ETM's. Rather than tracing instructions automatically, it lets the <em>software</em> deliberately push data out to the trace port. If you've ever used ARM's SWO <code>printf</code> retargeting, that's the ITM. Think of it as <code>printf</code> debugging that doesn't cost you a UART.</p>
+<p><strong>ITM (Instrumentation Trace Macrocell)</strong> - The ITM is similar to the ETM. Rather than tracing instructions automatically, it lets the software push data out to the trace port. If you've ever used ARM's SWO <code>printf</code> retargeting, that's the ITM. </p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Example ITM instrumentation trace output" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/itm.png"></p>
 <p><strong>DWT (Data Watchpoint and Trace)</strong> - The DWT contains four comparators that can watch for a particular data address, instruction address, data value, or (on comparator 0) a cycle count. It generates debug events and can sample data, and it works alongside the ETM and ITM to produce data traces and profiling counters.</p>
 <p><strong>TPIU (Trace Port Interface Unit)</strong> - The ETM and ITM generate trace data, but something has to get it out of the target device. The TPIU takes the internal trace streams, formats them, optionally tags them with source IDs and timestamps, and drives them out of a physical pin. The TPIU is what turns the internal trace bus into a  signal we can observe and analyze.</p>
@@ -164,16 +164,16 @@ In this post, we're going to dive deeper into this target and see if we can enab
 <li>A parallel <strong>Trace Port</strong> via the TPIU - fast, but needs a bunch of dedicated pins</li>
 <li>The <strong>Serial Wire Output (SWO)</strong> - a single pin, trace data shipped out asynchronously as UART-framed bytes</li>
 </ul>
-<p>On our STM32F401 there's no on-chip trace buffer and no wide parallel trace port broken out, so we're going to use the SWO path. That's actually great news for us, because SWO is a single pin running plain asynchronous serial - which means we don't need a fancy trace probe at all. We can capture it with a logic analyzer.</p>
+<p>On our STM32F401 there's no on-chip trace buffer and no wide parallel trace port broken out, so we're going to use the SWO path. That's great news for us, because SWO is a single pin running plain asynchronous serial - which means we don't need a fancy trace probe. We can capture it with a logic analyzer.</p>
 <p><strong>Note:</strong> This is the whole reason this technique is accessible. The "correct" way to capture ARM traces is with something like an ARM ULINKPRO-D, a Lauterbach, or an IAR I-jet Trace - all of which are excellent and all of which cost more than my car did in college. Because our target routes trace out over single-wire SWO as async UART, a $10 logic analyzer and Pulseview will do the job.</p>
 <hr>
 <h2>The Target: Finding Our One Pin</h2>
 <p>Our target is an Xbox One controller built around an STM32F401. According to the datasheet (page 809 of <code>stm32f401-ref.pdf</code>), this part contains the full CoreSight lineup - SWJ-DP, AHB-AP, ITM, FPB, DWT, TPIU, and ETM - so everything we need is on board.</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="STM32F401 debug and trace components listed in the datasheet" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/overview-stm32.png"></p>
-<p>The datasheet also tells us that when the TPIU is configured for asynchronous SWO output, the trace data comes out on pin <strong>PB3</strong>. So our entire physical problem reduces to: get a probe onto PB3.</p>
+<p>The datasheet also tells us that when the TPIU is configured for asynchronous SWO output, the trace data comes out on pin <strong>PB3</strong>. So our first step is to get a probe onto PB3.</p>
 <p>Now, if you've ever cracked one of these open, you'll know the main CPU is buried under a blob of epoxy, and PB3 is not exactly labeled with a friendly silkscreen arrow.</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Xbox controller PCB with the epoxy-covered main CPU" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/destroyed-pcb.jpg"></p>
-<p>This is where I want to plant a flag on a reverse engineering habit: <em>before you go destroying a board to find a pin, ask whether you already have a capability that can find it for you.</em> We have SWD access to this target. That means we can drive PB3 high and low from software and watch which test point or component wiggles, no epoxy excavation required. On this particular board, PB3 turns out to be connected to R15. Track it down non-destructively and solder onto that instead. I happened to have plenty of these laying around from previous training exercises and wanted to tear one down fully anyway!</p>
+<p>After removing the MCU and the epoxy, using a multimeter we were able to see that the PB3 pin was connected to R15 on the board. </p>
 <p><strong>RE Tip:</strong> Any time you have a working debug interface, you can potentially leverage that into a pin-hunting tool. Toggle a GPIO from OpenOCD and probe around with a scope or logic analyzer to correlate a firmware-controlled pin to a physical location on the PCB. It beats guessing, and it beats grinding epoxy. It should be noted that you typically will need a datasheet to understand exactly which registers to poke in order to toggle the GPIO, luckily for us in this case we had one. </p>
 <p>So we've found our potential output pin, now we have to figure out the following:</p>
 <table class="tb tr tc table table-hover">
@@ -202,11 +202,11 @@ In this post, we're going to dive deeper into this target and see if we can enab
 </tr>
 </tbody>
 </table>
-<p>Let's start filling in those question marks.</p>
+<p>In the next section, we'll go over configuring the TPIU</p>
 <hr>
 <h2>Configuring the TPIU</h2>
 <p>Remember, the TPIU is responsible for <em>outputting</em> the trace, so we configure it first. We're telling it, in effect: "take whatever the ETM hands you, frame it, and shove it out the SWO pin as 4 Mbaud async serial."</p>
-<p>There is no magic tool here - configuring these peripherals is just a series of memory-mapped register writes, and OpenOCD is perfectly happy to do them for us with <code>mww</code> (memory-write-word). The registers we care about are scattered across the STM32F401 reference manual (I'll call it document A) and the ARMv7-M Architecture Reference Manual (document B):</p>
+<p>Configuring these peripherals is a series of memory-mapped register writes, and we can do that via OpenOCD <code>mww</code> (memory-write-word). The registers we care about are scattered across the STM32F401 reference manual (I'll call it document A) and the ARMv7-M Architecture Reference Manual (document B):</p>
 <table class="tb tr tc table table-hover">
 <thead>
 <tr>
@@ -287,7 +287,7 @@ In this post, we're going to dive deeper into this target and see if we can enab
 <p>With that, the TPIU is configured. We've told the chip <em>how</em> to output trace data - now we need to tell it <em>what</em> to output.</p>
 <hr>
 <h2>Configuring the ETM</h2>
-<p>The ETM configuration follows the same pattern - a documented sequence of register writes - but the ETM is locked by default. You have to write a magic value to a lock register before it'll accept configuration. The relevant registers (from STM32401 reference manual and the ETM Architecture Specification) are:</p>
+<p>The ETM configuration follows the same pattern, but the ETM is locked by default. You have to write a magic value to a lock register before it'll accept configuration. The relevant registers (from STM32401 reference manual and the ETM Architecture Specification) are:</p>
 <table class="tb tr tc table table-hover">
 <thead>
 <tr>
@@ -418,7 +418,7 @@ In this post, we're going to dive deeper into this target and see if we can enab
 <p>Remember, the trace stream doesn't contain raw instructions - it contains just enough information for a decoder to <em>replay</em> execution against a copy of the firmware. So a "good" trace is one where the decoder locks onto a synchronization point and then walks the program counter through addresses that actually make sense.</p>
 <p>At the very beginning, things look great. The decoder syncs up and starts spitting out program counter values that march right through the reset vector:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Decoder syncing on the reset vector" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/etm_trace_pc_match.png"></p>
-<p>Even better, if we follow the decoded instruction flow, it's logical, the addresses form a coherent execution path through early startup, exactly the kind of thing you'd expect a Cortex-M to do out of reset:</p>
+<p>Even better, if we follow the decoded instruction flow, it's logical, the addresses form a coherent execution path through early startup:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Coherent instruction flow through early startup" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/etm_trace_pc_flow.png"></p>
 <p>At this point things are looking good, our instruction trace makes sense and we can line it up with the firmware in Ghidra...but hold the celebration, because a little further into the capture, something goes sideways:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Synchronization sequence in the middle of the trace" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/synchronization_error.png"></p>
@@ -427,12 +427,12 @@ In this post, we're going to dive deeper into this target and see if we can enab
 <p>And if we look at the raw signal around the failure, we can see that the baud rate increases during our capture!</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Baud rate increasing partway through the capture" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/baud_rate_increase.png"></p>
 <p>Our UART decoder is locked to 4 Mbaud, but the signal on the wire has sped up. The decoder is now sampling at the wrong intervals, so every byte it recovers is wrong, so the ETM decoder on top of it is replaying nonsense. Remember that  <code>TPIU_ACPR</code> derives the trace clock from <code>HCLK</code> so something in the firmware has reconfigured the clock, which will in turn increase the baud rate of our output data (remember that in our configuration we were assigning a pre-scaler, not a baud rate)</p>
-<p>So we have two mysteries to solve, and both of them live in the firmware:</p>
+<p>So we have two mysteries to solve:</p>
 <ol>
 <li><strong>Why does the clock speed change mid-trace, and can we stop it?</strong></li>
 <li><strong>What happens at the very <em>end</em> of the usable trace - what's the last thing the CPU does before we lose it entirely?</strong></li>
 </ol>
-<p>We can't answer either of these by staring at Pulseview. It's time to open Ghidra.</p>
+<p>We can't answer either of these by staring at Pulseview, so we'll dig into the firmware to see what's going on.</p>
 <hr>
 <h2>Diagnosing With Ghidra</h2>
 <p>To reason about the trace we need a copy of the firmware loaded up correctly. The image format for these Cortex-M parts is well documented: the first four bytes are the initial stack pointer, immediately followed by the interrupt vector table, and (per the datasheet) flash is mapped at <code>0x8000000</code>. So we load the dumped image as ARM Cortex little-endian at base address <code>0x8000000</code>.</p>
@@ -440,7 +440,7 @@ In this post, we're going to dive deeper into this target and see if we can enab
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Peripheral memory map generated by the SVD-Loader script" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/post-svd-2.png"></p>
 <p>Now analysis is dramatically more readable. As an example, we can take a global that SVD-Loader knows is an <code>RCC*</code> and retype it (hit Ctrl-L on the variable), and a wall of <code>*(undefined4 *)(DAT_... + 0x08)</code> accesses turns into named register writes:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="Decompilation after retyping the RCC global in Ghidra" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/retype_result.png"></p>
-<p><strong>RE Tip:</strong> The SVD-Loader workflow is worth adopting as a reflex for <em>any</em> Cortex-M target, tracing or not. Auto-generated peripheral structs cut your reversing time enormously. SVD files for most vendors are floating around on GitHub and in vendor CMSIS packs.</p>
+<p><strong>RE Tip:</strong> The SVD-Loader workflow is useful for Cortex-M target, tracing or not. Auto-generated peripheral structs cut your reversing time enormously. SVD files for most vendors are floating around on GitHub and in vendor CMSIS packs.</p>
 <h3>Mystery 1: The clock change</h3>
 <p>Recall that the last instruction we could reliably decode was around <code>0x8000390</code>. If we look at the subroutine that contains it, we can see that it's configuring the <strong>PLL</strong> by writing to the RCC and Power Controller peripherals:</p>
 <div class="highlight"><pre><span></span><code><span class="n">pRVar2</span><span class="o">-&gt;</span><span class="n">PLLCFGR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DAT_1fff0fd4</span><span class="p">;</span>
@@ -453,12 +453,12 @@ In this post, we're going to dive deeper into this target and see if we can enab
 <h3>Mystery 2: PB3 gets stolen</h3>
 <p>We've now diagnosed the baud rate issue, but if we zoom out in pulseview and look at more traffic we can see more weird behavior. After the baud change, the trace doesn't just get faster PB3 starts doing something completely different:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="PB3 switching to I2C traffic later in the capture" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/i2c_switch.png"></p>
-<p>If we consult the STM32F4 alternate-function table for PB3, we find that this pin has more than one job. It can be SWO, - but it can also be used as an I2C data line:</p>
+<p>If we consult the STM32F4 alternate-function table for PB3, we find that this pin has more than one job. It can be SWO, but it can also be used as an I2C data line:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="STM32F4 alternate-function table for PB3" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/pb3-usages.png"></p>
 <p>So what's on the other end of that I2C bus? On this controller, it's an <strong>AK4951 stereo audio codec</strong> - the chip that drives the headset audio:</p>
 <p><img class="center" height="80%" width="80%" style="border: 4px solid black;" alt="AK4951 stereo audio codec with the I2C signal overlay" src="https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/ak4951_w_overlay.jpg"></p>
 <p>The firmware's normal startup reconfigures PB3 from "SWO trace output" to "I2C2 SDA" so it can talk to the audio codec. The moment it does that, our trace pin physically stops being a trace pin. No amount of decoder tuning will fix that, because there's no trace data on the wire anymore, just I2C traffic.</p>
-<p>So the picture is complete. Our trace dies for two independent reasons: the PLL reconfiguration moves our baud rate out from under the decoder, and then the firmware repurposes PB3 for I2C entirely. If we want long, clean traces, we have to deal with both.</p>
+<p>So the picture is complete. Our trace dies for two independent reasons: the PLL reconfiguration moves our baud rate out from under the decoder, and then the firmware repurposes PB3 for I2C. If we want clean traces, we have to deal with both.</p>
 <hr>
 <h2>Getting Better Traces</h2>
 <p>At this point we've found the two issues, our clock rate increase and the firmware is reconfiguring the PB3 line to be used as I2C. We'll focus on the clock speed issue first, if we can capture a longer trace, that trace can hopefully lead us to the moment in the firmware where PB3 is reconfigured. </p>
@@ -557,7 +557,7 @@ resume
 </code></pre></div>
 
 <p>That last write sets <code>TPIU_ACPR</code> (at <code>0xe0040010</code>) to <code>15</code>, re-picking a baud rate that suits the current clock. Halt after entering the target's bootloader/UART mode, fire those writes, and tracing comes back to life on SWO at roughly 4 MHz. On the capture side, a faster analyzer helps here: with a <strong>DSLogic</strong> sampling at 100 MHz you can comfortably follow a 20 MHz-class trace clock, which buys you a lot of headroom when the core is running fast. For this exercise we were using the low-cost FX2 logic analyzers that run about $15 with shipping. </p>
-<p>This is the technique I have been using more frequently when prtforming <em>fault injection</em>. If you can get a clean instruction trace running alongside a logic capture, you can line up the exact instant a specific instruction executes - which is precisely the information you need to time a glitch. But that is a rabbit hole for another post.</p>
+<p>This is the technique I have been using more frequently when prtforming fault injection research. If you can get a clean instruction trace running alongside a logic capture, you can line up the exact instant a specific instruction executes - which is precisely the information you need to time a glitch. But that is a rabbit hole for another post.</p>
 <hr>
 <h2>Conclusion</h2>
 <p>We covered a lot in this post, and it probably should have been broken up into two different posts. We started from "ARM cores have these mysterious trace peripherals" and ended with a decoded instruction trace pulled off a running Xbox controller with a hobbyist logic analyzer. Along the way we:</p>
@@ -570,9 +570,9 @@ resume
 </ul>
 <p>Hopefully the information and steps here help others when tryng to reverse engineer ARM based targets with tracing peripherals. Be wary that the peripheral configuration is the easy half (which of course assumes you have a datasheet for any of the target-specific registers). Understanding your target's clock tree and pin multiplexing - and being willing to open the firmware in Ghidra when the trace lies to you - is what actually gets you a usable capture. The trace stream will happily hand you garbage and look confident doing it, so decode it against ground truth every time.</p>
 <h2>Next Steps</h2>
-<p>In the next post we will take a clean ETM trace running next to a synchronized logic capture and use it to precisely time a fault injection glitch. Being able to see the <em>exact</em> instruction the CPU is executing when you drop a glitch is a rare thing, and the trace pin is how you get there.</p>
+<p>In the next post we will take a clean ETM trace running next to a synchronized logic capture and use it to precisely time a fault injection glitch</p>
 <p>As always, if you have any questions, corrections, or a cleaner way to configure any of this (there almost certainly is one - the OpenOCD trace docs are famously thin), please reach out. I genuinely learn the most from readers poking holes in these.</p>
-<p>If you're looking to go deeper on hardware reverse engineering, check out our roadmap of free resources <a href="https://voidstarsec.com/roadmap">here</a>, and if you'd like structured, hands-on training for your team, take a look at the <a href="https://voidstarsec.com/#training">hardware hacking bootcamp</a> - the ETM material in this post is drawn straight from it. To hear about new posts and courses (and nothing else - I only email when there's something real to share), sign up for the mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
+<p>If you're looking to learn more about hardware reverse engineering, check out our roadmap of free resources <a href="https://voidstarsec.com/roadmap">here</a>. If you're interested in structured training for your team, check out our <a href="https://voidstarsec.com/#training">hardware hacking bootcamp</a>. And if you'd like an in-depth dive into how hardware-level debuggers work and how to reverse engineer them, check out our self-paced course <a href="https://voidstarsecurity.thinkific.com/">here</a>. To hear about new posts and courses (and nothing else - I only email when there's something real to share), sign up for the mailing list <a href="http://eepurl.com/hSl31f">here</a>.</p>
 <p>Thanks for reading - and happy hacking!</p>
 <p>Matt</p>
             </div>
@@ -627,28 +627,28 @@ resume
   <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
+      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
-    </li>
-    <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
