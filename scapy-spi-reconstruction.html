@@ -397,7 +397,7 @@ VoidStar Security Blog            </a>
                 <span class="n">current</span> <span class="o">=</span> <span class="kc">None</span>
 </code></pre></div>
 
-<p>This is where our Scapy model starts to pay off. We don't need to pick the MOSI bytes apart by hand; we can hand them straight to <code>SPIFlashCmd</code> and let the <code>ConditionalField</code>s decide whether an address and dummy byte are present. Here is the first <code>READ</code> from our capture, the same transaction we annotated earlier:</p>
+<p>We don't need to pick the MOSI bytes apart by hand; we can hand them straight to <code>SPIFlashCmd</code> and let the <code>ConditionalField</code>s decide whether an address and dummy byte are present. Here is the first <code>READ</code> from our capture, the same transaction we annotated earlier:</p>
 <div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">SPIFlashCmd</span><span class="p">(</span><span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s2">&quot;03000000001fffff&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 <span class="c1">###[ SPIFlashCmd ]###</span>
   <span class="n">cmd</span>       <span class="o">=</span> <span class="n">READ</span>
@@ -739,28 +739,28 @@ VoidStar Security Blog            </a>
       <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
-    </li>
-    <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
     </li>
-    <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
+    </li>
+    <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/blog/tag/training.html">training</a>
+      <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
     </li>
     <li class="list-group-item tag-4">
-      <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
+      <a href="https://voidstarsec.com/blog/tag/training.html">training</a>
     </li>
   </ul>
 </li>
