@@ -21,14 +21,17 @@ echo "Build complete."
 if [ "$1" = "--deploy" ]; then
     echo "Deploying to gh-pages..."
 
-    # Images (assets/) and some older pages only exist on gh-pages, not in
+    # Images (assets/) and some older posts only exist on gh-pages, not in
     # content/. ghp-import replaces the whole branch with output/, so copy
-    # anything live that the build didn't produce back in first.
+    # those back in first. Generated index pages (category/, tag/, feeds/,
+    # author/, index*.html) are left out so stale ones drop off normally.
     git fetch origin gh-pages
     LIVE_DIR="$(mktemp -d)"
     trap 'rm -rf "$LIVE_DIR"' EXIT
     git archive origin/gh-pages | tar -x -C "$LIVE_DIR"
-    rsync -a --ignore-existing "$LIVE_DIR"/ output/
+    rsync -a --ignore-existing \
+        --include='/assets/***' --exclude='/index*.html' --include='/*.html' \
+        --exclude='*' "$LIVE_DIR"/ output/
 
     ghp-import output/ -b gh-pages -r origin -p -n
     echo "Deployed to gh-pages branch."
