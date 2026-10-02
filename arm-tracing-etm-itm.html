@@ -121,9 +121,9 @@ VoidStar Security Blog            </a>
     
 </footer><!-- /.post-info -->                    </div>
                 </div>
-                <h1>A Hacker's Guide to ARM Tracing - ETM, ITM, and the TPIU</h1>
+                <h1>ARM Tracing for Reverse Engineers - ETM, ITM, and the TPIU</h1>
 <h2>Overview</h2>
-<p>Throughout the years with this blog we've covered various hardware debug peripherals and how to discover and instrument them. We've seen a number of <a href="https://voidstarsec.com/blog/xbox-swd">different</a> SWD <a href="https://voidstarsec.com/blog/brushing-up-part-3">interfaces</a> and looked at quite a <a href="https://voidstarsec.com/blog/jtag-pifex">few</a> JTAG <a href="https://voidstarsec.com/blog/jtag-ssd">taps</a>. With all of these posts we typically stop at firmware extraction without digging deeper into the hardware debug peripherals that are available. One of the common questions that I get in courses after we get JTAG or SWD working on an undocumented target is "OK, now what?". This post will hopefully help shed some life on other internal debug peripherals that are available on ARM targets. We've shown that we can single-step through firmware with an OpenOCD connection, but what if we wanted a live trace of a firmware executing without having to interrupt it?</p>
+<p>Throughout the years with this blog we've covered various hardware debug peripherals and how to discover and instrument them. We've seen a number of <a href="https://voidstarsec.com/blog/xbox-swd">different</a> SWD <a href="https://voidstarsec.com/blog/brushing-up-part-3">interfaces</a> and looked at quite a <a href="https://voidstarsec.com/blog/jtag-pifex">few</a> JTAG <a href="https://voidstarsec.com/blog/jtag-ssd">taps</a>. With all of these posts we typically stop at firmware extraction without digging deeper into the hardware debug peripherals that are available. One of the common questions that I get in courses after we get JTAG or SWD working on an undocumented target is "OK, now what?". This post will hopefully help shed some light on other internal debug peripherals that are available on ARM targets. We've shown that we can single-step through firmware with an OpenOCD connection, but what if we wanted a live trace of a firmware executing without having to interrupt it?</p>
 <p>That is exactly what the ARM trace peripherals were built for. Modern ARM cores contain CoreSight components that can stream out a compressed, real-time record of program execution. Developers use this to track down runaway code, timing bugs, and performance problems. From a reverse engineer's perspective it can also provide a ton of useful information including a cycle-accurate log of what the firmware actually did, without needing to set breakpoints or interrupt program flow. In my experience, these tools are often leveraged by developers with boards that have full SWO support, as well as vendor specific hardware for decoding the traces. As a reverse engineer, we are not often granted such a luxury, so in this post we'll talk about how to configure and communicate with the ARM trace peripherals using low cost hardware and open source software!</p>
 <p>In this post, we'll take a real target - the STM32F401-based Xbox One controller I've used in previous <a href="https://voidstarsec.com/blog/xbox-swd">blog posts</a> - and do the following:</p>
 <ol>
@@ -627,7 +627,10 @@ resume
   <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
@@ -636,10 +639,7 @@ resume
       <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
-    </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
+      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
