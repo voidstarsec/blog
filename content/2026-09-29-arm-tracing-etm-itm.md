@@ -400,7 +400,7 @@ That last call is the one that reassigns PB3 to `I2C2_SDA` and kills our trace. 
 
 ![Call site that enables the I2C2 peripheral](https://voidstarsec.com/blog/assets/images/arm-tracing-etm-itm/i2c-enable-call.png)
 
-For this post, our fix was very straightforward, patch out the branches to these routines so they never run. The ARM Thumb `nop` instruction encodes as `0xBF00`, so we overwrite the offending calls with `nop`s. There's a small [Capstone](https://www.capstone-engine.org/)-based patch script for doing this cleanly (`pip install capstone`), and once we've flashed the modified image back to the controller, PB3 stays ours.
+For this post, our fix was very straightforward, patch out the branches to these routines so they never run. The ARM Thumb `nop` instruction encodes as `0xBF00`, so we overwrite the offending calls with `nop`s. Once we've flashed the modified image back to the controller, PB3 stays ours.
 
 **Remember:** Patching out peripheral initialization is a scalpel, not a hammer. We're deliberately breaking the controller's audio codec setup to keep a debug pin free - that's a perfectly reasonable trade for a trace capture, but it does mean this firmware isn't a fully functional controller anymore. 
 
