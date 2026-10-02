@@ -11,6 +11,7 @@
 &lt;li&gt;Capture the resulting trace with a cheap logic analyzer and decode it in Pulseview&lt;/li&gt;
 &lt;li&gt;Use Ghidra to diagnose (and eventually fix) why our trace keeps falling apart&lt;/li&gt;
 &lt;/ol&gt;
+&lt;p&gt;All of the OpenOCD config files, scripts, and an example trace from this post are available in the &lt;a href="https://github.com/wrongbaud/etm-examples"&gt;&lt;code&gt;etm-examples&lt;/code&gt;&lt;/a&gt; repository if you want to follow along.&lt;/p&gt;
 &lt;h2&gt;Goals&lt;/h2&gt;
 &lt;p&gt;With this blog post, we will aim to cover the following:&lt;/p&gt;
 &lt;ul&gt;
@@ -446,6 +447,7 @@ resume
 &lt;li&gt;Watched the trace desynchronize, and used Ghidra to trace both failures back to a PLL reconfiguration and PB3 being repurposed for an I2C audio codec&lt;/li&gt;
 &lt;li&gt;Fixed both problems with a higher trace-clock prescaler and a couple of firmware patches&lt;/li&gt;
 &lt;/ul&gt;
+&lt;p&gt;The OpenOCD configs, scripts, and an example trace capture can be found &lt;a href="https://github.com/wrongbaud/etm-examples"&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Hopefully the information and steps here help others when tryng to reverse engineer ARM based targets with tracing peripherals. Be wary that the peripheral configuration is the easy half (which of course assumes you have a datasheet for any of the target-specific registers). Understanding your target's clock tree and pin multiplexing - and being willing to open the firmware in Ghidra when the trace lies to you - is what actually gets you a usable capture. The trace stream will happily hand you garbage and look confident doing it, so decode it against ground truth every time.&lt;/p&gt;
 &lt;h2&gt;Next Steps&lt;/h2&gt;
 &lt;p&gt;In the next post we will take a clean ETM trace running next to a synchronized logic capture and use it to precisely time a fault injection glitch&lt;/p&gt;
@@ -1485,7 +1487,7 @@ For this example, we will specify the data format to be &lt;code&gt;U8&lt;/code&
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="mf"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;25000000&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;2.000000E-8&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;2.500000E-1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;0.000000&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;2.0587E-02&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mf"&gt;128&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;The third field is our sample rate: &lt;code&gt;250000000&lt;/code&gt;, which is 25 Mpt/s. When we use these settings, we see the following:&lt;/p&gt;
+&lt;p&gt;The third field is our sample rate: &lt;code&gt;25000000&lt;/code&gt;, which is 25 Mpt/s. When we use these settings, we see the following:&lt;/p&gt;
 &lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/raw_signal.png"&gt;&lt;/p&gt;
 &lt;p&gt;Here is our analog signal in Pulseview! But we need to configure pulseview to convert these analog pulses into digital values. In PulseView, there are several ways to convert your analog capture into digital pulses. For this example, we will select our channel &lt;code&gt;CH1&lt;/code&gt; and use the &lt;code&gt;Logic via Threshold&lt;/code&gt; setting as shown in the image below:&lt;/p&gt;
 &lt;p&gt;&lt;img alt="" src="https://voidstarsec.com/blog/assets/images/scpi/channel_settings.png"&gt;

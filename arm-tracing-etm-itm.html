@@ -133,6 +133,7 @@ VoidStar Security Blog            </a>
 <li>Capture the resulting trace with a cheap logic analyzer and decode it in Pulseview</li>
 <li>Use Ghidra to diagnose (and eventually fix) why our trace keeps falling apart</li>
 </ol>
+<p>All of the OpenOCD config files, scripts, and an example trace from this post are available in the <a href="https://github.com/wrongbaud/etm-examples"><code>etm-examples</code></a> repository if you want to follow along.</p>
 <h2>Goals</h2>
 <p>With this blog post, we will aim to cover the following:</p>
 <ul>
@@ -568,6 +569,7 @@ resume
 <li>Watched the trace desynchronize, and used Ghidra to trace both failures back to a PLL reconfiguration and PB3 being repurposed for an I2C audio codec</li>
 <li>Fixed both problems with a higher trace-clock prescaler and a couple of firmware patches</li>
 </ul>
+<p>The OpenOCD configs, scripts, and an example trace capture can be found <a href="https://github.com/wrongbaud/etm-examples">here</a>.</p>
 <p>Hopefully the information and steps here help others when tryng to reverse engineer ARM based targets with tracing peripherals. Be wary that the peripheral configuration is the easy half (which of course assumes you have a datasheet for any of the target-specific registers). Understanding your target's clock tree and pin multiplexing - and being willing to open the firmware in Ghidra when the trace lies to you - is what actually gets you a usable capture. The trace stream will happily hand you garbage and look confident doing it, so decode it against ground truth every time.</p>
 <h2>Next Steps</h2>
 <p>In the next post we will take a clean ETM trace running next to a synchronized logic capture and use it to precisely time a fault injection glitch</p>
@@ -624,16 +626,16 @@ resume
   <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
-    </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
-    </li>
-    <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
     </li>
     <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+    </li>
+    <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
@@ -642,10 +644,10 @@ resume
       <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-3">
-      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
+      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-3">
-      <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
+      <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/blog/tag/training.html">training</a>
