@@ -289,7 +289,7 @@ def parse_transactions(path):
                 current = None
 ```
 
-This is where our Scapy model starts to pay off. We don't need to pick the MOSI bytes apart by hand; we can hand them straight to `SPIFlashCmd` and let the `ConditionalField`s decide whether an address and dummy byte are present. Here is the first `READ` from our capture, the same transaction we annotated earlier:
+We don't need to pick the MOSI bytes apart by hand; we can hand them straight to `SPIFlashCmd` and let the `ConditionalField`s decide whether an address and dummy byte are present. Here is the first `READ` from our capture, the same transaction we annotated earlier:
 
 ```python
 >>> SPIFlashCmd(bytes.fromhex("03000000001fffff")).show()
