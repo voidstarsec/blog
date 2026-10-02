@@ -25,6 +25,8 @@ In this post, we'll take a real target - the STM32F401-based Xbox One controller
 4. Capture the resulting trace with a cheap logic analyzer and decode it in Pulseview
 5. Use Ghidra to diagnose (and eventually fix) why our trace keeps falling apart
 
+All of the OpenOCD config files, scripts, and an example trace from this post are available in the [`etm-examples`](https://github.com/wrongbaud/etm-examples) repository if you want to follow along.
+
 
 ## Goals
 
@@ -468,6 +470,8 @@ We covered a lot in this post, and it probably should have been broken up into t
 - Captured SWO trace data with Pulseview's stacked ETM/UART decoder
 - Watched the trace desynchronize, and used Ghidra to trace both failures back to a PLL reconfiguration and PB3 being repurposed for an I2C audio codec
 - Fixed both problems with a higher trace-clock prescaler and a couple of firmware patches
+
+The OpenOCD configs, scripts, and an example trace capture can be found [here](https://github.com/wrongbaud/etm-examples).
 
 Hopefully the information and steps here help others when tryng to reverse engineer ARM based targets with tracing peripherals. Be wary that the peripheral configuration is the easy half (which of course assumes you have a datasheet for any of the target-specific registers). Understanding your target's clock tree and pin multiplexing - and being willing to open the firmware in Ghidra when the trace lies to you - is what actually gets you a usable capture. The trace stream will happily hand you garbage and look confident doing it, so decode it against ground truth every time.
 
