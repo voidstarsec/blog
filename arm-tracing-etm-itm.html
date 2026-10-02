@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
 <head>
-    <title>A Hacker's Guide to ARM Tracing - ETM, ITM, and the TPIU - VoidStar Security Blog</title>
+    <title>Following the Instructions: Live ARM Tracing with the ETM, ITM, and TPIU - VoidStar Security Blog</title>
     <!-- Using the latest rendering mode for IE -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta charset="utf-8">
@@ -17,7 +17,7 @@
 
         <meta property="og:site_name" content="VoidStar Security Blog" />
         <meta property="og:type" content="article"/>
-        <meta property="og:title" content="A Hacker&#39;s Guide to ARM Tracing - ETM, ITM, and the TPIU"/>
+        <meta property="og:title" content="Following the Instructions: Live ARM Tracing with the ETM, ITM, and TPIU"/>
         <meta property="og:url" content="https://voidstarsec.com/blog/arm-tracing-etm-itm"/>
         <meta property="og:description" content="ARM Cortex-M CPUs ship with a set of on-chip trace peripherals that most developers never touch and most reverse engineers forget exist. In this post, we&#39;ll wire up an Xbox One controller, configure the ETM and TPIU from OpenOCD, and capture a live instruction trace with nothing more than a logic analyzer and Pulseview - then use Ghidra to figure out why the trace keeps dying."/>
         <meta property="article:published_time" content="2026-09-29" />
@@ -74,7 +74,7 @@ VoidStar Security Blog            </a>
         <div class="col-sm-9 col-sm-push-3">
             <ol class="breadcrumb">
                 <li><a href="https://voidstarsec.com/blog" title="VoidStar Security Blog"><i class="fa fa-home fa-lg"></i></a></li>
-                <li class="active">A Hacker's Guide to ARM Tracing - ETM, ITM, and the TPIU</li>
+                <li class="active">Following the Instructions: Live ARM Tracing with the ETM, ITM, and TPIU</li>
             </ol>
     <section id="content">
         <article>
@@ -82,8 +82,8 @@ VoidStar Security Blog            </a>
                 <h1>
                     <a href="https://voidstarsec.com/blog/arm-tracing-etm-itm"
                        rel="bookmark"
-                       title="Permalink to A Hacker's Guide to ARM Tracing - ETM, ITM, and the TPIU">
-                        A Hacker's Guide to ARM Tracing - ETM, ITM, and the TPIU
+                       title="Permalink to Following the Instructions: Live ARM Tracing with the ETM, ITM, and TPIU">
+                        Following the Instructions: Live ARM Tracing with the ETM, ITM, and TPIU
                     </a>
                 </h1>
             </header>
@@ -121,7 +121,7 @@ VoidStar Security Blog            </a>
     
 </footer><!-- /.post-info -->                    </div>
                 </div>
-                <h1>ARM Tracing for Reverse Engineers - ETM, ITM, and the TPIU</h1>
+                <h1>Following the Instructions: Live ARM Tracing with the ETM, ITM, and TPIU</h1>
 <h2>Overview</h2>
 <p>Throughout the years with this blog we've covered various hardware debug peripherals and how to discover and instrument them. We've seen a number of <a href="https://voidstarsec.com/blog/xbox-swd">different</a> SWD <a href="https://voidstarsec.com/blog/brushing-up-part-3">interfaces</a> and looked at quite a <a href="https://voidstarsec.com/blog/jtag-pifex">few</a> JTAG <a href="https://voidstarsec.com/blog/jtag-ssd">taps</a>. With all of these posts we typically stop at firmware extraction without digging deeper into the hardware debug peripherals that are available. One of the common questions that I get in courses after we get JTAG or SWD working on an undocumented target is "OK, now what?". This post will hopefully help shed some light on other internal debug peripherals that are available on ARM targets. We've shown that we can single-step through firmware with an OpenOCD connection, but what if we wanted a live trace of a firmware executing without having to interrupt it?</p>
 <p>That is exactly what the ARM trace peripherals were built for. Modern ARM cores contain CoreSight components that can stream out a compressed, real-time record of program execution. Developers use this to track down runaway code, timing bugs, and performance problems. From a reverse engineer's perspective it can also provide a ton of useful information including a cycle-accurate log of what the firmware actually did, without needing to set breakpoints or interrupt program flow. In my experience, these tools are often leveraged by developers with boards that have full SWO support, as well as vendor specific hardware for decoding the traces. As a reverse engineer, we are not often granted such a luxury, so in this post we'll talk about how to configure and communicate with the ARM trace peripherals using low cost hardware and open source software!</p>
@@ -627,7 +627,13 @@ resume
   <a href="https://voidstarsec.com/blog/"><h4><i class="fa fa-tags fa-lg"></i><span class="icon-label">Tags</span></h4></a>
   <ul class="list-group " id="tags">
     <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
+    </li>
+    <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/tools.html">tools</a>
+    </li>
+    <li class="list-group-item tag-1">
+      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
     </li>
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/ghidra.html">ghidra</a>
@@ -635,20 +641,14 @@ resume
     <li class="list-group-item tag-1">
       <a href="https://voidstarsec.com/blog/tag/jtag.html">jtag</a>
     </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/hardware.html">hardware</a>
-    </li>
-    <li class="list-group-item tag-1">
-      <a href="https://voidstarsec.com/blog/tag/tutorial.html">tutorial</a>
-    </li>
-    <li class="list-group-item tag-2">
-      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
-    </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/pifex.html">pifex</a>
     </li>
     <li class="list-group-item tag-2">
       <a href="https://voidstarsec.com/blog/tag/spi.html">spi</a>
+    </li>
+    <li class="list-group-item tag-2">
+      <a href="https://voidstarsec.com/blog/tag/uart.html">uart</a>
     </li>
     <li class="list-group-item tag-4">
       <a href="https://voidstarsec.com/blog/tag/uboot.html">uboot</a>
